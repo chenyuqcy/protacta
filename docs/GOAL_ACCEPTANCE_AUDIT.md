@@ -12,7 +12,7 @@ correction help, real-device acceptance and the beginner trial.
 | Fixed CV checks distinguish match, adjustment, unknown | Restricted outline checker, negative/shadow/projection tests and isolated comparison history | Prototype implemented; independent real examples and calibration missing |
 | Reviewed correction help | Authored per-action draft, manual comparison and replay | Real-paper review not performed; cannot claim approved correction |
 | Appropriate automated tests | Build 4: 195 native logic/synthetic cases, 24 Python cases; phone/tablet UI, native-to-offline contract and generic unsigned builds | Recorded software checks; earlier framework UI launch crash/retest retained |
-| Real iPhone/iPad acceptance | Earlier inventories unavailable; user deferred physical testing; generic unsigned builds only | Not achieved |
+| Real iPhone/iPad acceptance | Build 4 signed, installed and launched wirelessly on iPhone 17 Pro Max; camera/course acceptance not recorded; iPad not installed | Installation gate achieved on iPhone; feature acceptance outstanding |
 | About ten beginners and matched tutorial comparison | Protocol only; no participants, task records or observed outcomes | Not achieved |
 | Honest evidence boundaries | Synthetic source guards, independent annotations, no automated MVP-pass output | Implemented; does not replace missing physical evidence |
 
@@ -39,6 +39,12 @@ Software checks and visual review are recorded in VALIDATION_VISUAL_FEEDBACK.md.
 No new device inventory or installation was requested during this iteration.
 This meaningful local progress does not satisfy the physical acceptance rows.
 The complete-course objective is unchanged and has not been marked complete.
+
+The user subsequently requested installation and unlocked the paired phone.
+Build 4 was signed, installed and launched on the iPhone 17 Pro Max over the local
+network; installed version and a running process were queried independently.
+DEVICE_INSTALL_2026-10-25.md records this new gate. Physical camera/folding
+behavior and learning outcomes remain unverified.
 
 ## Deferred physical acceptance gate
 

@@ -1,10 +1,27 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 4 local development and software checks completed. On
-25 October 2026 the user chose to continue local development and test on a
-physical device later. The full MVP remains incomplete: real-paper review,
-device acceptance, independent samples and beginner outcomes remain unproved.
+Current work: Build 4 local development and software checks completed, followed
+by a user-requested wireless installation on an iPhone 17 Pro Max on 25 October
+2026. Installed version 0.1.0 (4) and process launch were verified. The full MVP
+remains incomplete: real-paper review, device feature acceptance, independent
+samples and beginner outcomes remain unproved.
+
+## Build 4: wireless device installation
+
+- The user connected the phone on the same network and confirmed it was unlocked.
+  After an initial tunnel interruption, a local-network developer tunnel opened.
+- Built and verified a separate signed Debug artifact using the existing team;
+  the provisioning profile includes the target phone. The earlier unsigned
+  artifacts and local-validation receipt were preserved.
+- Installed Protacta 0.1.0 (4), launched/activated it without synthetic or validation
+  arguments, and independently queried the installed app and running process.
+- Camera permissions, physical paper alignment, voice, complete folding and
+  checkpoint accuracy still require the user's actual testing. Installation and
+  process launch are not feature acceptance.
+
+See DEVICE_INSTALL_2026-10-25.md and
+`output/device-install/build4-20261025/` for the signed build and device receipts.
 
 ## Build 4: frozen visual comparison and action-specific replay
 
@@ -122,9 +139,10 @@ See VALIDATION_FIRST_FOLD.md and output/first-fold/validation-receipt.json.
 - [ ] Test paper movement, occlusion, ambiguous backgrounds and folded-sheet rejection limits.
 - [ ] Record independent point/line errors and reacquisition, without labeling candidate confidence as accuracy.
 
-Earlier device inventories reported no available iOS connection. The user has
-since deferred physical testing; this Build 4 iteration did not repeat device
-queries or perform installation, camera measurement or real-fold acceptance.
+Earlier device inventories reported no available iOS connection. Physical testing
+was deferred during the local Build 4 iteration. A subsequent user request enabled
+wireless installation and launch; camera measurements and real-fold acceptance
+have not yet been recorded.
 
 ## Subsequent goal work
 
