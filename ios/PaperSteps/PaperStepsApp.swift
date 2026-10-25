@@ -3,8 +3,22 @@ import StoreKit
 
 @main
 struct ProtactaApp: App {
+    private var isLogicTestHost: Bool {
+        #if DEBUG
+        return NSClassFromString("XCTestCase") != nil &&
+            !ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        #else
+        return false
+        #endif
+    }
     var body: some Scene {
-        WindowGroup { PaperStepsView().preferredColorScheme(.light) }
+        WindowGroup {
+            // Logic tests exercise their own controllers. Starting a live
+            // renderer here adds unrelated simulator shader work before XCTest
+            // connects; UI tests still launch the full application below.
+            if isLogicTestHost { Color.clear }
+            else { PaperStepsView().preferredColorScheme(.light) }
+        }
     }
 }
 
@@ -39,11 +53,18 @@ struct PaperStepsView: View {
         VStack(spacing: 0) {
             header
             viewport
-            if controller.isPaperGuide { PaperGuideCard(controller: controller) }
+            if controller.isDartPractice { DartPracticeCard(controller: controller) { voiceControlButton } }
+            else if controller.isPaperGuide { PaperGuideCard(controller: controller) }
             else if !controller.started { introduction }
             else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
             else { lessonCard }
             if controller.lesson == .dart && !controller.isAR {
+                Button { voice.stop(); controller.enterDartPractice() } label: {
+                    Label(controller.practiceReferenceActive ? "Return to my practice" : "Practice the complete Dart", systemImage: "hand.draw")
+                        .font(.system(size: 14, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(.borderedProminent).tint(Palette.ink).foregroundStyle(.white)
+                    .padding(.horizontal, 22).padding(.top, 6)
+                    .accessibilityIdentifier("openDartPractice")
                 Button { voice.stop(); controller.enterPaperGuide() } label: {
                     Label("Guide on my paper", systemImage: "viewfinder")
                         .font(.system(size: 14, weight: .semibold))
@@ -93,6 +114,7 @@ struct PaperStepsView: View {
         .onAppear { configureVoiceCommands() }
         .onDisappear { voice.stop(); voice.onCommand = nil }
         .onChange(of: controller.stepIndex) { _, _ in voice.contextDidChange() }
+        .onChange(of: controller.dartPractice.currentAction) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.lesson) { _, _ in voice.stop() }
         .onChange(of: controller.isAR) { _, _ in voice.stop() }
         .onChange(of: controller.placed) { _, placed in if !placed { voice.stop() } }
@@ -190,8 +212,19 @@ struct PaperStepsView: View {
     private var viewport: some View {
         ZStack {
             PaperViewport(controller: controller)
-            if controller.isPaperGuide {
+            if controller.isDartPractice {
+                DartPracticeOverlay(controller: controller)
+            } else if controller.isPaperGuide {
                 PaperGuideOverlay(session: controller.paperGuide, isFixture: controller.isPaperGuideFixture)
+            }
+            if controller.isPaperGuide && controller.isPaperGuideFixture {
+                VStack {
+                    Text("SIMULATED PAPER · NO LIVE CAMERA")
+                        .font(.system(size: 10, weight: .bold)).foregroundStyle(.black)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(.yellow, in: Capsule())
+                    Spacer()
+                }.padding(.top, 10).allowsHitTesting(false)
             }
             if controller.isAR && !controller.isPaperGuide && LessonController.supportsAR && !controller.placed && controller.cameraError == nil {
                 GeometryReader { geometry in

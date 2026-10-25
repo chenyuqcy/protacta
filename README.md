@@ -4,12 +4,35 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current prototype identity: **Protacta 0.1.0 (1)**,
+Current prototype identity: **Protacta 0.1.0 (2)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
 
-## Current milestone
+## Complete-course practice prototype
+
+**Practice the complete Dart** provides ten actions, local progress, comparison
+notes, help and a 3D reference that returns to the same practice action. Only
+the learner's explicit confirmation advances this session. Voice can read the
+current action/help or open its 3D reference; saying Next step does not certify
+or confirm the physical action.
+
+The printed-paper Plan B uses four QR codes on the paper itself to establish
+position and direction. The practice sheet is bundled with a print/share entry;
+see `docs/DART_PRACTICE_SHEET.md`. All four codes must be visible, with white
+A4 paper on a plain dark mat. The known flat region supports planar cues before
+actions 1 and 3-7. When paper lifts, markers disappear, tracking becomes limited,
+or observations become stale, cues hide. Other actions retain their 3D/manual
+path. A marker on the table is not treated as a paper anchor.
+
+**Check my step** compares the visible silhouette after actions 2-6. Outcomes
+are scoped visible match, compare/adjust the outline, or cannot judge. State 2
+has the same silhouette as a new sheet and cannot establish a center crease.
+Hidden layers, crease pressure, arbitrary objects and nonplanar wings are not
+evaluated. Progress saves bounded text summaries, not photos, live pose or camera
+coordinates. Both teaching content and thresholds await physical-paper review.
+
+## First-fold natural-boundary prototype
 
 The free Classic Dart lesson has a **Guide on my paper** entry. On a supported
 device it uses a single ARKit camera session, bounded on-device Vision work,
@@ -49,6 +72,9 @@ For the focused automated checks, choose an available simulator UDID:
 
 ```sh
 scripts/test_first_fold.sh SIMULATOR_UDID
+scripts/test_dart_practice.sh SIMULATOR_UDID logic
+scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID phone
+scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID tablet
 ```
 
 The `Protacta-StoreKit` scheme uses a local, prototype-namespaced test fixture.
@@ -75,7 +101,7 @@ screenshots do not establish physical acceptance.
 ## Next stages
 
 The active goal is the single complete-course MVP in
-`docs/BUILD_PLAN_2026-10-25.md`. After real-paper acceptance, author the complete
-course checkpoint coverage, collect correct/incorrect/unclear samples, add
-limited visual checking and reviewed correction, then run the beginner pilot.
+`docs/BUILD_PLAN_2026-10-25.md`. Complete-course code and synthetic checks are
+prototype evidence. Real-paper registration, actual tutorial review, independent
+correct/incorrect/unclear samples and the beginner pilot remain acceptance gates.
 Progress and evidence are maintained in `docs/PROGRESS.md`.

@@ -13,16 +13,20 @@ struct VoiceGuidePanel: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("A little help, hands free.")
                         .font(.system(size: 29, weight: .regular, design: .serif))
-                    Text("Rest your phone on a stand where you can see the guide. In AR, place the model on your table first. Tap Hands-free once, then keep folding and say one command at a time.")
+                    Text(controller.isDartPractice
+                         ? "Rest your phone on a stand. Tap Hands-free once to hear the current action or help. Use the confirmation button when you have made the physical fold."
+                         : "Rest your phone on a stand where you can see the guide. In tabletop AR, place the model on your table first. Tap Hands-free once, then keep folding and say one command at a time.")
                         .font(.subheadline)
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Next step → play the next fold")
+                        Text(controller.isDartPractice ? "Next step → reminder to confirm using the button" : "Next step → play the next fold")
                         Text("Previous step → return to the previous fold")
-                        Text("Show me again → replay this fold")
+                        Text(controller.isDartPractice ? "Show me again → open this action in 3D" : "Show me again → replay this fold")
                         Text("Restart lesson → return to a blank sheet")
                     }.font(.subheadline.weight(.medium))
                         .accessibilityIdentifier("handsFreeQuickStart")
-                    Text("Wait for each animation to finish before saying Next step. Listening resumes after each command and spoken explanation. Keep the app open; say Stop listening when you are done.")
+                    Text(controller.isDartPractice
+                         ? "Read this step, Why and Help use the current practice action. Your paper checks and manual confirmations remain separate from voice navigation."
+                         : "Wait for each animation to finish before saying Next step. Listening resumes after each command and spoken explanation. Keep the app open; say Stop listening when you are done.")
                         .font(.footnote).foregroundStyle(.secondary)
                     Text(voice.status).font(.subheadline).foregroundStyle(.secondary)
                         .accessibilityIdentifier("voiceStatus")
@@ -62,7 +66,7 @@ struct VoiceGuidePanel: View {
                     if !voice.lastHeard.isEmpty {
                         Text("Heard: \(voice.lastHeard)").font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("Explanations come from this lesson's written guidance. Protacta does not listen until you turn voice control on, save recordings, or judge your real paper.")
+                    Text("Explanations come from this lesson's written guidance. Voice control starts only when you enable it, does not save recordings, and does not assess your real paper.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)
             }.background(Color(red: 0.96, green: 0.96, blue: 0.93))

@@ -14,6 +14,7 @@ extension LessonController {
         if command == .stopListening { return .message("Voice control is off.") }
         guard hasLessonAccess else { return .message("This lesson requires full library access.") }
         guard started else { return .message("Start or continue a lesson first.") }
+        if isDartPractice { return performPracticeVoiceCommand(command) }
 
         switch command {
         case .readStep:
@@ -70,6 +71,37 @@ extension LessonController {
             default:
                 return .message("Use one command at a time.")
             }
+        case .stopListening:
+            return .message("Voice control is off.")
+        }
+    }
+
+    private func performPracticeVoiceCommand(_ command: VoiceCommand) -> LessonVoiceResponse {
+        switch command {
+        case .readStep:
+            return .narration("Action \(practiceAction.id). \(practiceAction.title). \(practiceAction.instruction)")
+        case .why:
+            return .narration(practiceAction.explanation)
+        case .explainSimply, .help:
+            return .narration("\(practiceAction.instruction) Compare your paper: \(practiceAction.manualCheckpoint) If you are stuck: \(practiceAction.commonMistake)")
+        case .replay, .resume:
+            showPracticeActionIn3D()
+            return .message("Showing this action in 3D. Your practice stays at the same action.")
+        case .back:
+            previousPracticeAction()
+            return .message("Previous action. Compare your physical paper before continuing.")
+        case .next:
+            if dartPractice.completed { return .message("Practice complete. Say Restart lesson when you have a new practice sheet.") }
+            return .message("Tap I have made this fold when you want to confirm the action and continue. Voice navigation does not confirm the paper.")
+        case .restart:
+            restartDartPractice()
+            return .message("Practice restarted. Use a new flat practice sheet.")
+        case .slower, .normalSpeed:
+            slowMotion = command == .slower
+            saveLearningProgress()
+            return .message(slowMotion ? "The 3D reference will play at half speed." : "The 3D reference will play at normal speed.")
+        case .pause:
+            return .message("Take your time. The guide remains on this action.")
         case .stopListening:
             return .message("Voice control is off.")
         }

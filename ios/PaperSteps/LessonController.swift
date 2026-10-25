@@ -19,6 +19,21 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var isAR = false
     @Published private(set) var isPaperGuide = false
     @Published private(set) var paperGuide = PaperGuideSession()
+    @Published private(set) var isDartPractice = false
+    @Published var dartPractice: DartPracticeSession
+    @Published var practiceReferenceActive = false
+    @Published var practiceCheckBusy = false
+    @Published var practiceMarkerVisible = false
+    @Published var practiceCameraMessage = "Place the printed practice sheet on a plain dark mat."
+    let practiceProgressStore: PracticeProgressStore
+    let printedPaperTracker = PrintedPaperTracker()
+    var practiceCheckRequest: DartPracticeCheckRequest?
+    var practiceRequestRevision = 0
+    var lastPracticeObservation: TimeInterval?
+    var practiceFixtureVisible = true
+    var practiceViewportSize: CGSize = .zero
+    var practiceViewOrientation: UIInterfaceOrientation = .unknown
+    var practiceTrackingLost = false
     private let paperVision = PaperVisionTracker()
     private var paperGuideGeneration = 0
     private var paperViewportSize: CGSize = .zero
@@ -34,7 +49,13 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         return false
         #endif
     }
-    var supportsCurrentPaperGuideStep: Bool { lesson == .dart && stepIndex <= 1 && !completed }
+    var supportsCurrentPaperGuideStep: Bool {
+        if isDartPractice {
+            return !dartPractice.completed && DartPracticeCourse.supportsPlanarCue(beforeState: dartPractice.currentAction - 1)
+        }
+        return lesson == .dart && stepIndex <= 1 && !completed
+    }
+    var paperRegistrationRevision: Int { paperGuideGeneration }
     var paperGuideMessage: String {
         if let cameraError { return cameraError }
         if !supportsCurrentPaperGuideStep { return "This paper guide starts with the center crease on a flat A4 sheet. Use 3D for the other folds." }
@@ -95,8 +116,11 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private var lastViewportSize: CGSize = .zero
     private var savedIdleTimer = false
 
-    init(progressStore: LearningProgressStore? = nil) {
+    init(progressStore: LearningProgressStore? = nil, practiceStore: PracticeProgressStore? = nil) {
         self.progressStore = progressStore ?? Self.makeProgressStore()
+        let practiceStore = practiceStore ?? PracticeProgressStore.appDefault()
+        self.practiceProgressStore = practiceStore
+        self.dartPractice = practiceStore.load() ?? DartPracticeSession()
         super.init()
         lesson = self.progressStore.latestLesson ?? .dart
     }
@@ -288,6 +312,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         if isAR { leaveAR() }
         isPlaying = false; started = false; completed = false
         lesson = selected; stepIndex = 0; progress = 1
+        practiceReferenceActive = false
         hintsVisible = true; zoomMultiplier = 1; yaw = 0.32; pitch = 0.94; followsAnglePreset = true
         applyPose(); recordDiagnostic(force: true)
     }
@@ -358,7 +383,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     fileprivate func advanceFrame(_ link: CADisplayLink) {
         if isPaperGuide, link.timestamp - lastPaperExpiry >= 0.1 {
             lastPaperExpiry = link.timestamp
-            if isPaperGuideFixture {
+            if isDartPractice {
+                expireDartPracticeCapture(at: CACurrentMediaTime())
+                if isPaperGuideFixture { updateDartPracticeFixture() }
+            } else if isPaperGuideFixture {
                 updatePaperGuideFixture()
             } else if paperGuide.quadrilateral != nil {
                 paperGuide.expire(at: CACurrentMediaTime())
@@ -464,6 +492,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     func enterPaperGuide() {
         guard lesson == .dart, hasLessonAccess else { return }
         if isAR { leaveAR() }
+        practiceReferenceActive = false
         isPaperGuide = true
         enterAR()
         restartPaperGuideTracking()
@@ -476,6 +505,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         // Registration revisions must not cancel the camera permission Task.
         paperGuideGeneration += 1
         paperVision.reset(generation: paperGuideGeneration)
+        resetDartPracticeCapture(generation: paperGuideGeneration)
         paperGuide.start(generation: paperGuideGeneration)
         paperGuide.setSupported(supportsCurrentPaperGuideStep)
         fixtureSheetVisible = true
@@ -487,6 +517,28 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             needsRescan = false
             requestCameraStart(generation: sessionGeneration)
         }
+    }
+
+    /// Printed IDs establish semantic corner identity; do not reorder them to
+    /// match the previous frame as blank-rectangle tracking does.
+    func receivePrintedPracticePose(_ quad: PaperQuadrilateral?, timestamp: TimeInterval) {
+        guard isDartPractice else { return }
+        paperGuide.start(generation: paperGuideGeneration)
+        paperGuide.setSupported(supportsCurrentPaperGuideStep)
+        guard supportsCurrentPaperGuideStep else { return }
+        paperGuide.receive(quad: quad, timestamp: timestamp, generation: paperGuideGeneration, now: CACurrentMediaTime())
+        if quad != nil { paperGuide.confirmDirection() }
+    }
+
+    func enterDartPractice() {
+        guard lesson == .dart, hasLessonAccess else { return }
+        if isAR { leaveAR() }
+        practiceReferenceActive = false
+        isDartPractice = true
+        isPaperGuide = true
+        enterAR()
+        restartPaperGuideTracking()
+        if isPaperGuideFixture { updateDartPracticeFixture() }
     }
 
     func confirmPaperGuideDirection() { paperGuide.confirmDirection() }
@@ -528,6 +580,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     private func assessPaperGuide(_ frame: ARFrame) {
+        if isDartPractice { assessDartPractice(frame); return }
         guard supportsCurrentPaperGuideStep else { paperGuide.setSupported(false); return }
         guard let view = arView, view.bounds.width > 1, view.bounds.height > 1 else { return }
         let orientation = view.window?.windowScene?.interfaceOrientation ?? .portrait
@@ -715,6 +768,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         paperGuide.invalidate()
         isPaperGuide = false
         paperVision.reset(generation: paperGuideGeneration + 1)
+        stopDartPracticeCapture()
+        isDartPractice = false
         saveLearningProgress()
         sessionGeneration += 1
         positionLocked = true
@@ -726,6 +781,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         cameraStartRevision = nil
         paperGuide.invalidate()
         paperVision.reset(generation: paperGuideGeneration + 1)
+        stopDartPracticeCapture()
         pauseAndSave()
         if isAR {
             depthOcclusion.reset()
@@ -738,6 +794,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         cameraStartRevision = nil
         paperGuide.invalidate()
         paperVision.reset(generation: paperGuideGeneration + 1)
+        stopDartPracticeCapture()
         pauseAndSave()
         depthOcclusion.reset()
         displayLink?.invalidate(); displayLink = nil
@@ -806,6 +863,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         cameraStartRevision = nil
         paperGuide.invalidate()
         paperVision.reset(generation: paperGuideGeneration + 1)
+        stopDartPracticeCapture()
         cameraError = "AR could not continue: \(message)"
         needsRescan = true
     }

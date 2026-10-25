@@ -2,9 +2,10 @@
 
 **Draft, 25 October 2026 — awaiting real-paper review.** This document maps the
 existing authored course to proposed observations, checkpoints and recovery.
-It is not a record of successful physical folding, camera acceptance, approved
-teaching content or implemented computer-vision checking. No new capture or
-learner results were collected for this document.
+It is not a record of successful physical folding, camera acceptance or approved
+teaching content. Several proposed criteria below exceed the implemented
+visible-outline check. No real capture or learner results were collected for
+this document.
 
 The product goal remains one complete course, including real-object guidance
 and selected fixed-view checks. A successful first-fold overlay is a technical
@@ -27,13 +28,21 @@ is 0.210 by 0.297 metres. Those model dimensions do not prove that a camera
 rectangle is A4, paper or the learner's intended object. Image aspect ratio alone
 also cannot establish physical dimensions under perspective.
 
-The current `supportsCurrentPaperGuideStep` in
+The natural-boundary mode in
 [LessonController.swift](../ios/PaperSteps/LessonController.swift) permits the
 first-flat-sheet demonstration at source steps 0/1. This gate is an instructional
 entry point: it does **not** mean the folded result of action 1 is registered or
 recognized. The current rectangular detector, direction confirmation and
 registration are not a course-state recognizer. All additional checks and folded
-state registrations described below are proposals.
+state criteria described below remain physical-review proposals.
+
+Implementation update: complete Dart practice now has a separate ten-action
+session and a QR-marked-paper Plan B. It supports planar cues before actions 1
+and 3-7 and experimental visible-outline checks after actions 2-6. The detailed
+criteria below remain the physical-review brief, not an acceptance record. In
+particular, the implemented checker does not inspect visible internal fold edges,
+center creases, hidden layers or arbitrary deformation. See DART_PRACTICE_SHEET.md
+and the full-course validation record for code/test scope.
 
 ## Coverage of all eleven states
 

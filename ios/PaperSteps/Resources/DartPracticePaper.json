@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sheetSizeMM": { "width": 210, "height": 297 },
+  "codeSideMM": 14,
+  "quietZoneMM": 3,
+  "markers": [
+    { "payload": "PTC1A", "center": { "x": 0.16, "y": 0.72 } },
+    { "payload": "PTC1B", "center": { "x": 0.84, "y": 0.72 } },
+    { "payload": "PTC1C", "center": { "x": 0.84, "y": 0.94 } },
+    { "payload": "PTC1D", "center": { "x": 0.16, "y": 0.94 } }
+  ]
+}

@@ -39,4 +39,5 @@ permission behavior, processing latency versus the 350 ms lifetime, paper
 movement/deformation, real occlusion and independent alignment error remain
 device gates. The source's conservative rectangle/hand thresholds are not
 measured guarantees. Later-course CV checks and learner outcomes have not been
-implemented or evaluated.
+implemented or evaluated at this milestone. Later complete-course prototype
+work is recorded separately in VALIDATION_FULL_COURSE.md.

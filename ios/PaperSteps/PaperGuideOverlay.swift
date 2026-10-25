@@ -77,7 +77,7 @@ struct PaperGuideCard: View {
                     HStack(spacing: 10) {
                         if !controller.paperGuide.directionConfirmed {
                             Button("Direction looks right") { controller.confirmPaperGuideDirection() }
-                                .buttonStyle(.borderedProminent).tint(.black)
+                                .buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)
                                 .disabled(controller.paperGuide.quadrilateral == nil)
                                 .accessibilityIdentifier("confirmPaperDirection")
                         }
@@ -93,7 +93,7 @@ struct PaperGuideCard: View {
                         .accessibilityIdentifier("confirmFirstPaperFold")
                 } else {
                     Button("Start with a new flat sheet") { controller.startPaperGuideWithNewSheet() }
-                        .buttonStyle(.borderedProminent).tint(.black)
+                        .buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)
                         .accessibilityIdentifier("restartPaperGuide")
                 }
                 HStack {
