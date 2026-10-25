@@ -24,6 +24,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var practiceReferenceActive = false
     @Published var practiceCheckBusy = false
     @Published var practiceMarkerVisible = false
+    @Published var practiceCheckSnapshot: DartCheckSnapshot?
+    @Published var isReviewingPracticeComparison = false
     @Published var practiceCameraMessage = "Place the printed practice sheet on a plain dark mat."
     let practiceProgressStore: PracticeProgressStore
     let printedPaperTracker = PrintedPaperTracker()
@@ -546,6 +548,39 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         enterAR()
         restartPaperGuideTracking()
         if isPaperGuideFixture { updateDartPracticeFixture() }
+    }
+
+    /// The review uses one frozen image. Suspend paper analysis while its modal
+    /// is visible so modal layout changes cannot replace or invalidate it.
+    @discardableResult
+    func beginPracticeComparisonReview() -> Bool {
+        guard isDartPractice, !dartPractice.completed, !practiceCheckBusy,
+              let snapshot = practiceCheckSnapshot, snapshot.action == dartPractice.currentAction,
+              dartPractice.lastCheck?.timestamp == snapshot.capturedUptime,
+              !isReviewingPracticeComparison else { return false }
+        pauseAndSave()
+        isReviewingPracticeComparison = true
+        paperGuide.invalidate()
+        practiceMarkerVisible = false
+        lastPracticeObservation = nil
+        printedPaperTracker.reset(generation: paperGuideGeneration + 1)
+        resetValidationCapture(generation: paperGuideGeneration + 1)
+        return true
+    }
+
+    func endPracticeComparisonReview() {
+        guard isReviewingPracticeComparison else { return }
+        isReviewingPracticeComparison = false
+        // Background, failure and exit already invalidate this review through
+        // the common reset. Dismissing it must not restart a paused camera.
+        guard isDartPractice, !needsRescan, cameraError == nil else { return }
+        guard UIApplication.shared.applicationState == .active else {
+            practiceCheckSnapshot = nil
+            dartPractice.clearLiveCheck()
+            needsRescan = true
+            return
+        }
+        restartPaperGuideTracking()
     }
 
     func confirmPaperGuideDirection() { paperGuide.confirmDirection() }

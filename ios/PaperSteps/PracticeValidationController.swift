@@ -56,7 +56,7 @@ extension LessonController {
     }
 
     var canSaveValidationSample: Bool {
-        validationAllowsPhysicalCamera && Self.supportsAR && isDartPractice &&
+        validationAllowsPhysicalCamera && Self.supportsAR && isDartPractice && !isReviewingPracticeComparison &&
         !dartPractice.completed && !needsRescan && !practiceTrackingLost && cameraError == nil &&
         !validationBusy && validationIdentity.isValid
     }

@@ -1,9 +1,37 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Status: physical gate blocked by unavailable iOS devices. The ten-action practice
-prototype and local validation tools are implemented; real-paper review, device
-acceptance, independent samples and beginner outcomes remain unproved.
+Current work: Build 4 local development and software checks completed. On
+25 October 2026 the user chose to continue local development and test on a
+physical device later. The full MVP remains incomplete: real-paper review,
+device acceptance, independent samples and beginner outcomes remain unproved.
+
+## Build 4: frozen visual comparison and action-specific replay
+
+- Added **See this comparison** after an accepted check. The temporary grayscale
+  image, paper pose, display transform and result belong to the same frame.
+  Green marks the reference silhouette; soft red areas suggest where to compare.
+  Sample points are not presented as counts of separate folding mistakes.
+- Added the current action's draft manual comparison, common-mistake notes and
+  same-action 3D replay. Action 2 explicitly cannot verify the center crease;
+  no comparison or replay automatically confirms an action.
+- Paused paper analysis while the frozen comparison is open. Returning to the
+  camera clears it and restarts registration. New checks, action changes, rescan,
+  tracking loss, camera failure, backgrounding and exit clear the transient image.
+  Normal practice saves no photo; opt-in Debug validation capture stays separate.
+- Replaced unconditional Simulator matches with generated before-action pixels
+  processed by the real checker. Visible labels identify every sample as synthetic.
+  This exercises adjustment and unknown outcomes without manufacturing accuracy.
+- 195 native logic/synthetic tests and 24 Python evaluator tests passed. The
+  new snapshot path includes pixel-format/range and geometric-direction checks.
+- Five phone UI cases and one tablet landscape case passed. A final phone rerun
+  passed two overlapping cases after visual polish, including an asymmetric
+  action-4 image; these are software checks, not separate users or physical tests.
+- Generic iOS Debug and Release Build 4 compiled without signing. Final phone
+  and tablet captures were visually reviewed. No installation was performed.
+
+Evidence: VALIDATION_VISUAL_FEEDBACK.md and
+`output/visual-feedback/validation-receipt.json`.
 
 ## Build 3: check reliability and real-validation preparation
 
@@ -94,8 +122,9 @@ See VALIDATION_FIRST_FOLD.md and output/first-fold/validation-receipt.json.
 - [ ] Test paper movement, occlusion, ambiguous backgrounds and folded-sheet rejection limits.
 - [ ] Record independent point/line errors and reacquisition, without labeling candidate confidence as accuracy.
 
-The device inventory at the local check reports no available iOS connection.
-No device installation, camera measurement or real-fold acceptance has occurred.
+Earlier device inventories reported no available iOS connection. The user has
+since deferred physical testing; this Build 4 iteration did not repeat device
+queries or perform installation, camera measurement or real-fold acceptance.
 
 ## Subsequent goal work
 

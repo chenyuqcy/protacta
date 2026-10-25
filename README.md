@@ -4,7 +4,7 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current prototype identity: **Protacta 0.1.0 (3)**,
+Current prototype identity: **Protacta 0.1.0 (4)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
@@ -31,6 +31,15 @@ has the same silhouette as a new sheet and cannot establish a center crease.
 Hidden layers, crease pressure, arbitrary objects and nonplanar wings are not
 evaluated. Progress saves bounded text summaries, not photos, live pose or camera
 coordinates. Both teaching content and thresholds await physical-paper review.
+
+Build 4 adds **See this comparison** after an accepted camera check. A temporary
+grayscale image, reference outline and softly highlighted comparison areas come
+from the same checked frame. The learner can inspect the frozen view, read the
+action's draft comparison notes or replay that same action in 3D. It does not
+advance the course or identify which hidden fold caused a difference. Returning
+to the camera clears the image and starts fresh registration; action changes,
+rescan, tracking loss, camera failure, backgrounding and exit also clear it.
+Normal use keeps only the bounded image in memory and never saves a photo.
 
 ## First-fold natural-boundary prototype
 
@@ -65,6 +74,8 @@ It also adds opt-in Debug local camera sampling and a separate offline evaluator
 Normal practice and Release builds do not expose photo recording. See
 `docs/LOCAL_VALIDATION_CAPTURE.md` and `docs/VALIDATION_DATA_FORMAT.md` before
 collecting real samples; synthetic fixtures are never physical acceptance.
+Build 4's frozen comparison, lifecycle checks, final visual review and unsigned
+Debug/Release builds are recorded in `docs/VALIDATION_VISUAL_FEEDBACK.md`.
 
 Source folders retain the historical PaperSteps names. Regenerate after adding
 Swift files or resources:
@@ -107,8 +118,10 @@ screenshots do not establish physical acceptance.
 
 ## Next stages
 
-The active goal is the single complete-course MVP in
+The engineering objective is the single complete-course MVP in
 `docs/BUILD_PLAN_2026-10-25.md`. Complete-course code and synthetic checks are
 prototype evidence. Real-paper registration, actual tutorial review, independent
 correct/incorrect/unclear samples and the beginner pilot remain acceptance gates.
+The user chose to continue local development and defer physical testing on
+25 October 2026; Build 4 follows that choice.
 Progress and evidence are maintained in `docs/PROGRESS.md`.

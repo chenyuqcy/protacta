@@ -75,9 +75,11 @@ struct DartPracticeOverlay: View {
 
 struct DartPracticeCard<VoiceControls: View>: View {
     @ObservedObject var controller: LessonController
+    let onOpenComparison: () -> Void
     @ViewBuilder var voiceControls: () -> VoiceControls
     @State private var showSetup = false
     @State private var showHelp = false
+    @State private var showComparison = false
 
     var body: some View {
         ScrollView {
@@ -116,6 +118,17 @@ struct DartPracticeCard<VoiceControls: View>: View {
                             .background(.white, in: RoundedRectangle(cornerRadius: 10))
                             .accessibilityElement(children: .combine)
                             .accessibilityIdentifier("practiceCheckResult")
+                        if controller.practiceCheckSnapshot != nil {
+                            Button {
+                                guard controller.beginPracticeComparisonReview() else { return }
+                                onOpenComparison()
+                                showComparison = true
+                            } label: {
+                                Label("See this comparison", systemImage: "photo")
+                                    .frame(maxWidth: .infinity, minHeight: 40)
+                            }.buttonStyle(.bordered)
+                                .accessibilityIdentifier("reviewPracticeComparison")
+                        }
                     }
                     Button { controller.checkPracticeAction() } label: {
                         Label(controller.practiceCheckBusy ? "Checking…" : "Check my step", systemImage: "camera.viewfinder")
@@ -161,6 +174,16 @@ struct DartPracticeCard<VoiceControls: View>: View {
                 }
             }.padding(.horizontal, 22).padding(.vertical, 16)
         }.frame(maxHeight: 370).background(Color(red: 0.96, green: 0.96, blue: 0.93))
+            .onChange(of: controller.practiceCheckSnapshot?.id) { _, id in
+                if id == nil { showComparison = false }
+            }
+            .sheet(isPresented: $showComparison, onDismiss: { controller.endPracticeComparisonReview() }) {
+                if let snapshot = controller.practiceCheckSnapshot {
+                    DartCheckSnapshotView(snapshot: snapshot, action: DartPracticeCourse.action(snapshot.action)) {
+                        controller.showPracticeActionIn3D()
+                    }
+                }
+            }
             .sheet(isPresented: $showSetup) { DartPracticeSetupView(controller: controller) }
             .sheet(isPresented: $showHelp) {
                 NavigationStack {

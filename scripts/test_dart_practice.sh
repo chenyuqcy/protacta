@@ -22,17 +22,18 @@ set -- -project ios/Protacta.xcodeproj -scheme Protacta-StoreKit \
 
 case "$task_mode" in
   logic)
-    for task_suite in DartPracticeCourseTests DartPracticeSessionTests DartPracticeControllerTests DartOutlineCheckTests PrintedPaperTrackerTests PracticeValidationCaptureTests PracticeValidationControllerTests PaperRegistrationTests PaperGuideSessionTests PaperGuideControllerTests PaperVisionTrackerTests PaperGeometryTests LearningControllerTests LessonVoiceActionsTests VoiceCommandTests VoiceRecoveryPolicyTests VoiceGuideStateTests; do
+    for task_suite in DartPracticeCourseTests DartPracticeSessionTests DartPracticeControllerTests DartOutlineCheckTests PrintedPaperTrackerTests PracticeValidationCaptureTests PracticeValidationControllerTests DartCheckSnapshotTests DartPracticeSyntheticComparisonTests DartCheckFeedbackControllerTests PaperRegistrationTests PaperGuideSessionTests PaperGuideControllerTests PaperVisionTrackerTests PaperGeometryTests LearningControllerTests LessonVoiceActionsTests VoiceCommandTests VoiceRecoveryPolicyTests VoiceGuideStateTests; do
       set -- "$@" "-only-testing:ProtactaTests/$task_suite"
     done
     ;;
   phone)
-    set -- "$@" -only-testing:ProtactaUITests/DartPracticeUITests -only-testing:ProtactaUITests/PaperGuideUITests -only-testing:ProtactaUITests/PracticeValidationUITests \
+    set -- "$@" -only-testing:ProtactaUITests/DartPracticeUITests -only-testing:ProtactaUITests/PaperGuideUITests -only-testing:ProtactaUITests/PracticeValidationUITests -only-testing:ProtactaUITests/DartCheckComparisonUITests \
+      -skip-testing:ProtactaUITests/DartCheckComparisonUITests/testTabletLandscapeReviewKeepsItsFrozenGeometryAndControlsReachable \
       -skip-testing:ProtactaUITests/DartPracticeUITests/testTabletLandscapeCanReachSetupCheckAndConfirmation \
       -skip-testing:ProtactaUITests/PaperGuideUITests/testGuideControlsRemainReachableOnTabletInLandscape
     ;;
   tablet)
-    set -- "$@" -only-testing:ProtactaUITests/DartPracticeUITests -only-testing:ProtactaUITests/PaperGuideUITests -only-testing:ProtactaUITests/PracticeValidationUITests
+    set -- "$@" -only-testing:ProtactaUITests/DartPracticeUITests -only-testing:ProtactaUITests/PaperGuideUITests -only-testing:ProtactaUITests/PracticeValidationUITests -only-testing:ProtactaUITests/DartCheckComparisonUITests
     ;;
   *) printf '%s\n' 'Mode must be logic, phone or tablet.' >&2; exit 2 ;;
 esac

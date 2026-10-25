@@ -36,6 +36,9 @@ extension LessonController {
     }
 
     func resetDartPracticeCapture(generation: Int) {
+        isReviewingPracticeComparison = false
+        practiceCheckSnapshot = nil
+        dartPractice.clearLiveCheck()
         practiceRequestRevision += 1
         practiceCheckRequest = nil
         practiceCheckBusy = false
@@ -97,9 +100,11 @@ extension LessonController {
     }
 
     func checkPracticeAction() {
-        guard isDartPractice, !dartPractice.completed, !practiceCheckBusy else { return }
+        guard isDartPractice, !dartPractice.completed, !practiceCheckBusy, !isReviewingPracticeComparison else { return }
         let action = dartPractice.currentAction
         let now = CACurrentMediaTime()
+        practiceCheckSnapshot = nil
+        dartPractice.clearLiveCheck(at: now)
         if !DartPracticeCourse.supportsOutlineCheck(state: action) {
             recordPracticeCannotJudge("This action lifts or covers the marked paper. Compare the layers and edges with the 3D view; the camera cannot judge this step.", at: now)
             return
@@ -109,11 +114,12 @@ extension LessonController {
             return
         }
         if isPaperGuideFixture {
-            let result = DartOutlineCheckResult(checkpointID: "dart-outline-\(action)", referenceState: action,
-                                               outcome: practiceFixtureVisible ? .visibleMatch : .cannotJudge,
-                                               message: practiceFixtureVisible ? "Synthetic UI sample: visible outline match only. Compare the crease and layers yourself." : "Synthetic UI sample: sheet unavailable.",
-                                               mismatchedPoints: [], timestamp: now)
-            _ = dartPractice.recordCheck(result, at: now)
+            #if DEBUG && targetEnvironment(simulator)
+            let example = DartPracticeSyntheticComparison.make(action: action, sheetVisible: practiceFixtureVisible,
+                                                               viewportSize: arView?.bounds.size ?? CGSize(width: 390, height: 500),
+                                                               timestamp: now)
+            if dartPractice.recordCheck(example.result) { practiceCheckSnapshot = example.snapshot }
+            #endif
             return
         }
         practiceRequestRevision += 1
@@ -130,6 +136,7 @@ extension LessonController {
     }
 
     func expireDartPracticeCapture(at now: TimeInterval) {
+        guard !isReviewingPracticeComparison else { return }
         expireValidationCapture(at: now)
         if let observedAt = lastPracticeObservation,
            !now.isFinite || now < observedAt || now - observedAt > PaperGuideSession.maximumObservationAge {
@@ -144,7 +151,7 @@ extension LessonController {
     }
 
     func assessDartPractice(_ frame: ARFrame) {
-        guard !dartPractice.completed, let view = arView, view.bounds.width > 1, view.bounds.height > 1 else { return }
+        guard !isReviewingPracticeComparison, !dartPractice.completed, let view = arView, view.bounds.width > 1, view.bounds.height > 1 else { return }
         let orientation = view.window?.windowScene?.interfaceOrientation ?? .portrait
         if practiceViewportSize != view.bounds.size || practiceViewOrientation != orientation { restartPaperGuideTracking() }
         guard case .normal = frame.camera.trackingState else {
@@ -178,7 +185,7 @@ extension LessonController {
                                                    state: action, timestamp: result.timestamp)
             }
             Task { @MainActor [weak self] in
-                guard let self, self.isDartPractice, !self.needsRescan, !self.practiceTrackingLost,
+                guard let self, self.isDartPractice, !self.isReviewingPracticeComparison, !self.needsRescan, !self.practiceTrackingLost,
                       generation == self.paperRegistrationRevision, result.generation == generation,
                       cameraGeneration == self.cameraSessionRevision,
                       self.arView?.bounds.size == viewportSize,
@@ -191,7 +198,13 @@ extension LessonController {
                 self.practiceCameraMessage = result.processingFailure == nil
                     ? "Show all four codes on the printed sheet, on a plain dark mat. Keep the whole sheet in view and hands clear."
                     : "Visual analysis could not read this frame. Try the camera again or follow this action in 3D."
-                self.receiveDartPracticeFrame(timestamp: result.timestamp, displayedPose: displayed, request: request, check: check)
+                let accepted = self.receiveDartPracticeFrame(timestamp: result.timestamp, displayedPose: displayed, request: request, check: check)
+                if accepted, let image = result.luminance, let check {
+                    self.practiceCheckSnapshot = DartCheckSnapshot(image: image, result: check,
+                                                                  rawSheetQuadrilateral: displayed == nil ? nil : result.pose?.quadrilateral,
+                                                                  displayTransform: transform, viewportSize: viewportSize,
+                                                                  isSynthetic: false)
+                }
             }
         }
         if admitted && validation != nil { validationFrameInFlight = true }
@@ -199,22 +212,25 @@ extension LessonController {
 
     /// Testable freshness/request boundary. Neither a visual match nor an
     /// unknown result changes the learner's current action.
+    @discardableResult
     func receiveDartPracticeFrame(timestamp: TimeInterval, displayedPose: PaperQuadrilateral?,
                                   request: DartPracticeCheckRequest?, check: DartOutlineCheckResult?,
-                                  now: TimeInterval = CACurrentMediaTime()) {
-        guard isDartPractice, !needsRescan, !practiceTrackingLost, timestamp.isFinite, now.isFinite,
+                                  now: TimeInterval = CACurrentMediaTime()) -> Bool {
+        guard isDartPractice, !isReviewingPracticeComparison, !needsRescan, !practiceTrackingLost, timestamp.isFinite, now.isFinite,
               timestamp <= now, now - timestamp <= PaperGuideSession.maximumObservationAge,
-              lastPracticeObservation.map({ timestamp > $0 }) ?? true else { return }
+              lastPracticeObservation.map({ timestamp > $0 }) ?? true else { return false }
         lastPracticeObservation = timestamp
         practiceMarkerVisible = displayedPose != nil
         receivePrintedPracticePose(displayedPose, timestamp: timestamp)
         guard let request, request == practiceCheckRequest,
               request.action == dartPractice.currentAction, let check,
-              check.timestamp == timestamp, timestamp >= request.requestedAt else { return }
+              check.timestamp == timestamp, timestamp >= request.requestedAt else { return false }
         if dartPractice.recordCheck(check, at: now) {
             practiceCheckRequest = nil; practiceCheckBusy = false
             _ = practiceProgressStore.save(dartPractice)
+            return true
         }
+        return false
     }
 
     func handleDartPracticeTrackingLoss() {
@@ -225,7 +241,7 @@ extension LessonController {
     }
 
     func updateDartPracticeFixture() {
-        guard isDartPractice, isPaperGuideFixture, !needsRescan, !dartPractice.completed else { return }
+        guard isDartPractice, !isReviewingPracticeComparison, isPaperGuideFixture, !needsRescan, !dartPractice.completed else { return }
         let now = CACurrentMediaTime()
         let quad = practiceFixtureVisible ? PaperQuadrilateral(topLeft: CGPoint(x: 0.22, y: 0.12), topRight: CGPoint(x: 0.78, y: 0.12), bottomRight: CGPoint(x: 0.78, y: 0.88), bottomLeft: CGPoint(x: 0.22, y: 0.88)) : nil
         practiceMarkerVisible = quad != nil

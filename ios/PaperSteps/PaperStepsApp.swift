@@ -53,7 +53,11 @@ struct PaperStepsView: View {
         VStack(spacing: 0) {
             header
             viewport
-            if controller.isDartPractice { DartPracticeCard(controller: controller) { voiceControlButton } }
+            if controller.isDartPractice {
+                DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() }) {
+                    voiceControlButton
+                }
+            }
             else if controller.isPaperGuide { PaperGuideCard(controller: controller) }
             else if !controller.started { introduction }
             else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
@@ -737,7 +741,7 @@ struct PaperStepsView: View {
                     Text("Your camera and surroundings").font(.headline)
                     Text(controller.validationEnabled
                          ? "Camera analysis stays on your device. In this explicitly enabled local test mode, Save local test sample stores one camera photo and analysis metadata in the app's Documents folder. A photo is saved only when you press that button; no image is uploaded. Normal practice does not save camera photos."
-                         : "Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Paper boundary and hand observations, camera images, depth maps and room geometry are processed on your device. We do not record camera images or send them to a server.")
+                         : "Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Images and geometry are processed on your device. Check my step can temporarily show that checked view for comparison; changing action, restarting the camera, leaving the guide or backgrounding clears it. Normal practice does not save camera photos to storage or send them to a server.")
                     Text("Optional voice control and reading aloud").font(.headline)
                     Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Protacta does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
                     Text("Purchases and local data").font(.headline)
