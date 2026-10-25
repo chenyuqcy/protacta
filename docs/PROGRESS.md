@@ -259,3 +259,10 @@ validation targets. A first-fold technical demo is not the complete MVP.
 - [x] Verified all five delivery encodes; synthetic paper and virtual AERIS are
   explicitly labeled. See `DEMO_VIDEO_2026-10-26.md`.
 - [ ] Physical A4 alignment, hiding and recovery remain a separate acceptance gate.
+
+## Narrated presentation edition — 2026-10-26
+
+- [x] Added natural-style English AI narration and synchronized burned subtitles
+  to the master and all four portrait clips, preserving the silent set and SRTs.
+- [x] Verified five complete audio/video decodes and sampled all 37 caption cues.
+  See `DEMO_NARRATION_2026-10-26.md` for provenance, artifacts and validation scope.

@@ -55,3 +55,45 @@ camera alignment, fold accuracy, speech recognition or learning outcomes.
 
 See [the dated capture receipt](../../docs/DEMO_VIDEO_2026-10-26.md) for the actual
 delivered files, validation and limitations.
+
+## Narrated edition
+
+The local speech pipeline uses the existing Kokoro JS 1.2.1 full-precision model
+cache and `af_heart` model voice. It does not clone a person's voice or require an
+API key. Defaults point to the existing workspace runtime; override
+`PROTACTA_TTS_MODULES` and `PROTACTA_TTS_CACHE` to select another installed copy.
+Model download is disabled. A narration plan contains `videos` with `id`,
+`source`, `duration` and timed `segments` (`id`, `start`, `end`, `text`).
+
+```sh
+node tools/demo_video/generate_narration.mjs PLAN.json output/new-voice/raw
+python3 tools/demo_video/prepare_narration.py \
+  --manifest output/new-voice/raw/voice-manifest.json \
+  --output-dir output/new-voice/audio
+python3 tools/demo_video/align_narration_captions.py \
+  --manifest output/new-voice/raw/voice-manifest.json \
+  --audio-dir output/new-voice/audio \
+  --output-dir output/new-voice/captions \
+  --model /absolute/path/to/ggml-base.bin \
+  --video-output-dir output/new-voice/exports
+python3 tools/demo_video/add_narration.py output/new-voice/captions/compositor-plan.json
+```
+
+Speech retains its generated speed; shorten an overlong script instead of
+accelerating or cutting speech. Preparation validates exact PCM insertion times
+and applies full-track two-pass loudness normalization. Local `whisper-cli`
+recognition supplies approximate token timing and an independent text check;
+authored spelling is retained. Review proper-name differences and sampled frames.
+Recognition is not a substitute for a human listening audit.
+
+The compositor insets the complete original video and adds a separate caption
+footer. SRTs remain available for editing. An optional `embedClosedCaptions: true`
+adds a selectable `mov_text` track, but some MP4 players enable that track despite
+the requested disposition and duplicate the burned text. The delivered edition
+uses burned captions only. The tool encodes AAC 48 kHz stereo, verifies frame/stream counts, and
+fully decodes audio and video. Prior videos and recording sources remain intact.
+
+The installed ONNX runtime can fault during process shutdown after writing all
+WAVs. Check persisted phrase counts and independently decode source WAVs before
+assembly; a completed log message alone is insufficient. See
+`docs/DEMO_NARRATION_2026-10-26.md` for this run's evidence.
