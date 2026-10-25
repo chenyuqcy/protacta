@@ -9,11 +9,12 @@ Current local prototype identity: **Protacta 0.1.0 (7)**,
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
 
-Build 7 repairs the Dart completion voice boundary; the last confirmed phone
-installation is Build 5. It uses the **PTC2 revision-2** practice sheet introduced
+Build 7 repairs the Dart completion voice boundary and is now independently
+verified as installed on the iPhone 17 Pro Max. It uses the **PTC2 revision-2** practice sheet introduced
 in Build 6 to fix markers covered by later folds. Update the app and printed
 sheet together before physical testing. See `docs/DART_VOICE_COMPLETION.md` for
-the current repair, `docs/VALIDATION_PHYSICAL_READINESS.md` for the paper checks and
+the repair, `docs/DEVICE_UPDATE_BUILD_7.md` for phone installation and testing,
+`docs/VALIDATION_PHYSICAL_READINESS.md` for the paper checks and
 `docs/physical-review/README.md` for the unexecuted review packet.
 
 ## Unified tutorial app

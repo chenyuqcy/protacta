@@ -12,7 +12,7 @@ correction help, real-device acceptance and the beginner trial.
 | Fixed CV checks distinguish match, adjustment, unknown | Restricted outline checker, negative/shadow/projection tests and isolated comparison history | Prototype implemented; independent real examples and calibration missing |
 | Reviewed correction help | Authored per-action draft, manual comparison and replay | Real-paper review not performed; cannot claim approved correction |
 | Appropriate automated tests | Build 7: 241 native tests, four phone UI cases, signed Debug/unsigned Release passed; Build 6's 28 Python/17 annotation-core checks remain separate evidence | Software gates do not approve microphone, camera or learning behavior |
-| Real iPhone/iPad acceptance | Build 5 last installed/launched on iPhone 17 Pro Max; Build 7 is local only; camera/course acceptance not recorded; iPad not installed | Earlier installation gate achieved; current candidate and physical features unverified |
+| Real iPhone/iPad acceptance | Build 7 USB update, version query, activated launch and later process query passed on iPhone 17 Pro Max; user confirmed complete Dart entry; iPad not installed | Current iPhone installation/basic-entry gate achieved; paper, CV, voice and full-course acceptance outstanding |
 | About ten beginners and matched tutorial comparison | Protocol and blank CSVs only; no participants, task records or observed outcomes | Not achieved |
 | Honest evidence boundaries | Synthetic source guards, independent annotations, no automated MVP-pass output | Implemented; does not replace missing physical evidence |
 
@@ -66,6 +66,13 @@ read-only camera-pipeline audit found no further reproducible local defect;
 actual correspondence, uncertainty, reviewed help and learning outcomes still
 require physical observations. See DART_VOICE_COMPLETION.md for the exact local
 scope. No real microphone/camera result or reviewed correction was inferred.
+
+The user then resumed and requested the latest phone update. Build 7 installation,
+normal activated launch and independent process verification succeeded over USB;
+the user confirmed basic complete-Dart entry on the real device. The user has an
+ordinary A4 sheet and is being guided through a natural first-fold test. No test
+outcome is inferred from material availability or successful navigation. See
+DEVICE_UPDATE_BUILD_7.md for actual installation receipts and remaining checks.
 
 When the user is ready, connect and unlock an iPhone and enable development access.
 Install the matching current candidate, verify its real camera path, print the

@@ -3,12 +3,26 @@
 Use the matching candidate manifest from
 `output/dart-voice-completion/candidate.json`; it identifies the app build, source
 commit, native-observed Dart content revision, geometry hashes and print layout.
-Build 7 uses **PTC2 revision 2** from Build 6. The phone last received Build 5, which uses PTC1;
-update the phone and the practice sheet together when physical testing resumes.
+Build 7 uses **PTC2 revision 2** from Build 6. Its phone installation is now
+independently verified; use the PTC2 sheet with it, since old PTC1 sheets cannot
+establish alignment. See DEVICE_UPDATE_BUILD_7.md for installation evidence.
 Do not collect a candidate result from the wrong app/paper pair.
 Before each actual review run, copy the manifest into that run's dated evidence
 folder and record the archived copy's path in the CSV. Keep it with the completed
 notes; do not rely on the shared candidate path remaining unchanged in later builds.
+
+## Build 7 voice smoke check before the beginner pilot
+
+Use a separate reviewer attempt; keep voice off in both beginner comparison
+conditions below. At action 10, choose **Watch in 3D**, return to complete Dart
+practice, then explicitly enable **Hands-free** again before final confirmation.
+Switching modes already stops voice, so omitting that last enable would not test
+the completion boundary. Confirm **I have finished · Save my progress**: listening
+and narration should stop. Say **Previous step** / **Restart lesson** and verify
+that completed progress stays unchanged. Use the visible **Start again with a
+new practice sheet** to reopen action 1; voice should remain off until explicitly
+enabled. Also open Setup/Help while listening and verify it stops. Record actual
+permission, microphone and progress behavior; Simulator tests do not establish it.
 
 ## First: one real complete-course review
 

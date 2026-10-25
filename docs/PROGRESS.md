@@ -1,12 +1,29 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 7 repairs Dart's completion voice boundary after Build 6's
-print-layout and hands-on lifecycle repairs. It is a local candidate, not
-installed. Version 0.1.0 (5) remains the last confirmed phone installation,
-with the unified everyday courses and AERIS manual. The full MVP
+Current work: Protacta 0.1.0 (7) has replaced Build 5 on the iPhone 17 Pro Max.
+USB installation, an independent version query, activated launch and a later
+process query succeeded. The user confirmed entry to complete Dart practice.
+The full MVP
 remains incomplete: real-paper review, device feature acceptance, independent
 samples and beginner outcomes remain unproved.
+
+## Build 7: USB phone update and basic course entry
+
+- The user resumed engineering and requested installation. Wireless discovery
+  remained unavailable after unlock; USB enumeration and a connected developer
+  tunnel became available after the user connected the cable.
+- The frozen signed Debug artifact from runtime commit `739f2c0` was installed
+  without rebuilding. Separate before/after app queries verified 0.1.0 (5) → (7).
+- The first launch was refused because the phone had locked. After the user
+  unlocked again, normal foreground launch succeeded with no fixture or capture
+  arguments; a later process query independently found PID 5989.
+- User-reported on-device navigation passed: Paper & craft → Classic Dart →
+  Practice the complete Dart. This does not establish physical folding or CV.
+- The user has ordinary A4 paper and received the first-fold natural-guide
+  follow/move/loss/recovery instructions. Its outcome is pending, not inferred.
+
+See DEVICE_UPDATE_BUILD_7.md and `output/device-install/build7-20261025/`.
 
 ## Build 7: completed Dart practice stops voice
 
@@ -24,7 +41,8 @@ samples and beginner outcomes remain unproved.
 - 241 native tests and four focused phone Simulator UI cases passed with no
   failures/skips. Physical microphone/permission behavior remains untested.
 - Generic signed Debug and unsigned Release Build 7 passed in a separate output
-  folder. Debug's strict signature check passed; no installation was attempted.
+  folder. Debug's strict signature check passed; installation was not attempted
+  at that local stage. The subsequent USB update is recorded above.
 - The teaching content, PTC2 sheet and CV thresholds are unchanged. This is a
   local speech/state repair; no real microphone, paper or learner data was used.
 
