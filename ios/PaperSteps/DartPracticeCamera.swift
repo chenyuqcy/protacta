@@ -43,6 +43,7 @@ extension LessonController {
         lastPracticeObservation = nil
         practiceTrackingLost = false
         printedPaperTracker.reset(generation: generation)
+        resetValidationCapture(generation: generation)
         practiceViewportSize = arView?.bounds.size ?? .zero
         practiceViewOrientation = arView?.window?.windowScene?.interfaceOrientation ?? .portrait
         practiceCameraMessage = "Show all four codes on the printed sheet, on a plain dark mat. Keep the whole sheet in view and hands clear."
@@ -129,6 +130,7 @@ extension LessonController {
     }
 
     func expireDartPracticeCapture(at now: TimeInterval) {
+        expireValidationCapture(at: now)
         if let observedAt = lastPracticeObservation,
            !now.isFinite || now < observedAt || now - observedAt > PaperGuideSession.maximumObservationAge {
             practiceMarkerVisible = false
@@ -155,17 +157,25 @@ extension LessonController {
         let generation = paperRegistrationRevision
         let cameraGeneration = cameraSessionRevision
         let request = practiceCheckRequest
-        printedPaperTracker.submit(pixelBuffer: frame.capturedImage, timestamp: frame.timestamp, generation: generation) { [weak self] result in
+        let validation = validationFrameInFlight ? nil : validationRequest.flatMap {
+            frame.timestamp >= $0.requestedAt ? $0 : nil
+        }
+        // A full-resolution image is retained only after an explicit QA Save
+        // request. Normal practice keeps no extra camera-image reference.
+        let validationBuffer = validation == nil ? nil : frame.capturedImage
+        let admitted = printedPaperTracker.submit(pixelBuffer: frame.capturedImage, timestamp: frame.timestamp, generation: generation) { [weak self] result in
             let displayed = result.pose.flatMap {
                 DartPracticeCameraCoordinates.viewportQuadrilateral(rawTopLeft: $0.quadrilateral, displayTransform: transform)
             }
             // Work stays off the main actor. A result is only used if the same
             // request, action, camera and viewport are still current below.
-            let check: DartOutlineCheckResult? = request.flatMap { request in
-                guard result.timestamp >= request.requestedAt else { return nil }
+            let checkAction = request?.action ?? validation?.action
+            let requestedAt = request?.requestedAt ?? validation?.requestedAt
+            let check: DartOutlineCheckResult? = checkAction.flatMap { action in
+                guard let requestedAt, result.timestamp >= requestedAt else { return nil }
                 return DartOutlineChecker.evaluate(image: result.luminance ?? PaperLuminanceImage(width: 0, height: 0, pixels: []),
                                                    pose: displayed == nil ? nil : result.pose?.quadrilateral,
-                                                   state: request.action, timestamp: result.timestamp)
+                                                   state: action, timestamp: result.timestamp)
             }
             Task { @MainActor [weak self] in
                 guard let self, self.isDartPractice, !self.needsRescan, !self.practiceTrackingLost,
@@ -173,9 +183,18 @@ extension LessonController {
                       cameraGeneration == self.cameraSessionRevision,
                       self.arView?.bounds.size == viewportSize,
                       (self.arView?.window?.windowScene?.interfaceOrientation ?? .portrait) == orientation else { return }
+                if let validation, let validationBuffer, let check {
+                    self.finishValidationCapture(validation, frame: result, pixelBuffer: validationBuffer,
+                                                 result: check, viewportSize: viewportSize,
+                                                 orientation: orientation, transform: transform)
+                }
+                self.practiceCameraMessage = result.processingFailure == nil
+                    ? "Show all four codes on the printed sheet, on a plain dark mat. Keep the whole sheet in view and hands clear."
+                    : "Visual analysis could not read this frame. Try the camera again or follow this action in 3D."
                 self.receiveDartPracticeFrame(timestamp: result.timestamp, displayedPose: displayed, request: request, check: check)
             }
         }
+        if admitted && validation != nil { validationFrameInFlight = true }
     }
 
     /// Testable freshness/request boundary. Neither a visual match nor an

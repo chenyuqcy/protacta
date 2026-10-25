@@ -7,6 +7,10 @@ final class DartOutlineCheckTests: XCTestCase {
                                              topRight: CGPoint(x: 0.8, y: 0.15),
                                              bottomRight: CGPoint(x: 0.8, y: 0.85),
                                              bottomLeft: CGPoint(x: 0.2, y: 0.85))
+    private let projective = PaperQuadrilateral(topLeft: CGPoint(x: 0.18, y: 0.17),
+                                               topRight: CGPoint(x: 0.78, y: 0.24),
+                                               bottomRight: CGPoint(x: 0.85, y: 0.85),
+                                               bottomLeft: CGPoint(x: 0.12, y: 0.78))
 
     func testKnownFlatSilhouettesMatchWithoutClaimingHiddenCreases() throws {
         for state in [0, 2, 3, 4, 5, 6] {
@@ -31,13 +35,62 @@ final class DartOutlineCheckTests: XCTestCase {
         XCTAssertTrue(result.mismatchedPoints.allSatisfy { (0...1).contains($0.x) && (0...1).contains($0.y) })
     }
 
+    func testShadowedUnfoldedCornersCannotDisappearIntoAVisibleMatch() throws {
+        for pose in [straight, straight.rotated(by: 1), projective] {
+            for gray in [UInt8(50), 60, 140, 200, 205] {
+                // The actual sheet is still a whole A4 rectangle. Only the two
+                // regions that should have folded away are shadowed; the
+                // expected folded interior remains bright white throughout.
+                let image = try render(state: 0, pose: pose,
+                                       grayExteriorOfState: 4, exteriorGray: gray)
+                let result = DartOutlineChecker.evaluate(image: image, pose: pose, state: 4, timestamp: 3)
+                XCTAssertEqual(result.outcome, .cannotJudge, "Shadowed extra paper at gray \(gray) must not count as background: \(result.message)")
+                XCTAssertTrue(result.mismatchedPoints.isEmpty)
+            }
+        }
+    }
+
+    func testOneShadowedCornerIsUnknownWhileClearExtraWhitePaperNeedsAdjustment() throws {
+        for pose in [straight, straight.rotated(by: 1), projective] {
+            let partiallyShadowed = try render(state: 0, pose: pose,
+                                               grayExteriorOfState: 4, exteriorGray: 140, grayOnlyLeft: true)
+            let unknown = DartOutlineChecker.evaluate(image: partiallyShadowed, pose: pose, state: 4, timestamp: 3)
+            XCTAssertEqual(unknown.outcome, .cannotJudge)
+            // These binary raster edges interpolate to gray at subpixel
+            // samples. The full, clearly white corner remains a real mismatch;
+            // discounting only its narrow interpolation border must not hide it.
+            let clearlyUnfolded = try render(state: 0, pose: pose)
+            XCTAssertEqual(DartOutlineChecker.evaluate(image: clearlyUnfolded, pose: pose, state: 4, timestamp: 3).outcome,
+                           .needsAdjustment)
+            let correct = try render(state: 4, pose: pose)
+            XCTAssertEqual(DartOutlineChecker.evaluate(image: correct, pose: pose, state: 4, timestamp: 3).outcome,
+                           .visibleMatch)
+        }
+    }
+
+    func testLuminanceSamplingUsesRawImageEdgesAndPixelCenters() throws {
+        let image = PaperLuminanceImage(width: 4, height: 3,
+                                       pixels: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110])
+        // Independent expected values come directly from the row-major pixels,
+        // rather than using the renderer's projective mapping to define them.
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 0.375, y: 0.5))), 50, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 0.25, y: 0.5))), 45, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 0, y: 0.5))), 40, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 1, y: 0.5))), 70, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 0.625, y: 0))), 20, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(image.sample(at: CGPoint(x: 0.375, y: 1.0 / 3))), 30, accuracy: 1e-10)
+        XCTAssertNil(image.sample(at: CGPoint(x: -0.01, y: 0.5)))
+        XCTAssertNil(image.sample(at: CGPoint(x: .nan, y: 0.5)))
+        let oneColumn = PaperLuminanceImage(width: 1, height: 3, pixels: [20, 120, 220])
+        XCTAssertEqual(try XCTUnwrap(oneColumn.sample(at: CGPoint(x: 0.1, y: 0))), 20, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(oneColumn.sample(at: CGPoint(x: 0.9, y: 0.5))), 120, accuracy: 1e-10)
+        XCTAssertEqual(try XCTUnwrap(oneColumn.sample(at: CGPoint(x: 1, y: 1))), 220, accuracy: 1e-10)
+    }
+
     func testRotatedAndProjectiveIndependentAnalyticShapesMatch() throws {
         let poses = [
             straight.rotated(by: 1),
-            PaperQuadrilateral(topLeft: CGPoint(x: 0.18, y: 0.17),
-                               topRight: CGPoint(x: 0.78, y: 0.24),
-                               bottomRight: CGPoint(x: 0.85, y: 0.85),
-                               bottomLeft: CGPoint(x: 0.12, y: 0.78))
+            projective
         ]
         for pose in poses {
             for state in [0, 3, 4, 5, 6] {
@@ -149,7 +202,9 @@ final class DartOutlineCheckTests: XCTestCase {
 
     private func render(state: Int, pose: PaperQuadrilateral, paper: UInt8 = 255,
                         background: UInt8 = 0, printedCodes: Bool = false,
-                        obstruction: CGRect? = nil, obstructionValue: UInt8 = 0) throws -> PaperLuminanceImage {
+                        obstruction: CGRect? = nil, obstructionValue: UInt8 = 0,
+                        grayExteriorOfState: Int? = nil, exteriorGray: UInt8 = 140,
+                        grayOnlyLeft: Bool = false) throws -> PaperLuminanceImage {
         let registration = try XCTUnwrap(PaperRegistration(quadrilateral: pose))
         let polygon = try analyticOutline(state: state).map { try XCTUnwrap(registration.map($0)) }
         let layout = try XCTUnwrap(DartPracticePaperLayout.bundled)
@@ -165,12 +220,24 @@ final class DartOutlineCheckTests: XCTestCase {
         let obstructionPolygon = try obstruction.map { box in
             try rectangle(box).map { try XCTUnwrap(registration.map($0)) }
         }
+        let expectedPolygon = try grayExteriorOfState.map { referenceState in
+            try analyticOutline(state: referenceState).map { try XCTUnwrap(registration.map($0)) }
+        }
+        let leftHalf = try rectangle(CGRect(x: 0, y: 0, width: 0.5, height: 1)).map {
+            try XCTUnwrap(registration.map($0))
+        }
         let width = 240, height = 320
         var pixels = Array(repeating: background, count: width * height)
         for row in 0..<height {
             for column in 0..<width {
-                let point = CGPoint(x: Double(column) / Double(width - 1), y: Double(row) / Double(height - 1))
+                let point = CGPoint(x: (Double(column) + 0.5) / Double(width),
+                                    y: (Double(row) + 0.5) / Double(height))
                 if contains(point, polygon: polygon) { pixels[row * width + column] = paper }
+                if let expectedPolygon, contains(point, polygon: polygon),
+                   !contains(point, polygon: expectedPolygon),
+                   !grayOnlyLeft || contains(point, polygon: leftHalf) {
+                    pixels[row * width + column] = exteriorGray
+                }
                 if patches.contains(where: { contains(point, polygon: $0) }) { pixels[row * width + column] = 0 }
                 if let obstructionPolygon, contains(point, polygon: obstructionPolygon) {
                     pixels[row * width + column] = obstructionValue

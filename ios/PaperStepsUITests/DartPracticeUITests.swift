@@ -14,6 +14,7 @@ final class DartPracticeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["openDartPractice"].waitForExistence(timeout: 15))
         app.buttons["openDartPractice"].tap()
         XCTAssertTrue(app.staticTexts["practiceFixtureLabel"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["saveValidationSample"].exists, "Normal practice does not expose local photo recording")
     }
     override func tearDownWithError() throws { app?.terminate(); app = nil }
 

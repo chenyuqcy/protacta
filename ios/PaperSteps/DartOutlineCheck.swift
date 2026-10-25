@@ -21,6 +21,27 @@ struct PaperLuminanceImage {
     let width: Int
     let height: Int
     let pixels: [UInt8]
+
+    /// Vision's normalized coordinates describe image edges. Pixel (x,y) is
+    /// centered at ((x + 0.5)/width, (y + 0.5)/height), including after the
+    /// tracker's full-frame downsampling. Clamp only the outer half-pixel to
+    /// its edge sample; do not shift every interior point onto an endpoint grid.
+    func sample(at point: CGPoint) -> Double? {
+        guard width > 0, height > 0, width <= 4096, height <= 4096,
+              pixels.count == width * height,
+              point.x.isFinite, point.y.isFinite,
+              point.x >= 0, point.y >= 0, point.x <= 1, point.y <= 1 else { return nil }
+        let x = min(Double(width - 1), max(0, Double(point.x) * Double(width) - 0.5))
+        let y = min(Double(height - 1), max(0, Double(point.y) * Double(height) - 0.5))
+        let left = Int(x), top = Int(y)
+        let right = min(width - 1, left + 1), bottom = min(height - 1, top + 1)
+        let dx = x - Double(left), dy = y - Double(top)
+        let a = Double(pixels[top * width + left])
+        let b = Double(pixels[top * width + right])
+        let c = Double(pixels[bottom * width + left])
+        let d = Double(pixels[bottom * width + right])
+        return (a * (1 - dx) + b * dx) * (1 - dy) + (c * (1 - dx) + d * dx) * dy
+    }
 }
 
 /// The JSON is also the printing generator's source. Keep the matrix box distinct
@@ -66,6 +87,7 @@ struct DartPracticePaperLayout: Codable {
 enum DartOutlineChecker {
     private struct Sample {
         let point: CGPoint
+        let imagePoint: CGPoint
         let inside: Bool
         let edgeDistance: Double
         let luminance: Double
@@ -135,13 +157,13 @@ enum DartOutlineChecker {
                 let point = CGPoint(x: x, y: y)
                 guard !layout.isPrintedRegion(point),
                       let mapped = registration.map(point),
-                      let luminance = sample(image, at: mapped) else { continue }
+                      let luminance = image.sample(at: mapped) else { continue }
                 let distance = distanceToEdges(point, polygon: polygon)
                 // Boundary pixels, folds and anti-aliasing do not make reliable
                 // inside/outside samples at this downsampled resolution.
                 guard distance >= 0.014 else { continue }
                 let inside = contains(point, polygon: polygon)
-                samples.append(Sample(point: point, inside: inside,
+                samples.append(Sample(point: point, imagePoint: mapped, inside: inside,
                                       edgeDistance: distance, luminance: luminance))
                 if x < -0.015 || x > 1.015 || y < -0.015 || y > 1.015 {
                     background.append(luminance)
@@ -162,10 +184,27 @@ enum DartOutlineChecker {
         let whiteThreshold = white - max(25, contrast * 0.18)
         let darkThreshold = dark + max(20, contrast * 0.15)
         let ambiguous = interior.filter { $0.luminance > darkThreshold && $0.luminance < whiteThreshold }
+        let ambiguousExterior = exterior.filter {
+            $0.luminance > darkThreshold && $0.luminance < whiteThreshold &&
+                !isBilinearBoundary(at: $0.imagePoint, in: image,
+                                    darkThreshold: darkThreshold, whiteThreshold: whiteThreshold)
+        }
         let bright = interior.filter { $0.luminance >= whiteThreshold }
         guard Double(bright.count) / Double(interior.count) >= 0.65,
               Double(ambiguous.count) / Double(interior.count) <= 0.06 else {
             return result(.cannotJudge, "The paper has shadows, an obstruction or unclear contrast. Clear your hands, improve the view and try again.")
+        }
+        // An expected-empty corner that looks gray is not evidence of dark
+        // background. Otherwise shadowing an unfolded corner could erase both
+        // the 'extra white paper' error and all ambiguity, falsely matching the
+        // folded silhouette. The same 3.5% exterior allowance used for bright
+        // mismatches bounds ignored noise; larger unclear regions are unknown.
+        // Bilinear interpolation across a sharp paper/mat boundary is the one
+        // exception: all four contributing native pixels must already be
+        // settled white or dark, with both present. This excuses at most a
+        // one-pixel interpolation footprint, not a gray/shadowed image region.
+        guard Double(ambiguousExterior.count) / Double(exterior.count) <= 0.035 else {
+            return result(.cannotJudge, "The outline's surrounding area is unclear or shadowed. Clear the sheet, use even lighting and a plain dark mat, then try again.")
         }
         let deepDark = interior.filter { $0.edgeDistance > 0.07 && $0.luminance <= darkThreshold }
         guard Double(deepDark.count) / Double(interior.count) <= 0.025 else {
@@ -206,19 +245,19 @@ enum DartOutlineChecker {
                       Array(highlights.prefix(24)))
     }
 
-    private static func sample(_ image: PaperLuminanceImage, at point: CGPoint) -> Double? {
-        guard point.x.isFinite, point.y.isFinite, point.x >= 0, point.y >= 0,
-              point.x <= 1, point.y <= 1 else { return nil }
-        let x = Double(point.x) * Double(image.width - 1)
-        let y = Double(point.y) * Double(image.height - 1)
+    private static func isBilinearBoundary(at point: CGPoint, in image: PaperLuminanceImage,
+                                           darkThreshold: Double, whiteThreshold: Double) -> Bool {
+        // evaluate() has validated the image and mapped point before storing
+        // a sample. Use the same edge-based pixel-center convention as sample.
+        let x = min(Double(image.width - 1), max(0, Double(point.x) * Double(image.width) - 0.5))
+        let y = min(Double(image.height - 1), max(0, Double(point.y) * Double(image.height) - 0.5))
         let left = Int(x), top = Int(y)
         let right = min(image.width - 1, left + 1), bottom = min(image.height - 1, top + 1)
-        let dx = x - Double(left), dy = y - Double(top)
-        let a = Double(image.pixels[top * image.width + left])
-        let b = Double(image.pixels[top * image.width + right])
-        let c = Double(image.pixels[bottom * image.width + left])
-        let d = Double(image.pixels[bottom * image.width + right])
-        return (a * (1 - dx) + b * dx) * (1 - dy) + (c * (1 - dx) + d * dx) * dy
+        let values = [image.pixels[top * image.width + left], image.pixels[top * image.width + right],
+                      image.pixels[bottom * image.width + left], image.pixels[bottom * image.width + right]].map(Double.init)
+        return values.contains(where: { $0 <= darkThreshold }) &&
+            values.contains(where: { $0 >= whiteThreshold }) &&
+            values.allSatisfy { $0 <= darkThreshold || $0 >= whiteThreshold }
     }
 
     private static func percentile(_ values: [Double], _ fraction: Double) -> Double {

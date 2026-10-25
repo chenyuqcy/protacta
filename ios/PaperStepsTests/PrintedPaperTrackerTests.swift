@@ -132,6 +132,32 @@ final class PrintedPaperTrackerTests: XCTestCase {
         XCTAssertNil(PrintedPaperTracker.makePose(detection: detection(markers, uncertain: true), timestamp: 10))
         XCTAssertNotNil(PrintedPaperTracker.makePose(detection: detection(markers, hands: [.zero]), timestamp: 10))
         XCTAssertNil(PrintedPaperTracker.makePose(detection: detection(markers), timestamp: .nan))
+        var failed = detection(markers)
+        failed.failure = "A required analysis stage failed."
+        XCTAssertNil(PrintedPaperTracker.makePose(detection: failed, timestamp: 10),
+                     "Known corners cannot override a failed analysis stage")
+    }
+
+    func testProcessingTimingAndFailureBelongToTheAdmittedFrame() throws {
+        let buffer = try makeBuffer()
+        let completed = expectation(description: "timed unknown frame")
+        let tracker = PrintedPaperTracker(minimumInterval: 0) { _ in
+            PrintedPaperDetection(markers: [], handPoints: [], hasUncertainHand: false,
+                                  luminance: nil, failure: "Synthetic failure")
+        }
+        tracker.reset(generation: 4)
+        let before = ProcessInfo.processInfo.systemUptime
+        XCTAssertTrue(tracker.submit(pixelBuffer: buffer, timestamp: before, generation: 4) { frame in
+            XCTAssertEqual(frame.timestamp, before)
+            XCTAssertGreaterThanOrEqual(frame.processingStartedUptime, before)
+            XCTAssertGreaterThanOrEqual(frame.processedUptime, frame.processingStartedUptime)
+            XCTAssertLessThanOrEqual(frame.processedUptime, ProcessInfo.processInfo.systemUptime)
+            XCTAssertEqual(frame.processingFailure, "Synthetic failure")
+            XCTAssertNil(frame.pose)
+            completed.fulfill()
+        })
+        XCTAssertFalse(tracker.submit(pixelBuffer: buffer, timestamp: before, generation: 3) { _ in XCTFail("Wrong generation") })
+        wait(for: [completed], timeout: 5)
     }
 
     func testBGRAAndCGImageLuminanceKeepTopLeftRowsAndFullImageExtent() throws {

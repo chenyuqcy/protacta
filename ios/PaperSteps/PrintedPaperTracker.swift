@@ -18,6 +18,10 @@ struct PrintedPaperFrame {
     let pose: PrintedPaperPose?
     /// Same full-image coordinates as the pose, with no rotation or crop.
     let luminance: PaperLuminanceImage?
+    /// Monotonic processing timestamps exclude queue wait and file export.
+    let processingStartedUptime: TimeInterval
+    let processedUptime: TimeInterval
+    let processingFailure: String?
 }
 
 struct PrintedPaperMarkerObservation {
@@ -192,32 +196,35 @@ final class PrintedPaperTracker: @unchecked Sendable {
         lock.unlock()
     }
 
+    @discardableResult
     func submit(pixelBuffer: CVPixelBuffer, timestamp: TimeInterval, generation: Int,
-                completion: @escaping (PrintedPaperFrame) -> Void) {
+                completion: @escaping (PrintedPaperFrame) -> Void) -> Bool {
         let process = processor
-        enqueue(timestamp: timestamp, generation: generation,
+        return enqueue(timestamp: timestamp, generation: generation,
                 process: { process(pixelBuffer) }, completion: completion)
     }
 
     /// Real Vision integration on generated fixtures, without a camera session.
+    @discardableResult
     func submit(cgImage: CGImage, timestamp: TimeInterval, generation: Int,
-                completion: @escaping (PrintedPaperFrame) -> Void) {
-        enqueue(timestamp: timestamp, generation: generation,
+                completion: @escaping (PrintedPaperFrame) -> Void) -> Bool {
+        return enqueue(timestamp: timestamp, generation: generation,
                 process: { Self.detect(cgImage) }, completion: completion)
     }
 
     private func enqueue(timestamp: TimeInterval, generation: Int,
                          process: @escaping () -> PrintedPaperDetection,
-                         completion: @escaping (PrintedPaperFrame) -> Void) {
-        guard timestamp.isFinite, timestamp >= 0 else { return }
+                         completion: @escaping (PrintedPaperFrame) -> Void) -> Bool {
+        guard timestamp.isFinite, timestamp >= 0 else { return false }
         lock.lock()
         guard generation == self.generation, !inFlight,
-              timestamp - lastTimestamp >= minimumInterval else { lock.unlock(); return }
+              timestamp - lastTimestamp >= minimumInterval else { lock.unlock(); return false }
         inFlight = true
         lastTimestamp = timestamp
         let submittedRevision = revision
         lock.unlock()
         queue.async { [weak self] in
+            let started = ProcessInfo.processInfo.systemUptime
             let detection = autoreleasepool { process() }
             guard let self else { return }
             self.lock.lock()
@@ -227,12 +234,17 @@ final class PrintedPaperTracker: @unchecked Sendable {
             guard current else { return }
             let pose = Self.makePose(detection: detection, timestamp: timestamp)
             completion(PrintedPaperFrame(generation: generation, timestamp: timestamp,
-                                         pose: pose, luminance: detection.luminance))
+                                         pose: pose, luminance: detection.luminance,
+                                         processingStartedUptime: started,
+                                         processedUptime: ProcessInfo.processInfo.systemUptime,
+                                         processingFailure: detection.failure))
         }
+        return true
     }
 
     static func makePose(detection: PrintedPaperDetection, timestamp: TimeInterval) -> PrintedPaperPose? {
-        guard timestamp.isFinite, timestamp >= 0, !detection.hasUncertainHand else { return nil }
+        guard timestamp.isFinite, timestamp >= 0, detection.failure == nil,
+              !detection.hasUncertainHand else { return nil }
         var markers: [String: PaperQuadrilateral] = [:]
         let known = Set(PrintedPaperRegistration.markerIDs)
         for marker in detection.markers where known.contains(marker.payload) {

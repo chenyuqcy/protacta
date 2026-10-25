@@ -4,6 +4,9 @@
 goal remains incomplete. Result counts are recorded below and in
 output/full-course/validation-receipt.json.
 
+This record describes build 2. Subsequent checker fixes and opt-in local
+validation preparation are recorded in VALIDATION_CHECKER_AND_CAPTURE.md.
+
 ## Validation boundaries
 
 Logic checks cover ten-action content, explicit confirmation, revisions and

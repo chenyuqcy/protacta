@@ -152,6 +152,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                     Spacer()
                     Button("I'm stuck") { showHelp = true }.accessibilityIdentifier("practiceHelp")
                 }.font(.system(size: 12)).frame(minHeight: 40)
+                if controller.validationEnabled { PracticeValidationControls(controller: controller) }
                 if controller.isPaperGuideFixture {
                     HStack {
                         Button("Lose sample") { controller.setDartPracticeFixtureVisible(false) }.accessibilityIdentifier("losePracticeFixture")
@@ -160,7 +161,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                 }
             }.padding(.horizontal, 22).padding(.vertical, 16)
         }.frame(maxHeight: 370).background(Color(red: 0.96, green: 0.96, blue: 0.93))
-            .sheet(isPresented: $showSetup) { DartPracticeSetupView() }
+            .sheet(isPresented: $showSetup) { DartPracticeSetupView(controller: controller) }
             .sheet(isPresented: $showHelp) {
                 NavigationStack {
                     ScrollView {
@@ -196,6 +197,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
 }
 
 struct DartPracticeSetupView: View {
+    @ObservedObject var controller: LessonController
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
@@ -211,6 +213,11 @@ struct DartPracticeSetupView: View {
                     Text("When the sheet is flat, the codes let the guide follow its position and direction. Folds that hide codes or lift the sheet use 3D reference and your own comparison.")
                     Text("A camera outline cannot prove a crease or hidden layer is correct. Check the authored comparison notes before confirming each action.")
                     Text(DartPracticeCourse.reviewNotice).font(.footnote).foregroundStyle(.secondary)
+                    if controller.validationEnabled {
+                        NavigationLink("Configure local validation samples") {
+                            PracticeValidationSettingsView(controller: controller)
+                        }.accessibilityIdentifier("openValidationSettings")
+                    }
                 }.padding(24)
             }.navigationTitle("Practice setup")
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }

@@ -735,7 +735,9 @@ struct PaperStepsView: View {
                     Text("Privacy, simply.").font(.system(size: 30, weight: .regular, design: .serif))
                     Text("Protacta Privacy Policy · September 13, 2026").font(.caption).foregroundStyle(Palette.muted)
                     Text("Your camera and surroundings").font(.headline)
-                    Text("Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Paper boundary and hand observations, camera images, depth maps and room geometry are processed on your device. We do not record camera images or send them to a server.")
+                    Text(controller.validationEnabled
+                         ? "Camera analysis stays on your device. In this explicitly enabled local test mode, Save local test sample stores one camera photo and analysis metadata in the app's Documents folder. A photo is saved only when you press that button; no image is uploaded. Normal practice does not save camera photos."
+                         : "Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Paper boundary and hand observations, camera images, depth maps and room geometry are processed on your device. We do not record camera images or send them to a server.")
                     Text("Optional voice control and reading aloud").font(.headline)
                     Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Protacta does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
                     Text("Purchases and local data").font(.headline)

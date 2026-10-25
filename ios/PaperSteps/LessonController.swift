@@ -34,6 +34,13 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     var practiceViewportSize: CGSize = .zero
     var practiceViewOrientation: UIInterfaceOrientation = .unknown
     var practiceTrackingLost = false
+    @Published var validationIdentity = PracticeValidationIdentity()
+    @Published var validationBusy = false
+    @Published var validationStatus = "No test photo has been saved."
+    @Published var lastValidationDirectory: URL?
+    let validationCapture = PracticeValidationCapture()
+    var validationRequest: PracticeValidationRequest?
+    var validationFrameInFlight = false
     private let paperVision = PaperVisionTracker()
     private var paperGuideGeneration = 0
     private var paperViewportSize: CGSize = .zero

@@ -1,8 +1,31 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Status: active. The ten-action practice prototype is implemented; real-paper
-review, device acceptance, independent samples and beginner outcomes remain.
+Status: physical gate blocked by unavailable iOS devices. The ten-action practice
+prototype and local validation tools are implemented; real-paper review, device
+acceptance, independent samples and beginner outcomes remain unproved.
+
+## Build 3: check reliability and real-validation preparation
+
+- Fixed gray shadows outside the expected silhouette being ignored. Narrow
+  white/dark interpolation footprints are distinguished from actual gray areas,
+  preserving clear visible-error feedback instead of collapsing it to unknown.
+- Corrected raw normalized image coordinates to pixel centers (`x * width - 0.5`).
+- Added explicit Debug-only local camera capture with same-frame image, hash,
+  step, semantic pose and processing timestamps; lifecycle changes cancel work.
+  No photo is saved in normal use, and simulator drawings cannot become physical
+  evidence. See LOCAL_VALIDATION_CAPTURE.md.
+- Added independent paper-width error, three-way outcome and timing reports;
+  PNG integrity, split leakage, candidate versions and unfinished exports are
+  checked. Human labels stay separate. See VALIDATION_DATA_FORMAT.md.
+- 168 App logic/synthetic tests and 24 Python tests passed. The actual native
+  exporter output was accepted by the offline evaluator as one explicitly
+  synthetic contract fixture, not real accuracy or learning evidence.
+- New phone/tablet capture UI cases passed. An old iOS 18 simulator launch
+  crashed once in CoreRE/CoreMedia; the case passed on an isolated rerun. The
+  original failure is retained and physical stability remains a gate.
+
+See VALIDATION_CHECKER_AND_CAPTURE.md and GOAL_ACCEPTANCE_AUDIT.md.
 
 ## Complete-course prototype
 

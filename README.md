@@ -4,7 +4,7 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current prototype identity: **Protacta 0.1.0 (2)**,
+Current prototype identity: **Protacta 0.1.0 (3)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
@@ -60,6 +60,12 @@ fixtures are isolated from Foliafold.
 
 ## Build and test
 
+Build 3 fixes shadow ambiguity and pixel-center sampling in the outline checker.
+It also adds opt-in Debug local camera sampling and a separate offline evaluator.
+Normal practice and Release builds do not expose photo recording. See
+`docs/LOCAL_VALIDATION_CAPTURE.md` and `docs/VALIDATION_DATA_FORMAT.md` before
+collecting real samples; synthetic fixtures are never physical acceptance.
+
 Source folders retain the historical PaperSteps names. Regenerate after adding
 Swift files or resources:
 
@@ -75,6 +81,7 @@ scripts/test_first_fold.sh SIMULATOR_UDID
 scripts/test_dart_practice.sh SIMULATOR_UDID logic
 scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID phone
 scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID tablet
+python3 -m unittest discover -s scripts/tests -p 'test_evaluate_practice_validation.py' -v
 ```
 
 The `Protacta-StoreKit` scheme uses a local, prototype-namespaced test fixture.
