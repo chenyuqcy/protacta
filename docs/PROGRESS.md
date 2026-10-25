@@ -251,3 +251,11 @@ have not yet been recorded.
 
 Numerical registration limits and proposed 3%/1-second product targets remain
 validation targets. A first-fold technical demo is not the complete MVP.
+
+## Simulator presentation videos — 2026-10-26
+
+- [x] Recorded actual Simulator UI and delivered a 90-second presentation video,
+  four portrait clips, original recordings and speaker notes locally.
+- [x] Verified all five delivery encodes; synthetic paper and virtual AERIS are
+  explicitly labeled. See `DEMO_VIDEO_2026-10-26.md`.
+- [ ] Physical A4 alignment, hiding and recovery remain a separate acceptance gate.
