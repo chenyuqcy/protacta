@@ -39,6 +39,7 @@ Each capture folder contains `sample.json` and the referenced PNG, usually
 | `id` | Canonical UUID string; unique across the entire run. |
 | `tutorialID` | Exactly `classic-dart`. |
 | `courseRevision`, `appVersion`, `appBuild` | Nonempty single-line strings, at most 160 UTF-8 bytes each; exact candidate identity. |
+| `paperLayoutID`, `paperLayoutRevision` | Current exports require `protacta-dart-a4-ptc2`, integer `2`. Historical PTC1 records use `protacta-dart-a4-ptc1`, integer `1`; only exact legacy fitting points may infer this pair when both fields are absent. |
 | `source` | Exactly `physical_camera` or `synthetic_fixture`. Never mix these in one report. |
 | `split` | Exactly `development` or `evaluation`. These are preassigned evidence groups, not random frame splits. |
 | `sessionID`, `operatorID`, `sheetID`, `attemptID` | Nonempty pseudonymous capture-session, operator, physical-sheet and whole-course-attempt IDs. Reuse the same ID when the same entity reappears. |
@@ -48,7 +49,7 @@ Each capture folder contains `sample.json` and the referenced PNG, usually
 | `capturedUptime`, `processedUptime` | Finite nonnegative timestamps on one monotonic clock; processed must not precede captured. |
 | `image` | Object with positive integer `width`, `height` (maximum 16384 each), `orientation: "raw_top_left"`, relative `path`, and actual PNG `sha256`. The file must stay inside the sample folder. |
 | `rawSheetQuadrilateral` | Object with `topLeft`, `topRight`, `bottomRight`, `bottomLeft`, each `{x,y}` in normalized **raw-image** coordinates, or explicit `null` when registration is unavailable. Names preserve semantic paper-corner identities, not a fresh image-space sort. |
-| `registrationPoints` | List of `{id, sheet:{x,y}}` for all 20 known fitting QR centres/corners, even when no pose is available. IDs/positions must match the pinned `DartPracticePaper.json` in this checkout. |
+| `registrationPoints` | List of `{id, sheet:{x,y}}` for all 20 known fitting QR centres/corners, even when no pose is available. IDs/positions must match the pinned layout named by the metadata. |
 | `result` | Object with `outcome`, nonempty `message`, `timestamp` exactly equal to `capturedUptime`, and `support: "visible_outline_only"`. Outcome is exactly `visibleMatch`, `needsAdjustment` or `cannotJudge`. No pose requires `cannotJudge`. |
 | `frameDisposition` | Optional `fresh` or `expired`. Expired requires `cannotJudge`. Missing disposition is reported as `unreported`, never assumed fresh. |
 | `processingMs` | Optional finite nonnegative algorithm-processing duration, no greater than capture-to-processing elapsed time (0.001 ms rounding allowance). Omit it when not measured. |
@@ -59,6 +60,11 @@ Every report contains exactly one `(tutorialID, courseRevision, appVersion,
 appBuild)` tuple. Mixing builds or course revisions is rejected rather than
 silently aggregating their results. JSON and Markdown report that identity;
 empty reports expose a null/unavailable candidate rather than guessing a version.
+Every report also contains one paper-layout ID/revision. PTC1 and PTC2 cannot be
+pooled. The evaluator pins PTC2 in bundled `DartPracticePaper.json` and PTC1 in
+`docs/reference/ptc1-layout-obsolete/`; it never reinterprets old coordinates as
+the new layout. These declarations identify the intended candidate and do not
+prove the photographed sheet is correct.
 
 Optional contextual metadata may include `device`, `viewport`, marker
 quadrilaterals and result mismatch points. These do
@@ -130,7 +136,7 @@ Every holdout must be separate from the fitting features by both ID and position
 The tool rejects an identical fitting ID or a sheet-coordinate distance within
 1e-6 of any declared registration point. All fitting QR centres **and corners**
 belong in the exclusion list. The known 20-point list is checked against this
-checkout's printed layout: pin that source alongside the capture software,
+sample's named pinned layout: preserve that source alongside the capture software,
 rather than replacing it while evaluating older data. Its reprojection residuals cannot be reported as
 independent accuracy.
 
@@ -153,6 +159,14 @@ invalid row/range, nonfinite/out-of-frame points and degenerate width segments.
 It cannot prove that a person annotated the actual full-width endpoints: that
 still needs reviewed capture instructions and human checking. If they cannot be
 observed/measured independently, leave geometry unscored.
+
+The optional browser tool in `tools/validation_annotator/` displays the exact raw
+PNG while hiding detector predictions. It initially assigns no label and exports
+only after an explicit choice and confirmation. It supports original-corner
+geometry only for flat reopened state 2; other states remain classification-only.
+Synthetic inputs always export `synthetic_fixture`, including automated browser
+smoke checks. See its README for limits and the physical-review packet for the
+unexecuted human protocol.
 
 For each held-out landmark:
 

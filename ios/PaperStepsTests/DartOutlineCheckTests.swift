@@ -164,9 +164,11 @@ final class DartOutlineCheckTests: XCTestCase {
         }
     }
 
-    func testPracticePaperContractSurvivesPlanarCheckpoints() throws {
+    func testPracticePaperFootprintsStayInsideSupportedSilhouettes() throws {
         let layout = try XCTUnwrap(DartPracticePaperLayout.bundled)
-        XCTAssertEqual(layout.markers.map(\.payload), ["PTC1A", "PTC1B", "PTC1C", "PTC1D"])
+        XCTAssertEqual(layout.markers.map(\.payload), ["PTC2A", "PTC2B", "PTC2C", "PTC2D"])
+        XCTAssertEqual(layout.layoutID, "protacta-dart-a4-ptc2")
+        XCTAssertEqual(layout.layoutRevision, 2)
         XCTAssertEqual(layout.codeSideMM, 14)
         XCTAssertEqual(layout.quietZoneMM, 3)
         XCTAssertEqual(layout.sheetSizeMM.width, 210)
@@ -179,7 +181,7 @@ final class DartOutlineCheckTests: XCTestCase {
                     for dy in [-halfHeight, halfHeight] {
                         XCTAssertTrue(contains(CGPoint(x: marker.center.x + dx, y: marker.center.y + dy),
                                                polygon: analyticOutline(state: state)),
-                                      "The printed code must remain on a visible stationary region")
+                                      "Silhouette containment only; material-layer visibility is tested separately")
                     }
                 }
             }

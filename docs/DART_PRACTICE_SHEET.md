@@ -1,5 +1,9 @@
 # Dart practice sheet
 
+Current print contract: **PTC2 revision 2**, layout ID
+`protacta-dart-a4-ptc2`. Print a new sheet for this version; PTC1 sheets cannot
+establish camera alignment. The PDF metadata title identifies PTC2 revision 2.
+
 Generate `output/pdf/Protacta_Dart_Practice_A4.pdf` with:
 
 ```sh
@@ -23,16 +27,27 @@ Code centers, measured from the top-left of an uncut 210 x 297 mm A4 sheet, are:
 
 | Code | Normalized center | Center in mm |
 | --- | --- | --- |
-| PTC1A | 0.16, 0.72 | 33.6, 213.84 |
-| PTC1B | 0.84, 0.72 | 176.4, 213.84 |
-| PTC1C | 0.84, 0.94 | 176.4, 279.18 |
-| PTC1D | 0.16, 0.94 | 33.6, 279.18 |
+| PTC2A | 0.30, 0.72 | 63.0, 213.84 |
+| PTC2B | 0.70, 0.72 | 147.0, 213.84 |
+| PTC2C | 0.70, 0.94 | 147.0, 279.18 |
+| PTC2D | 0.30, 0.94 | 63.0, 279.18 |
 
 All four matrices have the same orientation. The bundled
 `Resources/DartPracticePaper.json` is the printing and interpretation contract.
-Their quiet-zone boxes remain on stationary visible regions for Dart flat
-states 0, 2, 3, 4, 5 and 6. State 1 and the later lifted body/wing states are not
-eligible for the flat-outline check.
+In the ideal authored geometry, their full matrix and quiet-zone boxes remain
+stationary and top-layer visible at Dart flat states 0, 2, 3, 4, 5 and 6.
+`DartPracticePaperVisibilityTests` maps each original material footprint into
+the folded mesh, then checks its continuous polygon for overlap with higher
+paper layers. Silhouette containment alone does not establish visibility.
+State 1 and the later lifted body/wing states are not eligible for the
+flat-outline check.
+
+The old PTC1 first row lay underneath the correct narrowing flaps at states 5
+and 6. Its unchanged PDF and JSON are retained under
+`docs/reference/ptc1-layout-obsolete/` for historical validation records only.
+PTC2 moves the columns inward, retaining the vertical row baseline. The changed
+horizontal baseline still requires independent physical alignment measurement;
+ideal-model visibility does not establish camera accuracy.
 
 `DartOutlineChecker` compares only a visible silhouette. Use even lighting and
 clear hands or other objects before checking. Its initial brightness, contrast

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; connect-src 'none'; font-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Protacta · Independent raw-image annotation</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="core.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">PROTACTA · LOCAL ANNOTATION</p>
+      <h1>Label what you can see.</h1>
+      <p>Open one local capture. Its detector result and registration are hidden. Your annotation is separate from the app's prediction.</p>
+      <p class="scope">No upload, account or automatic approval. Images stay in this page's memory; only your explicit JSONL download is written.</p>
+    </header>
+
+    <section class="card" aria-labelledby="files-heading">
+      <h2 id="files-heading">1. Match the local files</h2>
+      <div class="file-grid">
+        <label>Capture metadata · sample.json<input id="metadata-file" type="file" accept=".json,application/json"></label>
+        <label>Original raw image · image.png<input id="image-file" type="file" accept=".png,image/png"></label>
+      </div>
+      <p id="file-status" role="status">No capture loaded. No label assigned.</p>
+      <div id="sample-info" hidden>
+        <p id="source-status" class="badge"></p>
+        <dl id="sample-details"></dl>
+      </div>
+    </section>
+
+    <section id="annotation-workspace" hidden aria-labelledby="annotation-heading">
+      <div class="card">
+        <h2 id="annotation-heading">2. Make an independent annotation</h2>
+        <div class="form-grid">
+          <label>Annotator pseudonym<input id="annotator-id" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="Example: reviewer-01"></label>
+          <label>Visible-outline label<select id="expected-outcome">
+            <option value="">Choose your label…</option>
+            <option value="visibleMatch">Visible criterion matches</option>
+            <option value="needsAdjustment">Visible outline needs adjustment</option>
+            <option value="cannotJudge">Cannot judge this view</option>
+          </select></label>
+        </div>
+        <ul class="definitions">
+          <li><strong>Matches:</strong> only the declared visible boundary agrees; this does not verify a crease or hidden layer.</li>
+          <li><strong>Needs adjustment:</strong> the view supports an actual visible-outline mismatch.</li>
+          <li><strong>Cannot judge:</strong> evidence is missing, ambiguous, occluded, nonplanar or outside the supported view.</li>
+        </ul>
+        <label class="check"><input id="geometry-enabled" type="checkbox"> Add optional, independently clicked ORIGINAL paper corners (flat state 2 only)</label>
+        <p id="geometry-note" class="scope">Other states export labels only: empty landmarks and no width reference. Never infer hidden or moved paper coordinates.</p>
+        <div id="corner-instructions" hidden>
+          <p><strong>Click paper TL → TR → BR → BL.</strong> These are the original sheet's corners using its marked TOP direction, even when the raw sensor image is sideways. They are <strong>not QR-code corners</strong> and are not automatically detected.</p>
+          <p>Only use this option when all four original paper corners are visible and the whole state-2 sheet is flat. Bottom paper BL/BR define the full-width reference at sheetY = 1. If unsure, turn geometry off.</p>
+          <div class="toolbar"><button id="undo-corner" type="button">Undo last click</button><button id="clear-corners" type="button">Clear corners</button><span id="corner-status" role="status"></span></div>
+          <ol id="corner-values"></ol>
+        </div>
+        <div class="toolbar image-toolbar">
+          <label>Image zoom<select id="image-zoom"><option value="fit">Fit width</option><option value="1">100% raw pixels</option><option value="2">200%</option></select></label>
+          <span id="pointer-position">Raw image · top-left origin · no portrait rotation/crop</span>
+        </div>
+        <div class="image-scroll"><canvas id="raw-image" aria-label="Original raw capture; click only when corner geometry is enabled"></canvas></div>
+      </div>
+
+      <section class="card" aria-labelledby="export-heading">
+        <h2 id="export-heading">3. Export your label</h2>
+        <label class="check"><input id="confirm-annotation" type="checkbox"> I explicitly assigned this label. If geometry is selected, I clicked all four real original-paper corners myself.</label>
+        <p id="export-status" role="status">Choose a label and confirm your annotation. Nothing is pre-approved.</p>
+        <button id="export-label" type="button" disabled>Download one JSONL annotation</button>
+        <p class="scope">Synthetic input always stays <code>synthetic_fixture</code>. This tool does not issue a reviewed-course or MVP acceptance result.</p>
+        <pre id="annotation-preview" hidden aria-label="Exported annotation only"></pre>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

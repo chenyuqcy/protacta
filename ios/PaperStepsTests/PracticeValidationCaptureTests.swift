@@ -29,6 +29,8 @@ final class PracticeValidationCaptureTests: XCTestCase {
         XCTAssertEqual(object["schemaVersion"] as? Int, 1)
         XCTAssertEqual(object["source"] as? String, "synthetic_fixture")
         XCTAssertEqual(object["split"] as? String, "development")
+        XCTAssertEqual(object["paperLayoutID"] as? String, "protacta-dart-a4-ptc2")
+        XCTAssertEqual(object["paperLayoutRevision"] as? Int, 2)
         XCTAssertNil(object["humanLabel"])
         XCTAssertNil(object["reviewed"])
         XCTAssertNil(object["deviceName"])
@@ -89,6 +91,19 @@ final class PracticeValidationCaptureTests: XCTestCase {
                                               from: Data(contentsOf: directory.appendingPathComponent("sample.json")))
         XCTAssertEqual(decoded.originID, origin)
         XCTAssertEqual(decoded.sourceBasename, "\(origin).png")
+    }
+
+    func testObsoleteOrMislabeledPaperLayoutCannotBeExportedAsCurrent() throws {
+        let capture = PracticeValidationCapture(rootDirectory: output)
+        let image = try fixtureImage()
+        for change: (inout [String: Any]) -> Void in [
+            { $0["paperLayoutID"] = "protacta-dart-a4-ptc1" },
+            { $0["paperLayoutRevision"] = 1 }
+        ] {
+            let invalid = try mutated(fixtureSample(), change)
+            XCTAssertEqual(error(in: try save(capture, image: image, sample: invalid)), .invalidSample)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
     }
 
     func testPixelBufferExportKeepsRawTopLeftRowsAndPrimaryColors() throws {

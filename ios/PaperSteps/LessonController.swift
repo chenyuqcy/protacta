@@ -123,7 +123,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private var configured = false
     private var lastCollisionUpdate: CFTimeInterval = 0
     private var lastViewportSize: CGSize = .zero
-    private var savedIdleTimer = false
+    private let screenAwake = HandsOnScreenAwakeLease.system()
 
     init(progressStore: LearningProgressStore? = nil, practiceStore: PracticeProgressStore? = nil) {
         self.progressStore = progressStore ?? Self.makeProgressStore()
@@ -238,10 +238,18 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         link.preferredFrameRateRange = CAFrameRateRange(minimum: 30, maximum: 60, preferred: 60)
         link.add(to: .main, forMode: .common)
         displayLink = link
-        savedIdleTimer = UIApplication.shared.isIdleTimerDisabled
-        UIApplication.shared.isIdleTimerDisabled = true
+        resumeScreenAwake()
         return view
     }
+
+    /// Screen ownership follows the foreground lesson independently of AR
+    /// session recovery. Resuming it never starts a paused camera.
+    func resumeScreenAwake() {
+        guard configured, displayLink != nil else { return }
+        screenAwake.acquire()
+    }
+
+    func suspendScreenAwake() { screenAwake.release() }
 
     private func clearScene() {
         guard let view = arView else { return }
@@ -819,6 +827,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         configureStudio(); recordDiagnostic(force: true)
     }
     func background() {
+        suspendScreenAwake()
         sessionGeneration += 1
         cameraStartRevision = nil
         paperGuide.invalidate()
@@ -841,7 +850,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         depthOcclusion.reset()
         displayLink?.invalidate(); displayLink = nil
         arView?.session.pause()
-        UIApplication.shared.isIdleTimerDisabled = savedIdleTimer
+        suspendScreenAwake()
     }
     nonisolated func session(_ session: ARSession, didUpdate frame: ARFrame) {
         MainActor.assumeIsolated { assess(frame) }

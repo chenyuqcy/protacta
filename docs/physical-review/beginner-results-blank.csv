@@ -1,0 +1,11 @@
+participant_id,condition,candidate_manifest,prior_dart_experience,attempt_id,status,start_time,end_time,elapsed_seconds,learner_declared_complete,independent_visible_result,app_help_uses,human_instruction_count,exit_action,exit_reason,observer_notes
+P01,,,,,not_started,,,,,,,,,,
+P02,,,,,not_started,,,,,,,,,,
+P03,,,,,not_started,,,,,,,,,,
+P04,,,,,not_started,,,,,,,,,,
+P05,,,,,not_started,,,,,,,,,,
+P06,,,,,not_started,,,,,,,,,,
+P07,,,,,not_started,,,,,,,,,,
+P08,,,,,not_started,,,,,,,,,,
+P09,,,,,not_started,,,,,,,,,,
+P10,,,,,not_started,,,,,,,,,,

@@ -1,6 +1,20 @@
 import SwiftUI
 import StoreKit
 
+/// Cancel queued speech work as well as refusing the navigation/narration
+/// callback. Keeping this boundary independent of microphone access lets tests
+/// exercise a command that was already queued when a local tool opens.
+@MainActor
+enum PracticeToolVoiceCommandGate {
+    static func route(_ command: VoiceCommand, modalPresented: Bool,
+                      stopVoice: () -> Void,
+                      perform: (VoiceCommand) -> LessonVoiceResponse) -> LessonVoiceResponse? {
+        guard !modalPresented else { stopVoice(); return nil }
+        if command == .stopListening { stopVoice() }
+        return perform(command)
+    }
+}
+
 @main
 struct ProtactaApp: App {
     init() {
@@ -66,6 +80,7 @@ struct PaperStepsView: View {
     @State private var showARHelp = false
     @State private var showVoiceGuide = false
     @State private var showFoldHelp = false
+    @State private var practiceToolsPresented = false
     @State private var voiceFeedback = ""
     @State private var selectedPurchasePlan: PurchasePlan = .annual
     @State private var afterAbout: String?
@@ -76,7 +91,11 @@ struct PaperStepsView: View {
             header
             viewport
             if controller.isDartPractice {
-                DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() }) {
+                DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() },
+                                 onPracticeToolsPresented: { presented in
+                    practiceToolsPresented = presented
+                    if presented { voice.stop(); controller.pauseAndSave() }
+                }) {
                     voiceControlButton
                 }
             }
@@ -133,12 +152,12 @@ struct PaperStepsView: View {
             }
         }) { stepListSheet }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .inactive { controller.pauseAndSave(); voice.handleSceneInactive() }
+            if phase == .inactive { controller.suspendScreenAwake(); controller.pauseAndSave(); voice.handleSceneInactive() }
             if phase == .background { controller.background(); voice.stop() }
-            if phase == .active { voice.handleSceneActive(); Task { await purchases.refresh() } }
+            if phase == .active { controller.resumeScreenAwake(); voice.handleSceneActive(); Task { await purchases.refresh() } }
         }
         .onAppear { configureVoiceCommands() }
-        .onDisappear { voice.stop(); voice.onCommand = nil }
+        .onDisappear { voice.stop(); voice.onCommand = nil; practiceToolsPresented = false }
         .onChange(of: controller.stepIndex) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.dartPractice.currentAction) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.lesson) { _, _ in voice.stop() }
@@ -157,7 +176,7 @@ struct PaperStepsView: View {
     }
 
     private var blockingSheetPresented: Bool {
-        showNotes || showAbout || showLibrary || showStepList || showUnlock || showPrivacy || showARHelp || showFoldHelp
+        showNotes || showAbout || showLibrary || showStepList || showUnlock || showPrivacy || showARHelp || showFoldHelp || practiceToolsPresented
     }
 
     private func closeVoiceTools() {
@@ -168,10 +187,13 @@ struct PaperStepsView: View {
 
     private func configureVoiceCommands() {
         let feedback = $voiceFeedback
+        let practiceTools = $practiceToolsPresented
         voice.onCommand = { [weak controller, weak voice] command in
             guard let controller, let voice else { return }
-            if command == .stopListening { voice.stop() }
-            switch controller.performVoiceCommand(command) {
+            guard let response = PracticeToolVoiceCommandGate.route(command, modalPresented: practiceTools.wrappedValue,
+                                                                    stopVoice: { voice.stop() },
+                                                                    perform: controller.performVoiceCommand) else { return }
+            switch response {
             case .message(let text): feedback.wrappedValue = text
             case .narration(let text):
                 feedback.wrappedValue = text

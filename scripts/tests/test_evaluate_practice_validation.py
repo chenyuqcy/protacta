@@ -50,6 +50,8 @@ class ValidationHarnessTests(unittest.TestCase):
             "schemaVersion": 1, "id": identifier, "source": source, "split": split,
             "tutorialID": "classic-dart", "courseRevision": "SYNTHETIC-COURSE-REVISION",
             "appVersion": "0.1.0", "appBuild": "SYNTHETIC-TEST",
+            "paperLayoutID": validation.CURRENT_LAYOUT_ID,
+            "paperLayoutRevision": validation.CURRENT_LAYOUT_REVISION,
             "sessionID": "session-" + name, "operatorID": "operator-" + name,
             "sheetID": "sheet-" + name, "attemptID": "attempt-" + name,
             "originID": "origin-" + name, "sourceBasename": identifier + ".png",
@@ -421,6 +423,47 @@ class ValidationHarnessTests(unittest.TestCase):
         self.assertEqual(report["sampleCount"], 0)
         self.assertFalse(report["physicalAcceptanceEstablished"])
         self.assertIn("never declares the MVP passed", (output / "validation_report.md").read_text())
+
+    def test_current_layout_is_explicit_and_reported_without_implying_acceptance(self):
+        sample = self.sample()
+        report = self.report()
+        self.assertEqual(report["paperLayout"], {"id": validation.CURRENT_LAYOUT_ID, "revision": 2})
+        self.assertFalse(report["physicalAcceptanceEstablished"])
+        del sample["paperLayoutID"]
+        del sample["paperLayoutRevision"]
+        self.write_sample("one", sample)
+        with self.assertRaisesRegex(validation.ValidationError, "PTC2 records must declare"):
+            self.report()
+
+    def test_historical_ptc1_records_keep_their_original_calibration(self):
+        sample = self.sample()
+        sample.pop("paperLayoutID"); sample.pop("paperLayoutRevision")
+        old = validation.known_registration_points(validation.LEGACY_LAYOUT_ID)
+        self.assertEqual(old["PTC1A.center"], (.16, .72))
+        sample["registrationPoints"] = [{"id": key, "sheet": {"x": xy[0], "y": xy[1]}} for key, xy in old.items()]
+        self.write_sample("one", sample)
+        report = self.report()
+        self.assertEqual(report["paperLayout"], {"id": validation.LEGACY_LAYOUT_ID, "revision": 1})
+        self.assertFalse(report["physicalAcceptanceEstablished"])
+
+    def test_layout_identity_revision_and_feature_points_cannot_be_crossed(self):
+        original = self.sample()
+        for changes in ({"paperLayoutID": validation.LEGACY_LAYOUT_ID, "paperLayoutRevision": 1},
+                        {"paperLayoutRevision": 1}, {"paperLayoutRevision": True},
+                        {"paperLayoutID": "unknown-layout"}):
+            sample = dict(original); sample.update(changes); self.write_sample("one", sample)
+            with self.assertRaises(validation.ValidationError):
+                self.report()
+
+    def test_old_and_current_layouts_cannot_share_an_accuracy_report(self):
+        self.sample("current")
+        old = self.sample("old")
+        old["paperLayoutID"] = validation.LEGACY_LAYOUT_ID; old["paperLayoutRevision"] = 1
+        old["registrationPoints"] = [{"id": key, "sheet": {"x": xy[0], "y": xy[1]}}
+                                     for key, xy in validation.known_registration_points(validation.LEGACY_LAYOUT_ID).items()]
+        self.write_sample("old", old)
+        with self.assertRaisesRegex(validation.ValidationError, "mixed paper layouts"):
+            self.report()
 
 
 if __name__ == "__main__":

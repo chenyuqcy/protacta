@@ -11,9 +11,9 @@ correction help, real-device acceptance and the beginner trial.
 | One complete supported course | Ten actions, separate explicit confirmations, help/3D return and persistence; full UI flow | Software flow implemented; physical follow-through/review missing |
 | Fixed CV checks distinguish match, adjustment, unknown | Restricted outline checker, negative/shadow/projection tests and isolated comparison history | Prototype implemented; independent real examples and calibration missing |
 | Reviewed correction help | Authored per-action draft, manual comparison and replay | Real-paper review not performed; cannot claim approved correction |
-| Appropriate automated tests | Build 5: 220 native focused cases and course-hub UI; prior 24 Python evaluator cases/contract remain recorded separately | Software checks recorded with failed UI attempts and focused repairs retained |
-| Real iPhone/iPad acceptance | Build 5 signed, installed and launched wirelessly on iPhone 17 Pro Max; camera/course acceptance not recorded; iPad not installed | Installation gate achieved on iPhone; feature acceptance outstanding |
-| About ten beginners and matched tutorial comparison | Protocol only; no participants, task records or observed outcomes | Not achieved |
+| Appropriate automated tests | Build 6: 236 native, 28 Python, 17 annotation-core cases; 3 focused phone UI cases; signed Debug/unsigned Release builds | Local software checks passed; prior attempts retained separately |
+| Real iPhone/iPad acceptance | Build 5 last installed/launched on iPhone 17 Pro Max; Build 6 locally built only; camera/course acceptance not recorded; iPad not installed | Earlier installation gate achieved; current candidate and physical features unverified |
+| About ten beginners and matched tutorial comparison | Protocol and blank CSVs only; no participants, task records or observed outcomes | Not achieved |
 | Honest evidence boundaries | Synthetic source guards, independent annotations, no automated MVP-pass output | Implemented; does not replace missing physical evidence |
 
 ## Earlier external blocker audit
@@ -54,8 +54,16 @@ behavior and learning outcomes remain unverified.
 
 ## Deferred physical acceptance gate
 
+Build 6 resolved the old PTC1 marker-occlusion defect and strengthened hands-on
+screen/voice boundaries. Synthetic geometry tests establish only authored layer
+visibility, not practical QR detection. Its independent-label tool, schema and
+blank review packet are prepared; no physical reviewer/participant result exists.
+See VALIDATION_PHYSICAL_READINESS.md. The user's latest direction was to test
+later and continue local checks, so no new installation was attempted.
+
 When the user is ready, connect and unlock an iPhone and enable development access.
-Build/install the Debug prototype, verify its real camera path, print the A4
+Install the matching Build 6 candidate, verify its real camera path, print the
+**PTC2 revision-2** A4
 sheet and review the complete physical sequence. Use the explicit local capture
 tool and independent labeling process for actual accuracy/timing. Then calibrate
 or change the implementation based on observed errors, review help content and

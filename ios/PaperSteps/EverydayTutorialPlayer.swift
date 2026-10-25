@@ -6,6 +6,7 @@ struct EverydayTutorialPlayer: View {
     private let store: EverydayTutorialProgressStore
     @State private var session: EverydayTutorialSession
     @StateObject private var voice = VoiceGuide()
+    @StateObject private var screenAwake = HandsOnScreenAwakeLease.system()
     @Environment(\.scenePhase) private var scenePhase
     @State private var progress: Double = 0
     @State private var isPlaying = false
@@ -66,15 +67,15 @@ struct EverydayTutorialPlayer: View {
                 }
             }
         }
-        .onAppear { configureVoice() }
-        .onDisappear { stopAndSave(); voice.onCommand = nil }
+        .onAppear { screenAwake.acquire(); configureVoice() }
+        .onDisappear { screenAwake.release(); stopAndSave(); voice.onCommand = nil }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { voice.handleSceneActive() }
-            else if phase == .background { stopAndSave(); voice.handleSceneInactive() }
+            if phase == .active { screenAwake.acquire(); voice.handleSceneActive() }
+            else if phase == .background { screenAwake.release(); stopAndSave(); voice.handleSceneInactive() }
             else {
                 // Speech permission sheets temporarily make the scene inactive;
                 // VoiceGuide preserves its matching permission request itself.
-                isPlaying = false; _ = store.save(session); voice.handleSceneInactive()
+                screenAwake.release(); isPlaying = false; _ = store.save(session); voice.handleSceneInactive()
             }
         }
         .sheet(isPresented: $showHelp, onDismiss: { voice.stop() }) { helpSheet }
@@ -246,6 +247,8 @@ struct EverydayTutorialPlayer: View {
 
     private func configureVoice() {
         voice.onCommand = { command in
+            guard EverydayPracticeVoiceBoundary.permitsCommand(completed: session.completed,
+                                                               stop: { voice.stop() }) else { return }
             switch command {
             case .next: feedback = "Use I have done this to confirm your own action and continue."
             case .back: previous()
@@ -263,8 +266,10 @@ struct EverydayTutorialPlayer: View {
         }
     }
     private func confirm() {
-        voice.contextDidChange(); isPlaying = false
-        _ = session.confirmCurrentAction(); _ = store.save(session); progress = session.completed ? 1 : 0; feedback = ""
+        isPlaying = false
+        _ = EverydayPracticeVoiceBoundary.confirm(&session, stop: { voice.stop() },
+                                                  continueListening: { voice.contextDidChange() })
+        _ = store.save(session); progress = session.completed ? 1 : 0; feedback = ""
     }
     private func previous() {
         voice.contextDidChange(); isPlaying = false
@@ -274,5 +279,5 @@ struct EverydayTutorialPlayer: View {
         voice.contextDidChange(); isPlaying = false; session.restart(); _ = store.save(session); progress = 0
     }
     private func stopAndSave() { isPlaying = false; voice.stop(); _ = store.save(session) }
-    private func close() { stopAndSave(); onExit() }
+    private func close() { screenAwake.release(); stopAndSave(); onExit() }
 }

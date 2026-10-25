@@ -4,10 +4,16 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current prototype identity: **Protacta 0.1.0 (5)**,
+Current local prototype identity: **Protacta 0.1.0 (6)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
+
+Build 6 is a locally checked candidate; the last confirmed phone installation is
+Build 5. Its new **PTC2 revision-2** practice sheet fixes markers covered by later
+folds in the previous layout. Update the app and printed sheet together before
+physical testing. See `docs/VALIDATION_PHYSICAL_READINESS.md` for checks and
+`docs/physical-review/README.md` for the unexecuted review packet.
 
 ## Unified tutorial app
 
@@ -46,7 +52,7 @@ the learner's explicit confirmation advances this session. Voice can read the
 current action/help or open its 3D reference; saying Next step does not certify
 or confirm the physical action.
 
-The printed-paper Plan B uses four QR codes on the paper itself to establish
+The printed-paper Plan B uses four PTC2 QR codes on the paper itself to establish
 position and direction. The practice sheet is bundled with a print/share entry;
 see `docs/DART_PRACTICE_SHEET.md`. All four codes must be visible, with white
 A4 paper on a plain dark mat. The known flat region supports planar cues before
@@ -154,5 +160,8 @@ The engineering objective is the single complete-course MVP in
 prototype evidence. Real-paper registration, actual tutorial review, independent
 correct/incorrect/unclear samples and the beginner pilot remain acceptance gates.
 The user chose to continue local development and defer physical testing on
-25 October 2026; Build 4 follows that choice.
+25 October 2026; Build 6 follows that choice. Screen-awake and voice lifecycle
+repairs, the revised paper layout and offline independent-label tooling are
+locally verified; real-paper follow-through, calibration and beginner outcomes
+remain untested.
 Progress and evidence are maintained in `docs/PROGRESS.md`.

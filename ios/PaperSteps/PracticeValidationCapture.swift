@@ -85,6 +85,8 @@ struct PracticeValidationSample: Codable {
     let sourceBasename: String
     let tutorialID: String
     let courseRevision: String
+    let paperLayoutID: String
+    let paperLayoutRevision: Int
     let checkpointID: String
     let referenceState: Int
     let appVersion: String
@@ -125,6 +127,8 @@ struct PracticeValidationSample: Codable {
         self.attemptID = attemptID; self.originID = originID
         self.sourceBasename = sourceBasename ?? "\(id).png"
         self.tutorialID = tutorialID; self.courseRevision = courseRevision
+        paperLayoutID = PrintedPaperRegistration.layoutID
+        paperLayoutRevision = PrintedPaperRegistration.layoutRevision
         checkpointID = result.checkpointID; referenceState = result.referenceState
         self.appVersion = appVersion; self.appBuild = appBuild
         self.deviceModel = deviceModel; self.osVersion = osVersion
@@ -147,6 +151,7 @@ struct PracticeValidationSample: Codable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion, id, source, split, sessionID, operatorID, sheetID, attemptID, originID, sourceBasename
         case tutorialID, courseRevision, checkpointID, referenceState, appVersion, appBuild, deviceModel, osVersion
+        case paperLayoutID, paperLayoutRevision
         case capturedUptime, processedUptime, processingFailure, processingMs, frameAgeMs, frameDisposition, image, viewport
         case rawSheetQuadrilateral, markerQuadrilaterals, registrationPoints, result
     }
@@ -159,6 +164,7 @@ struct PracticeValidationSample: Codable {
         try values.encode(sheetID, forKey: .sheetID); try values.encode(attemptID, forKey: .attemptID)
         try values.encode(originID, forKey: .originID); try values.encode(sourceBasename, forKey: .sourceBasename)
         try values.encode(tutorialID, forKey: .tutorialID); try values.encode(courseRevision, forKey: .courseRevision)
+        try values.encode(paperLayoutID, forKey: .paperLayoutID); try values.encode(paperLayoutRevision, forKey: .paperLayoutRevision)
         try values.encode(checkpointID, forKey: .checkpointID); try values.encode(referenceState, forKey: .referenceState)
         try values.encode(appVersion, forKey: .appVersion); try values.encode(appBuild, forKey: .appBuild)
         try values.encodeIfPresent(deviceModel, forKey: .deviceModel); try values.encodeIfPresent(osVersion, forKey: .osVersion)
@@ -212,6 +218,8 @@ struct PracticeValidationSample: Codable {
             !value.isEmpty && value.utf8.count <= 160 && !value.contains("\n") && !value.contains("\r")
         }
         guard schemaVersion == 1, UUID(uuidString: id) != nil,
+              paperLayoutID == PrintedPaperRegistration.layoutID,
+              paperLayoutRevision == PrintedPaperRegistration.layoutRevision,
               ids.allSatisfy(identifier), tutorialID == "classic-dart", shortText(courseRevision),
               shortText(checkpointID), (0...10).contains(referenceState),
               shortText(appVersion), shortText(appBuild),

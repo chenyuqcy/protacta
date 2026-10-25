@@ -40,6 +40,8 @@ final class PrintedPaperTrackerTests: XCTestCase {
         let layout = try XCTUnwrap(DartPracticePaperLayout.bundled,
                                    "The printable layout JSON must be bundled with the app")
         XCTAssertEqual(layout.schemaVersion, 1)
+        XCTAssertEqual(layout.layoutID, PrintedPaperRegistration.layoutID)
+        XCTAssertEqual(layout.layoutRevision, PrintedPaperRegistration.layoutRevision)
         XCTAssertEqual(layout.sheetSizeMM.width, 210, accuracy: 1e-10)
         XCTAssertEqual(layout.sheetSizeMM.height, 297, accuracy: 1e-10)
         XCTAssertEqual(layout.codeSideMM, 14, accuracy: 1e-10)
@@ -67,7 +69,7 @@ final class PrintedPaperTrackerTests: XCTestCase {
                                       PaperQuadrilateral.unit.points.map(perspective)) {
             assertPoint(actual, equals: expected)
         }
-        XCTAssertFalse(markers["PTC1A"]!.isValid,
+        XCTAssertFalse(markers["PTC2A"]!.isValid,
                        "A small marker must use its own geometry validation, not the full-sheet minimum area")
     }
 
@@ -83,18 +85,18 @@ final class PrintedPaperTrackerTests: XCTestCase {
 
     func testFourCentersAloneCannotAcceptWrongCodeSizeOrDistortedMarker() {
         var markers = markerQuads(mapping: perspective)
-        let original = markers["PTC1B"]!
+        let original = markers["PTC2B"]!
         // Scaling about the diagonal intersection preserves the measured
         // center, so a center-only homography would incorrectly accept it.
-        let center = perspective(PrintedPaperRegistration.markerCenters["PTC1B"]!)
+        let center = perspective(PrintedPaperRegistration.markerCenters["PTC2B"]!)
         let enlarged = original.points.map {
             CGPoint(x: center.x + ($0.x - center.x) * 1.8,
                     y: center.y + ($0.y - center.y) * 1.8)
         }
-        markers["PTC1B"] = quad(enlarged)
+        markers["PTC2B"] = quad(enlarged)
         XCTAssertNil(PrintedPaperRegistration(markers: markers))
         markers = markerQuads(mapping: perspective)
-        markers["PTC1B"] = quad([original.topLeft, original.bottomRight,
+        markers["PTC2B"] = quad([original.topLeft, original.bottomRight,
                                   original.topRight, original.bottomLeft])
         XCTAssertNil(PrintedPaperRegistration(markers: markers), "Crossed marker corners are invalid")
     }
@@ -102,15 +104,15 @@ final class PrintedPaperTrackerTests: XCTestCase {
     func testMissingDuplicatedWrongAndReflectedMarkersAreRejected() {
         let complete = markerQuads(mapping: perspective)
         var missing = complete
-        missing.removeValue(forKey: "PTC1D")
+        missing.removeValue(forKey: "PTC2D")
         XCTAssertNil(PrintedPaperRegistration(markers: missing))
         var wrongIDs = complete
-        wrongIDs["PTC1A"] = complete["PTC1B"]
-        wrongIDs["PTC1B"] = complete["PTC1A"]
+        wrongIDs["PTC2A"] = complete["PTC2B"]
+        wrongIDs["PTC2B"] = complete["PTC2A"]
         XCTAssertNil(PrintedPaperRegistration(markers: wrongIDs))
         var reflected = complete
-        let marker = complete["PTC1A"]!
-        reflected["PTC1A"] = quad([marker.topLeft, marker.bottomLeft, marker.bottomRight, marker.topRight])
+        let marker = complete["PTC2A"]!
+        reflected["PTC2A"] = quad([marker.topLeft, marker.bottomLeft, marker.bottomRight, marker.topRight])
         XCTAssertNil(PrintedPaperRegistration(markers: reflected))
 
         var observations = markerObservations(complete)
@@ -136,6 +138,17 @@ final class PrintedPaperTrackerTests: XCTestCase {
         failed.failure = "A required analysis stage failed."
         XCTAssertNil(PrintedPaperTracker.makePose(detection: failed, timestamp: 10),
                      "Known corners cannot override a failed analysis stage")
+    }
+
+    func testObsoletePTC1PayloadsCannotEstablishCurrentPose() {
+        let current = markerObservations(markerQuads(mapping: perspective))
+        let obsolete = current.map {
+            PrintedPaperMarkerObservation(payload: $0.payload.replacingOccurrences(of: "PTC2", with: "PTC1"),
+                                          quadrilateral: $0.quadrilateral)
+        }
+        XCTAssertNil(PrintedPaperRegistration(markers: Dictionary(uniqueKeysWithValues:
+            obsolete.map { ($0.payload, $0.quadrilateral) })))
+        XCTAssertNil(PrintedPaperTracker.makePose(detection: detection(obsolete), timestamp: 10))
     }
 
     func testProcessingTimingAndFailureBelongToTheAdmittedFrame() throws {
@@ -329,7 +342,7 @@ final class PrintedPaperTrackerTests: XCTestCase {
 
     func testRealVisionBlankAndMissingCodeFramesCannotReturnPose() throws {
         let blank = try bandImage(width: 640, height: 480, top: 25, bottom: 25)
-        let missing = try practiceImage(including: ["PTC1A", "PTC1B", "PTC1C"])
+        let missing = try practiceImage(including: ["PTC2A", "PTC2B", "PTC2C"])
         let tracker = PrintedPaperTracker()
         tracker.reset(generation: 9)
         let blankResult = expectation(description: "blank image has no printed pose")
@@ -346,6 +359,22 @@ final class PrintedPaperTrackerTests: XCTestCase {
             missingResult.fulfill()
         }
         wait(for: [missingResult], timeout: 30)
+    }
+
+    func testNativeDecoderReadsObsoleteCodesButProductionTrackerRejectsTheirLayout() throws {
+        let fixture = try practiceImage(payloadPrefix: "PTC1")
+        let scan = PrintedPaperTracker.markerAnalysis(cgImage: fixture.image)
+        XCTAssertNil(scan.failure)
+        XCTAssertEqual(Set(scan.markers.map(\.payload)), Set(["PTC1A", "PTC1B", "PTC1C", "PTC1D"]),
+                       "Old IDs must be readable; rejection must come from the current layout contract")
+        let tracker = PrintedPaperTracker()
+        let completed = expectation(description: "obsolete QR layout is not admitted")
+        tracker.reset(generation: 12)
+        tracker.submit(cgImage: fixture.image, timestamp: 7, generation: 12) { frame in
+            XCTAssertNil(frame.pose, "A fully readable PTC1 sheet must not inherit PTC2 coordinates")
+            completed.fulfill()
+        }
+        wait(for: [completed], timeout: 30)
     }
 
     private func perspective(_ point: CGPoint) -> CGPoint {
@@ -408,7 +437,8 @@ final class PrintedPaperTrackerTests: XCTestCase {
         return try image(bytes: bytes, width: width, height: height)
     }
 
-    private func practiceImage(including markerIDs: [String] = PrintedPaperRegistration.markerIDs) throws -> (image: CGImage, sheet: PaperQuadrilateral) {
+    private func practiceImage(including markerIDs: [String] = PrintedPaperRegistration.markerIDs,
+                               payloadPrefix: String = "PTC2") throws -> (image: CGImage, sheet: PaperQuadrilateral) {
         let width = 1700, height = 2000
         let paperX = 220, paperY = 70, paperWidth = 1260, paperHeight = 1782
         var bytes = [UInt8](repeating: 255, count: width * height * 4)
@@ -423,7 +453,8 @@ final class PrintedPaperTrackerTests: XCTestCase {
         let context = CIContext(options: [.useSoftwareRenderer: true])
         for id in markerIDs {
             let filter = try XCTUnwrap(CIFilter(name: "CIQRCodeGenerator"))
-            filter.setValue(Data(id.utf8), forKey: "inputMessage")
+            let payload = id.replacingOccurrences(of: "PTC2", with: payloadPrefix)
+            filter.setValue(Data(payload.utf8), forKey: "inputMessage")
             filter.setValue("M", forKey: "inputCorrectionLevel")
             let output = try XCTUnwrap(filter.outputImage)
             let code = try XCTUnwrap(context.createCGImage(output, from: output.extent))

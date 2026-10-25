@@ -51,6 +51,8 @@ struct DartPracticePaperLayout: Codable {
     struct Point: Codable { let x: Double; let y: Double }
     struct Marker: Codable { let payload: String; let center: Point }
     let schemaVersion: Int
+    let layoutID: String
+    let layoutRevision: Int
     let sheetSizeMM: Size
     let codeSideMM: Double
     let quietZoneMM: Double
@@ -60,10 +62,19 @@ struct DartPracticePaperLayout: Codable {
         guard let url = Bundle.main.url(forResource: "DartPracticePaper", withExtension: "json"),
               let data = try? Data(contentsOf: url),
               let layout = try? JSONDecoder().decode(Self.self, from: data),
-              layout.schemaVersion == 1, layout.markers.count == 4,
+              layout.schemaVersion == 1,
+              layout.layoutID == PrintedPaperRegistration.layoutID,
+              layout.layoutRevision == PrintedPaperRegistration.layoutRevision,
+              layout.markers.map(\.payload) == PrintedPaperRegistration.markerIDs,
               abs(layout.sheetSizeMM.width - 210) < 0.001,
               abs(layout.sheetSizeMM.height - 297) < 0.001,
-              layout.codeSideMM > 0, layout.quietZoneMM >= 0 else { return nil }
+              abs(layout.codeSideMM - 14) < 0.001,
+              abs(layout.quietZoneMM - 3) < 0.001,
+              layout.markers.allSatisfy({ marker in
+                  guard let center = PrintedPaperRegistration.markerCenters[marker.payload] else { return false }
+                  return abs(marker.center.x - Double(center.x)) < 1e-10 &&
+                      abs(marker.center.y - Double(center.y)) < 1e-10
+              }) else { return nil }
         return layout
     }
 

@@ -25,6 +25,10 @@ SPLITS = ("development", "evaluation")
 QUAD_KEYS = ("topLeft", "topRight", "bottomRight", "bottomLeft")
 GROUP_KEYS = ("sessionID", "operatorID", "sheetID", "attemptID", "originID")
 LAYOUT_PATH = Path(__file__).resolve().parents[1] / "ios/PaperSteps/Resources/DartPracticePaper.json"
+LEGACY_LAYOUT_PATH = Path(__file__).resolve().parents[1] / "docs/reference/ptc1-layout-obsolete/DartPracticePaper.json"
+CURRENT_LAYOUT_ID = "protacta-dart-a4-ptc2"
+CURRENT_LAYOUT_REVISION = 2
+LEGACY_LAYOUT_ID = "protacta-dart-a4-ptc1"
 
 
 class ValidationError(ValueError):
@@ -204,9 +208,17 @@ def verify_png(raw: bytes, width: int, height: int) -> None:
     require(all(scanlines[row * row_size] <= 4 for row in range(height)), "invalid PNG scanline filter")
 
 
-def known_registration_points() -> dict[str, tuple[float, float]]:
+def known_registration_points(layout_id: str = CURRENT_LAYOUT_ID) -> dict[str, tuple[float, float]]:
+    require(layout_id in (CURRENT_LAYOUT_ID, LEGACY_LAYOUT_ID), "unknown printed layout ID")
+    layout_path = LAYOUT_PATH if layout_id == CURRENT_LAYOUT_ID else LEGACY_LAYOUT_PATH
     try:
-        layout = parse_json(LAYOUT_PATH.read_text(encoding="utf-8"), str(LAYOUT_PATH))
+        layout = parse_json(layout_path.read_text(encoding="utf-8"), str(layout_path))
+        prefix = "PTC2" if layout_id == CURRENT_LAYOUT_ID else "PTC1"
+        require({m["payload"] for m in layout["markers"]} == {prefix + suffix for suffix in "ABCD"},
+                "pinned printed layout has unexpected marker IDs")
+        if layout_id == CURRENT_LAYOUT_ID:
+            require(layout.get("layoutID") == CURRENT_LAYOUT_ID and layout.get("layoutRevision") == CURRENT_LAYOUT_REVISION,
+                    "unsupported current printed-layout revision")
         width, height = layout["sheetSizeMM"]["width"], layout["sheetSizeMM"]["height"]
         half_x, half_y = layout["codeSideMM"] / width / 2, layout["codeSideMM"] / height / 2
         result = {}
@@ -326,10 +338,26 @@ def load_sample(path: Path) -> dict:
         require(identifier not in identifiers, "duplicate fitting point ID")
         identifiers.add(identifier)
         point(feature.get("sheet"), "registrationPoints.sheet")
-    known_points = known_registration_points()
+    declared_id = sample.get("paperLayoutID")
+    declared_revision = sample.get("paperLayoutRevision")
+    if declared_id is None and declared_revision is None:
+        # Historical Build 3-5 records predate layout metadata. Only their exact
+        # obsolete PTC1 feature set can be inferred; current records declare it.
+        require(identifiers == set(known_registration_points(LEGACY_LAYOUT_ID)),
+                "current PTC2 records must declare paperLayoutID and paperLayoutRevision")
+        layout_id, layout_revision = LEGACY_LAYOUT_ID, 1
+    else:
+        require(declared_id in (LEGACY_LAYOUT_ID, CURRENT_LAYOUT_ID), "unknown paperLayoutID")
+        expected_revision = 1 if declared_id == LEGACY_LAYOUT_ID else CURRENT_LAYOUT_REVISION
+        require(type(declared_revision) is int and declared_revision == expected_revision,
+                "paperLayoutRevision does not match the pinned layout")
+        layout_id, layout_revision = declared_id, declared_revision
+    known_points = known_registration_points(layout_id)
     require(identifiers == set(known_points), "all 20 known fitting QR centers/corners must be declared")
     require(all(math.dist(point(feature["sheet"], "fitting point"), known_points[feature["id"]]) <= 1e-9 for feature in features),
             "fitting points do not match the pinned printed layout")
+    sample["_paperLayoutID"] = layout_id
+    sample["_paperLayoutRevision"] = layout_revision
     return sample
 
 
@@ -488,6 +516,9 @@ def evaluate(samples_dir: Path, labels_path: Path, events_path: Path | None = No
     candidates = {tuple(sample[key] for key in candidate_keys) for sample in samples}
     require(len(candidates) <= 1, "mixed app/course candidates must be evaluated separately")
     candidate = dict(zip(candidate_keys, next(iter(candidates)))) if candidates else None
+    paper_layouts = {(sample["_paperLayoutID"], sample["_paperLayoutRevision"]) for sample in samples}
+    require(len(paper_layouts) <= 1, "mixed paper layouts must be evaluated separately")
+    paper_layout = dict(zip(("id", "revision"), next(iter(paper_layouts)))) if paper_layouts else None
     reject_leakage(samples)
     labels = load_labels(labels_path, by_id)
     measurements = {sample["id"]: geometry(sample, labels[sample["id"]]) for sample in samples if sample["id"] in labels}
@@ -499,7 +530,7 @@ def evaluate(samples_dir: Path, labels_path: Path, events_path: Path | None = No
                                "checkpoints": {checkpoint: checkpoint_report([sample for sample in subset if sample["checkpointID"] == checkpoint], labels, measurements) for checkpoint in checkpoints},
                                "totals": checkpoint_report(subset, labels, measurements)}
     return {"reportSchemaVersion": 1, "generatedAtUTC": datetime.now(timezone.utc).isoformat(),
-            "source": next(iter(sources), None), "candidate": candidate,
+            "source": next(iter(sources), None), "candidate": candidate, "paperLayout": paper_layout,
             "sampleCount": len(samples), "labeledCount": len(labels),
             "unlabeledSampleIDs": sorted(set(by_id) - set(labels)), "splits": split_reports,
             "measurements": list(measurements.values()), "lifecycle": lifecycle_report(events_path, by_id),
@@ -517,7 +548,10 @@ def markdown(report: dict) -> str:
     candidate = report["candidate"]
     candidate_line = (f"Candidate: tutorial `{candidate['tutorialID']}`; course revision `{candidate['courseRevision']}`; "
                       f"app `{candidate['appVersion']}` build `{candidate['appBuild']}`.") if candidate else "Candidate: unavailable (no data)."
+    layout = report["paperLayout"]
+    layout_line = f"Paper layout: `{layout['id']}` revision `{layout['revision']}`." if layout else "Paper layout: unavailable (no data)."
     lines = ["# Offline practice validation report", "", f"Source: **{report['source'] or 'NO DATA'}**", candidate_line,
+             layout_line,
              f"Samples: {report['sampleCount']}; labeled: {report['labeledCount']}; unlabeled: {len(report['unlabeledSampleIDs'])}.",
              "", "**Physical acceptance is not established. This report never declares the MVP passed.**", "",
              "Errors below are fractions of independently annotated full paper width in the raw image, not image diagonal.", "",

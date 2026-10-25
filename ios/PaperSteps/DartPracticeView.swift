@@ -76,10 +76,15 @@ struct DartPracticeOverlay: View {
 struct DartPracticeCard<VoiceControls: View>: View {
     @ObservedObject var controller: LessonController
     let onOpenComparison: () -> Void
+    let onPracticeToolsPresented: (Bool) -> Void
     @ViewBuilder var voiceControls: () -> VoiceControls
-    @State private var showSetup = false
-    @State private var showHelp = false
+    @State private var presentedPracticeTool: PracticeTool?
     @State private var showComparison = false
+
+    private enum PracticeTool: String, Identifiable {
+        case setup, help
+        var id: String { rawValue }
+    }
 
     var body: some View {
         ScrollView {
@@ -89,7 +94,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                         .font(.system(size: 11, weight: .bold)).tracking(1)
                         .accessibilityIdentifier("practiceCounter")
                     Spacer()
-                    Button { showSetup = true } label: { Image(systemName: "printer") }
+                    Button { presentPracticeTool(.setup) } label: { Image(systemName: "printer") }
                         .frame(minWidth: 44, minHeight: 32).accessibilityLabel("Practice paper and setup")
                         .accessibilityIdentifier("practiceSetup")
                 }
@@ -163,7 +168,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                     Button("Find sheet again") { controller.restartPaperGuideTracking() }
                         .accessibilityIdentifier("reacquirePractice")
                     Spacer()
-                    Button("I'm stuck") { showHelp = true }.accessibilityIdentifier("practiceHelp")
+                    Button("I'm stuck") { presentPracticeTool(.help) }.accessibilityIdentifier("practiceHelp")
                 }.font(.system(size: 12)).frame(minHeight: 40)
                 if controller.validationEnabled { PracticeValidationControls(controller: controller) }
                 if controller.isPaperGuideFixture {
@@ -184,23 +189,40 @@ struct DartPracticeCard<VoiceControls: View>: View {
                     }
                 }
             }
-            .sheet(isPresented: $showSetup) { DartPracticeSetupView(controller: controller) }
-            .sheet(isPresented: $showHelp) {
-                NavigationStack {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 18) {
-                            Text(controller.practiceAction.instruction)
-                            Text("Compare your paper").font(.headline)
-                            Text(controller.practiceAction.manualCheckpoint)
-                            Text("If you are stuck").font(.headline)
-                            Text(controller.practiceAction.commonMistake)
-                            Button("Watch this action in 3D") { showHelp = false; controller.showPracticeActionIn3D() }
-                                .buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)
-                        }.padding(24)
-                    }.navigationTitle("Action \(controller.dartPractice.currentAction) help")
-                        .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showHelp = false } } }
+            .onDisappear {
+                // A compact-height sheet may cover its presenter. Clear on a
+                // real mode exit; the parent also clears when its lesson exits.
+                if !controller.isDartPractice { onPracticeToolsPresented(false) }
+            }
+            .sheet(item: $presentedPracticeTool, onDismiss: { onPracticeToolsPresented(false) }) { tool in
+                switch tool {
+                case .setup:
+                    DartPracticeSetupView(controller: controller)
+                case .help:
+                    NavigationStack {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 18) {
+                                Text(controller.practiceAction.instruction)
+                                Text("Compare your paper").font(.headline)
+                                Text(controller.practiceAction.manualCheckpoint)
+                                Text("If you are stuck").font(.headline)
+                                Text(controller.practiceAction.commonMistake)
+                                Button("Watch this action in 3D") { presentedPracticeTool = nil; controller.showPracticeActionIn3D() }
+                                    .buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)
+                            }.padding(24)
+                        }.navigationTitle("Action \(controller.dartPractice.currentAction) help")
+                            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { presentedPracticeTool = nil } } }
+                    }
                 }
             }
+    }
+
+    private func presentPracticeTool(_ tool: PracticeTool) {
+        // Set the parent's routing gate synchronously, before SwiftUI presents
+        // the modal. Keep it set through the dismissal animation; onDismiss
+        // (or leaving this card) is the only path that clears it.
+        onPracticeToolsPresented(true)
+        presentedPracticeTool = tool
     }
 
     private func checkTitle(_ outcome: PaperCheckOutcome) -> String {
@@ -228,6 +250,8 @@ struct DartPracticeSetupView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     Text("One sheet, ten actions").font(.title2.bold())
                     Text("Print the practice PDF on white A4 paper at 100% / Actual Size. Turn off Fit to Page. Keep the codes on the visible face and both rows of codes at the end closest to you. The other short edge is the top.")
+                    Text("Use the PTC2 revision 2 sheet supplied with this build. Earlier PTC1 sheets cannot establish alignment.")
+                        .font(.footnote.weight(.semibold)).accessibilityIdentifier("practicePaperRevision")
                     if let file = Bundle.main.url(forResource: "Protacta_Dart_Practice_A4", withExtension: "pdf") {
                         ShareLink(item: file) { Label("Open or print the practice sheet", systemImage: "printer") }
                             .buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)

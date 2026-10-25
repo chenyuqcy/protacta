@@ -1,0 +1,11 @@
+reviewer_id,review_date,candidate_manifest,physical_attempt_id,paper_layout_id,action,action_title,status,actual_observation,text_or_visual_issue,help_used,proposed_correction,recheck_status
+,,,,,1,Make the center crease,not_tested,,,,,not_tested
+,,,,,2,Open the sheet,not_tested,,,,,not_tested
+,,,,,3,Fold the left corner,not_tested,,,,,not_tested
+,,,,,4,Fold the right corner,not_tested,,,,,not_tested
+,,,,,5,Narrow the left side,not_tested,,,,,not_tested
+,,,,,6,Narrow the right side,not_tested,,,,,not_tested
+,,,,,7,Close the body,not_tested,,,,,not_tested
+,,,,,8,Fold the first wing,not_tested,,,,,not_tested
+,,,,,9,Fold the other wing,not_tested,,,,,not_tested
+,,,,,10,Open your finished wings,not_tested,,,,,not_tested

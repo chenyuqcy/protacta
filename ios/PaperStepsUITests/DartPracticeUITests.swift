@@ -70,6 +70,22 @@ final class DartPracticeUITests: XCTestCase {
         checkCounter(3)
     }
 
+    func testSetupUsesTheNewPaperRevisionAndLocalToolsDismissWithoutChangingAction() {
+        tap("practiceSetup")
+        XCTAssertTrue(app.staticTexts["One sheet, ten actions"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["practicePaperRevision"].label.contains("PTC2 revision 2"))
+        app.buttons["Done"].tap()
+        checkCounter(1)
+        tap("confirmPracticeAction")
+        tap("practiceHelp")
+        XCTAssertTrue(app.navigationBars["Action 2 help"].waitForExistence(timeout: 5))
+        app.buttons["Done"].tap()
+        checkCounter(2)
+        tap("checkPracticeStep")
+        XCTAssertTrue(checkResult.waitForExistence(timeout: 5))
+        checkCounter(2)
+    }
+
     func testTabletLandscapeCanReachSetupCheckAndConfirmation() throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("Tablet layout check") }
         XCUIDevice.shared.orientation = .landscapeLeft

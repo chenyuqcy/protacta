@@ -1,8 +1,10 @@
 # Real-paper acceptance protocol
 
-Status: not executed. Synthetic images, simulator screens and unsigned builds
-do not establish any result in this protocol. The next gate is an unlocked,
-connected iPhone and a printed practice sheet.
+Status: not executed. Build 5 installation/launch was verified, but the user
+deferred physical testing while local checks continue. Build 6 requires the new
+PTC2 revision-2 sheet; update the app and paper together. Synthetic images and
+simulator screens do not establish a result in this protocol. The executable
+review forms and pilot script are in [physical-review/README.md](physical-review/README.md).
 
 ## Prepare a reproducible session
 

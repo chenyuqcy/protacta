@@ -28,7 +28,7 @@ enum DartPracticeCourse {
     /// Fingerprint both source wording and the added teaching/checkpoint notes.
     /// Bump the geometry/checkpoint revision when semantics change independently.
     static let revision: String = {
-        var fields = ["Protacta Classic Dart practice v1", "geometry=1", "outline-checkpoints=1", creaseAmbiguityNote]
+        var fields = ["Protacta Classic Dart practice v1", "geometry=1", "outline-checkpoints=1", "paper-layout=2", creaseAmbiguityNote]
         for action in actions {
             fields += [String(action.id), action.title, action.instruction,
                        action.explanation, action.manualCheckpoint, action.commonMistake]

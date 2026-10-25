@@ -11,8 +11,10 @@ practice does not record camera photos. The entry is hidden in Release builds.
    as needed; an unsigned generic build is not an installed app.
 2. Add the launch argument `--practice-validation`. Remove `--ui-testing` and
    `--paper-guide-fixture`; those arguments prohibit physical-source recording.
-3. Open Classic Dart, then **Practice the complete Dart**. In the printer/setup
-   panel choose **Configure local validation samples**. Enter anonymous operator,
+3. From the normal hub choose **Paper & craft** → **Classic Dart** →
+   **Practice the complete Dart**. Use the matching PTC2 revision-2 sheet for
+   Build 6; Build 5/PTC1 is a different candidate. In the printer/setup panel
+   choose **Configure local validation samples**. Enter anonymous operator,
    physical-sheet and whole-attempt IDs and choose development or evaluation.
    Do not use a person's name, phone identifier or email.
 4. Return to the camera and frame the current action. Press **Save local test

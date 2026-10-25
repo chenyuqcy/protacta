@@ -54,10 +54,12 @@ struct PrintedPaperDetection {
 /// Four marker centers establish a homography; their independently measured
 /// corners must also agree with the projected 14 mm code squares.
 struct PrintedPaperRegistration {
-    static let markerIDs = ["PTC1A", "PTC1B", "PTC1C", "PTC1D"]
+    static let layoutID = "protacta-dart-a4-ptc2"
+    static let layoutRevision = 2
+    static let markerIDs = ["PTC2A", "PTC2B", "PTC2C", "PTC2D"]
     static let markerCenters: [String: CGPoint] = [
-        "PTC1A": CGPoint(x: 0.16, y: 0.72), "PTC1B": CGPoint(x: 0.84, y: 0.72),
-        "PTC1C": CGPoint(x: 0.84, y: 0.94), "PTC1D": CGPoint(x: 0.16, y: 0.94)
+        "PTC2A": CGPoint(x: 0.30, y: 0.72), "PTC2B": CGPoint(x: 0.70, y: 0.72),
+        "PTC2C": CGPoint(x: 0.70, y: 0.94), "PTC2D": CGPoint(x: 0.30, y: 0.94)
     ]
     static let codeSize = CGSize(width: 14.0 / 210, height: 14.0 / 297)
 
@@ -102,7 +104,7 @@ struct PrintedPaperRegistration {
     }
 
     private static func centerCoordinates(_ point: CGPoint) -> CGPoint {
-        CGPoint(x: (point.x - 0.16) / 0.68, y: (point.y - 0.72) / 0.22)
+        CGPoint(x: (point.x - 0.30) / 0.40, y: (point.y - 0.72) / 0.22)
     }
 
     /// Generic PaperQuadrilateral rejects very small viewport targets, which is

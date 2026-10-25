@@ -34,8 +34,8 @@
       "target": "AR/ProductARController.swift",
       "sourceSHA256": "4d46c1159107cabafbd0c9ec5c5236b154e4666a33866599c4ac39c110d03066",
       "sourceBytes": 27342,
-      "integratedSHA256": "6aa13d2939398ecd141f36e535aa23b4b4694980637ce4ef8816f1dfd47cbcd0",
-      "integratedBytes": 30674,
+      "integratedSHA256": "09f4cb44d647f848592b27b491ac73091293b51fc6d9a1814d7fdd221b399bb3",
+      "integratedBytes": 30687,
       "originalUnchanged": true
     },
     {
@@ -61,6 +61,7 @@
     "Native view module in Protacta; no separate application entry point.",
     "The USDZ is byte-identical to the original concept asset.",
     "Lifecycle and asynchronous cancellation guards were added in copied source only.",
-    "AR places a virtual model on a detected surface and does not register a real appliance."
+    "AR places a virtual model on a detected surface and does not register a real appliance.",
+    "Build 6 replaces the copied AR screen idle-timer Boolean with the shared multiwindow screen-awake lease; original AERIS source remains unchanged."
   ]
 }

@@ -1,11 +1,39 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 5 integrates five everyday skill courses and the AERIS product
-manual under one home screen. Version 0.1.0 (5) was signed, installed wirelessly
-and launched on the user's iPhone 17 Pro Max on 25 October 2026. The full MVP
+Current work: Build 6 repairs print-layout and hands-on lifecycle defects and
+prepares independent physical review. It is locally built and checked, not
+installed. Version 0.1.0 (5) remains the last confirmed phone installation,
+with the unified everyday courses and AERIS manual. The full MVP
 remains incomplete: real-paper review, device feature acceptance, independent
 samples and beginner outcomes remain unproved.
+
+## Build 6: paper visibility and physical-review readiness
+
+- Found a real geometric defect in PTC1: upper QR codes sit beneath the narrowed
+  top layers at correct reference states 5 and 6. PTC2 moves their full footprints
+  into stationary, top-visible material. Tests evaluate actual layer coverage,
+  not just containment inside the paper silhouette. Old sheets are rejected;
+  the original PTC1 PDF/JSON remain pinned for historical data.
+- Keep lesson screens awake through a shared coordinator across everyday,
+  origami and product-AR windows. Restore the initial idle-timer setting only
+  after the last active owner exits/backgrounds. Stop voice on completion and reject queued
+  commands. Dart Setup/Help now block pending voice/narration until dismissal.
+- Include exact paper-layout identity/revision in captures and reject mixed
+  layouts in the offline evaluator. Historical PTC1 samples use their preserved
+  fitting geometry; new PTC2 samples require explicit layout metadata.
+- Added a local raw-PNG labeling tool that hides detector predictions, verifies
+  image identity and exports only an explicit separate label. Native ImageIO
+  upright EXIF is accepted without rewriting the PNG. Native-export → browser
+  download → Python report round-trip passed using a synthetic 4×2 fixture;
+  it is not a physical image label or measured camera result.
+- 236 native logic/synthetic tests, 28 Python tests, 17 annotator-core tests and
+  3 focused iPhone Simulator UI cases passed. Generic signed Debug and unsigned
+  Release Build 6 passed. No Build 6 install or physical test was performed.
+- Prepared ten-action physical-review and beginner-trial CSVs with all outcomes
+  blank/not tested. The user again selected “稍后测试，先继续本地检查”.
+
+See VALIDATION_PHYSICAL_READINESS.md and `output/physical-readiness/` for evidence.
 
 ## Build 5: everyday skills and integrated product manual
 

@@ -440,7 +440,7 @@ struct ProductARScreen: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var phase
     @StateObject private var controller: ProductARController
-    @State private var previousIdleTimerDisabled = false
+    @StateObject private var screenAwake = HandsOnScreenAwakeLease.system()
     private let green = Color(red: 0.15, green: 0.31, blue: 0.23)
     init(task: ManualTask = .filter, sharedView: ARView? = nil) {
         _controller = StateObject(wrappedValue: ProductARController(task: task, sharedView: sharedView))
@@ -509,13 +509,16 @@ struct ProductARScreen: View {
             }.foregroundStyle(green)
         }
         .onAppear {
-            previousIdleTimerDisabled = UIApplication.shared.isIdleTimerDisabled
-            UIApplication.shared.isIdleTimerDisabled = true
+            if phase == .active { screenAwake.acquire() }
         }
         .onDisappear {
             controller.stop()
-            UIApplication.shared.isIdleTimerDisabled = previousIdleTimerDisabled
+            screenAwake.release()
         }
-        .onChange(of: phase) { _, newValue in if newValue == .background { controller.pauseForBackground() } }
+        .onChange(of: phase) { _, newValue in
+            if newValue == .active { screenAwake.acquire() }
+            else { screenAwake.release() }
+            if newValue == .background { controller.pauseForBackground() }
+        }
     }
 }
