@@ -1,7 +1,7 @@
 # Real-paper acceptance protocol
 
 Status: not executed. Build 5 installation/launch was verified, but the user
-deferred physical testing while local checks continue. Build 6 requires the new
+deferred physical testing while local checks continue. Build 6 and later require the new
 PTC2 revision-2 sheet; update the app and paper together. Synthetic images and
 simulator screens do not establish a result in this protocol. The executable
 review forms and pilot script are in [physical-review/README.md](physical-review/README.md).

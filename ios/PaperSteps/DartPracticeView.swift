@@ -76,6 +76,7 @@ struct DartPracticeOverlay: View {
 struct DartPracticeCard<VoiceControls: View>: View {
     @ObservedObject var controller: LessonController
     let onOpenComparison: () -> Void
+    let onConfirmAction: () -> Void
     let onPracticeToolsPresented: (Bool) -> Void
     @ViewBuilder var voiceControls: () -> VoiceControls
     @State private var presentedPracticeTool: PracticeTool?
@@ -140,7 +141,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                             .frame(maxWidth: .infinity, minHeight: 40)
                     }.buttonStyle(.bordered).disabled(controller.practiceCheckBusy)
                         .accessibilityIdentifier("checkPracticeStep")
-                    Button { controller.confirmPracticeAction() } label: {
+                    Button { onConfirmAction() } label: {
                         Text(controller.dartPractice.currentAction == 10 ? "I have finished · Save my progress" : "I have made this fold · Next action")
                             .frame(maxWidth: .infinity, minHeight: 40)
                     }.buttonStyle(.borderedProminent).tint(.black).foregroundStyle(.white)

@@ -7,9 +7,10 @@ import StoreKit
 @MainActor
 enum PracticeToolVoiceCommandGate {
     static func route(_ command: VoiceCommand, modalPresented: Bool,
+                      practiceCompleted: Bool = false,
                       stopVoice: () -> Void,
                       perform: (VoiceCommand) -> LessonVoiceResponse) -> LessonVoiceResponse? {
-        guard !modalPresented else { stopVoice(); return nil }
+        guard !modalPresented, !practiceCompleted else { stopVoice(); return nil }
         if command == .stopListening { stopVoice() }
         return perform(command)
     }
@@ -92,6 +93,7 @@ struct PaperStepsView: View {
             viewport
             if controller.isDartPractice {
                 DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() },
+                                 onConfirmAction: { DartPracticeVoiceBoundary.confirm(controller: controller, stopVoice: { voice.stop() }) },
                                  onPracticeToolsPresented: { presented in
                     practiceToolsPresented = presented
                     if presented { voice.stop(); controller.pauseAndSave() }
@@ -160,6 +162,9 @@ struct PaperStepsView: View {
         .onDisappear { voice.stop(); voice.onCommand = nil; practiceToolsPresented = false }
         .onChange(of: controller.stepIndex) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.dartPractice.currentAction) { _, _ in voice.contextDidChange() }
+        .onChange(of: controller.dartPractice.completed) { _, completed in
+            if completed && controller.isDartPractice { closeVoiceTools() }
+        }
         .onChange(of: controller.lesson) { _, _ in voice.stop() }
         .onChange(of: controller.isAR) { _, _ in voice.stop() }
         .onChange(of: controller.placed) { _, placed in if !placed { voice.stop() } }
@@ -191,6 +196,7 @@ struct PaperStepsView: View {
         voice.onCommand = { [weak controller, weak voice] command in
             guard let controller, let voice else { return }
             guard let response = PracticeToolVoiceCommandGate.route(command, modalPresented: practiceTools.wrappedValue,
+                                                                    practiceCompleted: controller.isDartPractice && controller.dartPractice.completed,
                                                                     stopVoice: { voice.stop() },
                                                                     perform: controller.performVoiceCommand) else { return }
             switch response {

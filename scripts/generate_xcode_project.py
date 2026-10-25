@@ -14,7 +14,7 @@ SOURCE_NAMES = {APP: "PaperSteps", APP + "Tests": "PaperStepsTests", APP + "UITe
 TEAM = "67P96Z83PX"
 BUNDLE = "org.realitycore.protacta.prototype"
 VERSION = "0.1.0"
-BUILD = "6"
+BUILD = "7"
 TARGETS = [APP, APP + "Tests", APP + "UITests"]
 objects = []
 

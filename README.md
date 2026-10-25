@@ -4,15 +4,16 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current local prototype identity: **Protacta 0.1.0 (6)**,
+Current local prototype identity: **Protacta 0.1.0 (7)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
 
-Build 6 is a locally checked candidate; the last confirmed phone installation is
-Build 5. Its new **PTC2 revision-2** practice sheet fixes markers covered by later
-folds in the previous layout. Update the app and printed sheet together before
-physical testing. See `docs/VALIDATION_PHYSICAL_READINESS.md` for checks and
+Build 7 repairs the Dart completion voice boundary; the last confirmed phone
+installation is Build 5. It uses the **PTC2 revision-2** practice sheet introduced
+in Build 6 to fix markers covered by later folds. Update the app and printed
+sheet together before physical testing. See `docs/DART_VOICE_COMPLETION.md` for
+the current repair, `docs/VALIDATION_PHYSICAL_READINESS.md` for the paper checks and
 `docs/physical-review/README.md` for the unexecuted review packet.
 
 ## Unified tutorial app
@@ -160,7 +161,7 @@ The engineering objective is the single complete-course MVP in
 prototype evidence. Real-paper registration, actual tutorial review, independent
 correct/incorrect/unclear samples and the beginner pilot remain acceptance gates.
 The user chose to continue local development and defer physical testing on
-25 October 2026; Build 6 follows that choice. Screen-awake and voice lifecycle
+25 October 2026; Build 7 follows that choice. Screen-awake and voice lifecycle
 repairs, the revised paper layout and offline independent-label tooling are
 locally verified; real-paper follow-through, calibration and beginner outcomes
 remain untested.

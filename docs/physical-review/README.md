@@ -1,9 +1,9 @@
 # Physical review packet — not yet executed
 
 Use the matching candidate manifest from
-`output/physical-readiness/candidate.json`; it identifies the app build, source
+`output/dart-voice-completion/candidate.json`; it identifies the app build, source
 commit, native-observed Dart content revision, geometry hashes and print layout.
-Build 6 uses **PTC2 revision 2**. The phone last received Build 5, which uses PTC1;
+Build 7 uses **PTC2 revision 2** from Build 6. The phone last received Build 5, which uses PTC1;
 update the phone and the practice sheet together when physical testing resumes.
 Do not collect a candidate result from the wrong app/paper pair.
 Before each actual review run, copy the manifest into that run's dated evidence

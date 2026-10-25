@@ -1,12 +1,35 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 6 repairs print-layout and hands-on lifecycle defects and
-prepares independent physical review. It is locally built and checked, not
+Current work: Build 7 repairs Dart's completion voice boundary after Build 6's
+print-layout and hands-on lifecycle repairs. It is a local candidate, not
 installed. Version 0.1.0 (5) remains the last confirmed phone installation,
 with the unified everyday courses and AERIS manual. The full MVP
 remains incomplete: real-paper review, device feature acceptance, independent
 samples and beginner outcomes remain unproved.
+
+## Build 7: completed Dart practice stops voice
+
+- Source/control-flow audit found that Dart's final confirmation can leave
+  voice enabled while its controls disappear. Action 10 and the 3D step index
+  may both remain unchanged, so index observers cannot provide the stop boundary.
+- Stop synchronously before final confirmation, observe other completion paths,
+  reject queued commands against live completion state, and refuse new startup
+  or direct navigation/narration on a completed practice.
+- Explicit Start again/Previous reopens practice without starting voice. Ordinary
+  3D voice Restart keeps its existing behavior and independent progress.
+- Five added native regression cases cover stop ordering, all queued/direct
+  commands, restored completion, explicit reopening and ordinary 3D compatibility.
+  A new UI case covers final-action 3D replay, completion and visible restart.
+- 241 native tests and four focused phone Simulator UI cases passed with no
+  failures/skips. Physical microphone/permission behavior remains untested.
+- Generic signed Debug and unsigned Release Build 7 passed in a separate output
+  folder. Debug's strict signature check passed; no installation was attempted.
+- The teaching content, PTC2 sheet and CV thresholds are unchanged. This is a
+  local speech/state repair; no real microphone, paper or learner data was used.
+
+See DART_VOICE_COMPLETION.md and `output/dart-voice-completion/` for validation.
+Build 6 artifacts remain preserved separately.
 
 ## Build 6: paper visibility and physical-review readiness
 

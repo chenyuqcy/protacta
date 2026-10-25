@@ -86,6 +86,28 @@ final class DartPracticeUITests: XCTestCase {
         checkCounter(2)
     }
 
+    func testFinalActionAfter3DReplayHidesVoiceAndExplicitRestartRestoresControls() {
+        for _ in 1..<10 { tap("confirmPracticeAction") }
+        checkCounter(10)
+        XCTAssertTrue(app.buttons["toggleHandsFree"].exists)
+        tap("practice3DReference")
+        XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 10 OF 10")
+        app.buttons["openDartPractice"].tap()
+        checkCounter(10)
+        tap("confirmPracticeAction")
+        XCTAssertTrue(app.staticTexts["practiceCompletion"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["toggleHandsFree"].exists,
+                       "Finished practice must not offer a hidden/restarted voice session")
+        tap("restartPractice")
+        checkCounter(1)
+        XCTAssertFalse(app.staticTexts["practiceCompletion"].exists)
+        XCTAssertTrue(app.buttons["toggleHandsFree"].exists)
+        capture("Synthetic_explicit_restart_after_final_replay")
+        // This checks UI availability; native injected-boundary tests verify
+        // actual stop/dispatch ordering without requesting a microphone.
+    }
+
     func testTabletLandscapeCanReachSetupCheckAndConfirmation() throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("Tablet layout check") }
         XCUIDevice.shared.orientation = .landscapeLeft

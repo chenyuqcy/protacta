@@ -5,8 +5,23 @@ enum LessonVoiceResponse: Equatable {
     case narration(String)
 }
 
+/// Final confirmation hides the practice microphone controls. Stop synchronously
+/// before that mutation, even if action 10 was already the displayed 3D step and
+/// no action/step-index observer will fire. Other completion paths are also
+/// covered by the view's completion observer and live command-admission gate.
+@MainActor
+enum DartPracticeVoiceBoundary {
+    static func confirm(controller: LessonController, stopVoice: () -> Void) {
+        guard controller.isDartPractice else { return }
+        if controller.dartPractice.currentAction == DartPracticeCourse.actions.count { stopVoice() }
+        controller.confirmPracticeAction()
+    }
+}
+
 extension LessonController {
-    var canUseVoiceGuide: Bool { started && hasLessonAccess }
+    var canUseVoiceGuide: Bool {
+        started && hasLessonAccess && !(isDartPractice && dartPractice.completed)
+    }
 
     /// The same access, tracking and playback gates apply to buttons and voice.
     /// Recognition never changes geometry, grants access or confirms a real fold.
@@ -77,6 +92,9 @@ extension LessonController {
     }
 
     private func performPracticeVoiceCommand(_ command: VoiceCommand) -> LessonVoiceResponse {
+        guard !dartPractice.completed else {
+            return .message("Practice is finished. Use Start again with a new practice sheet to begin another attempt.")
+        }
         switch command {
         case .readStep:
             return .narration("Action \(practiceAction.id). \(practiceAction.title). \(practiceAction.instruction)")
@@ -91,7 +109,6 @@ extension LessonController {
             previousPracticeAction()
             return .message("Previous action. Compare your physical paper before continuing.")
         case .next:
-            if dartPractice.completed { return .message("Practice complete. Say Restart lesson when you have a new practice sheet.") }
             return .message("Tap I have made this fold when you want to confirm the action and continue. Voice navigation does not confirm the paper.")
         case .restart:
             restartDartPractice()

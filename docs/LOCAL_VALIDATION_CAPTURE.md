@@ -13,7 +13,7 @@ practice does not record camera photos. The entry is hidden in Release builds.
    `--paper-guide-fixture`; those arguments prohibit physical-source recording.
 3. From the normal hub choose **Paper & craft** → **Classic Dart** →
    **Practice the complete Dart**. Use the matching PTC2 revision-2 sheet for
-   Build 6; Build 5/PTC1 is a different candidate. In the printer/setup panel
+   Build 6 and later; Build 5/PTC1 is a different candidate. In the printer/setup panel
    choose **Configure local validation samples**. Enter anonymous operator,
    physical-sheet and whole-attempt IDs and choose development or evaluation.
    Do not use a person's name, phone identifier or email.

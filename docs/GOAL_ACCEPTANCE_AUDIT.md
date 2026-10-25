@@ -11,8 +11,8 @@ correction help, real-device acceptance and the beginner trial.
 | One complete supported course | Ten actions, separate explicit confirmations, help/3D return and persistence; full UI flow | Software flow implemented; physical follow-through/review missing |
 | Fixed CV checks distinguish match, adjustment, unknown | Restricted outline checker, negative/shadow/projection tests and isolated comparison history | Prototype implemented; independent real examples and calibration missing |
 | Reviewed correction help | Authored per-action draft, manual comparison and replay | Real-paper review not performed; cannot claim approved correction |
-| Appropriate automated tests | Build 6: 236 native, 28 Python, 17 annotation-core cases; 3 focused phone UI cases; signed Debug/unsigned Release builds | Local software checks passed; prior attempts retained separately |
-| Real iPhone/iPad acceptance | Build 5 last installed/launched on iPhone 17 Pro Max; Build 6 locally built only; camera/course acceptance not recorded; iPad not installed | Earlier installation gate achieved; current candidate and physical features unverified |
+| Appropriate automated tests | Build 7: 241 native tests, four phone UI cases, signed Debug/unsigned Release passed; Build 6's 28 Python/17 annotation-core checks remain separate evidence | Software gates do not approve microphone, camera or learning behavior |
+| Real iPhone/iPad acceptance | Build 5 last installed/launched on iPhone 17 Pro Max; Build 7 is local only; camera/course acceptance not recorded; iPad not installed | Earlier installation gate achieved; current candidate and physical features unverified |
 | About ten beginners and matched tutorial comparison | Protocol and blank CSVs only; no participants, task records or observed outcomes | Not achieved |
 | Honest evidence boundaries | Synthetic source guards, independent annotations, no automated MVP-pass output | Implemented; does not replace missing physical evidence |
 
@@ -61,8 +61,14 @@ blank review packet are prepared; no physical reviewer/participant result exists
 See VALIDATION_PHYSICAL_READINESS.md. The user's latest direction was to test
 later and continue local checks, so no new installation was attempted.
 
+Build 7 subsequently repaired Dart's separate completion voice boundary. A
+read-only camera-pipeline audit found no further reproducible local defect;
+actual correspondence, uncertainty, reviewed help and learning outcomes still
+require physical observations. See DART_VOICE_COMPLETION.md for the exact local
+scope. No real microphone/camera result or reviewed correction was inferred.
+
 When the user is ready, connect and unlock an iPhone and enable development access.
-Install the matching Build 6 candidate, verify its real camera path, print the
+Install the matching current candidate, verify its real camera path, print the
 **PTC2 revision-2** A4
 sheet and review the complete physical sequence. Use the explicit local capture
 tool and independent labeling process for actual accuracy/timing. Then calibrate
