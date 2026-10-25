@@ -2,7 +2,7 @@
 set -eu
 
 if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-  printf '%s\n' 'Usage: scripts/test_dart_practice.sh SIMULATOR_UDID [logic|phone|tablet]' >&2
+  printf '%s\n' 'Usage: scripts/test_dart_practice.sh SIMULATOR_UDID [logic|phone|tablet|hub|hub-tablet]' >&2
   exit 2
 fi
 
@@ -22,7 +22,7 @@ set -- -project ios/Protacta.xcodeproj -scheme Protacta-StoreKit \
 
 case "$task_mode" in
   logic)
-    for task_suite in DartPracticeCourseTests DartPracticeSessionTests DartPracticeControllerTests DartOutlineCheckTests PrintedPaperTrackerTests PracticeValidationCaptureTests PracticeValidationControllerTests DartCheckSnapshotTests DartPracticeSyntheticComparisonTests DartCheckFeedbackControllerTests PaperRegistrationTests PaperGuideSessionTests PaperGuideControllerTests PaperVisionTrackerTests PaperGeometryTests LearningControllerTests LessonVoiceActionsTests VoiceCommandTests VoiceRecoveryPolicyTests VoiceGuideStateTests; do
+    for task_suite in DartPracticeCourseTests DartPracticeSessionTests DartPracticeControllerTests DartOutlineCheckTests PrintedPaperTrackerTests PracticeValidationCaptureTests PracticeValidationControllerTests DartCheckSnapshotTests DartPracticeSyntheticComparisonTests DartCheckFeedbackControllerTests PaperRegistrationTests PaperGuideSessionTests PaperGuideControllerTests PaperVisionTrackerTests PaperGeometryTests LearningControllerTests LessonVoiceActionsTests VoiceCommandTests VoiceRecoveryPolicyTests VoiceGuideStateTests EverydayTutorialCourseTests EverydayTutorialSessionTests EverydayTutorialVisualTests AerisIntegrationTests; do
       set -- "$@" "-only-testing:ProtactaTests/$task_suite"
     done
     ;;
@@ -35,7 +35,14 @@ case "$task_mode" in
   tablet)
     set -- "$@" -only-testing:ProtactaUITests/DartPracticeUITests -only-testing:ProtactaUITests/PaperGuideUITests -only-testing:ProtactaUITests/PracticeValidationUITests -only-testing:ProtactaUITests/DartCheckComparisonUITests
     ;;
-  *) printf '%s\n' 'Mode must be logic, phone or tablet.' >&2; exit 2 ;;
+  hub)
+    set -- "$@" -only-testing:ProtactaUITests/TutorialHubUITests \
+      -skip-testing:ProtactaUITests/TutorialHubUITests/testTabletLandscapeCanPlayAndConfirmAnEverydayAction
+    ;;
+  hub-tablet)
+    set -- "$@" -only-testing:ProtactaUITests/TutorialHubUITests/testTabletLandscapeCanPlayAndConfirmAnEverydayAction
+    ;;
+  *) printf '%s\n' 'Mode must be logic, phone, tablet, hub or hub-tablet.' >&2; exit 2 ;;
 esac
 
 xcodebuild "$@" test > "$task_run/tests.log" 2>&1

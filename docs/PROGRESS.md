@@ -1,11 +1,37 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 4 local development and software checks completed, followed
-by a user-requested wireless installation on an iPhone 17 Pro Max on 25 October
-2026. Installed version 0.1.0 (4) and process launch were verified. The full MVP
+Current work: Build 5 integrates five everyday skill courses and the AERIS product
+manual under one home screen. Version 0.1.0 (5) was signed, installed wirelessly
+and launched on the user's iPhone 17 Pro Max on 25 October 2026. The full MVP
 remains incomplete: real-paper review, device feature acceptance, independent
 samples and beginner outcomes remain unproved.
+
+## Build 5: everyday skills and integrated product manual
+
+- User-approved expansion: T-shirt (6 actions), rectangular towel (3), flat
+  bedsheet (4), square knot (5) and four-in-hand tie (7), with actual animated
+  diagrams, exact Start/Target references, action help and independent progress.
+- Migrated AERIS's native filter/setup/cleaning walkthroughs, interactive tab,
+  exploded 3D, Quick Look and tabletop AR into the same app. Original projects
+  and the copied model's bytes were verified; no separate-app link substitutes
+  for integration.
+- Added home/exit routing and renderer cleanup; opening one destination does not
+  leave the previous camera renderer or display link running behind it.
+- 220 native focused logic/synthetic tests passed. Complete skill flows,
+  persistence/help, AERIS's release gate and existing Dart regressions passed
+  phone Simulator checks. A near-endpoint slider assertion was repaired with
+  explicit Start/Target comparison controls and a passing focused rerun.
+- Signed Debug and unsigned Release Build 5 succeeded. Phone installation and
+  launch succeeded, and a separate installed-app query confirmed Build 5. A
+  subsequent live-process query timed out in the wireless tunnel; it is not
+  recorded as a confirmed long-running process or device-feature acceptance.
+- New everyday content remains an illustrated, manual-comparison prototype.
+  Object-specific camera tracking/checking for these categories is not enabled.
+  The user explicitly deferred cloud AI until after course integration.
+
+Full evidence, retained failed attempts and iPad screenshot limits are recorded
+in INTEGRATION_BUILD_5.md and `output/multi-course/validation-receipt.json`.
 
 ## Build 4: wireless device installation
 

@@ -4,10 +4,39 @@ An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
 `/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
 The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
 
-Current prototype identity: **Protacta 0.1.0 (4)**,
+Current prototype identity: **Protacta 0.1.0 (5)**,
 `org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
 This is a local development identity, not an App Store listing or migrated
 Foliafold purchase entitlement.
+
+## Unified tutorial app
+
+The normal launch now opens a tutorial hub with paper/craft, five everyday skill
+courses and the integrated AERIS product manual. The original source projects
+remain separate and unchanged.
+
+| Content | Available guidance | Camera scope |
+| --- | --- | --- |
+| Origami library | Existing 12-course 3D library; Classic Dart and Little Fox are free | Existing tabletop models; Dart's experimental real-paper modes below |
+| T-shirt | 6 authored actions, animated folds, manual comparison/help | Illustrated reference only |
+| Rectangular towel | 3 actions, width thirds then half, animated folds | Illustrated reference only |
+| Flat bedsheet | 4 actions, explicit paired edges/corners; excludes fitted sheets | Illustrated reference only |
+| Square knot | 5 actions, named ends and over/under diagrams; loose practice | Illustrated reference only |
+| Four-in-hand tie | 7 actions, named wide/narrow ends, wrap/threading diagrams | Illustrated reference only |
+| AERIS One | Filter replacement, setup and cleaning; actual interactive release tab, exploded 3D and Quick Look | Virtual concept-product tabletop placement, not real-appliance registration |
+
+Everyday skill courses share a player with play/pause, a movement slider, slow
+playback, step-specific help and optional on-device narration/commands. Only the
+learner's explicit confirmation advances the declared practice record. Saves are
+per course and versioned. AERIS retains its own session-local task progress.
+New illustrations and procedures remain draft pending real follow-through review.
+The user chose to defer cloud AI chat; no API, key, fake chatbot or network
+dependency is introduced in this build.
+
+On Debug Simulator, older focused tests use `--ui-testing` for direct origami
+entry. `--ui-testing --tutorial-hub` exercises the normal hub; adding
+`--reset-everyday-progress` clears only the isolated UI-test skill saves once on
+launch. Normal physical-device launches and Release builds use the normal hub.
 
 ## Complete-course practice prototype
 
@@ -92,6 +121,8 @@ scripts/test_first_fold.sh SIMULATOR_UDID
 scripts/test_dart_practice.sh SIMULATOR_UDID logic
 scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID phone
 scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID tablet
+scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID hub
+scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID hub-tablet
 python3 -m unittest discover -s scripts/tests -p 'test_evaluate_practice_validation.py' -v
 ```
 

@@ -1,0 +1,66 @@
+{
+  "sourceProject": "ar_product_manual_demo",
+  "sourceDirectory": "/Users/adrian/Desktop/QCRI/ar_product_manual_demo/ios/AerisManual",
+  "files": [
+    {
+      "source": "ManualContent.swift",
+      "target": "ManualContent.swift",
+      "sourceSHA256": "19727469bb6768b617434f790258f92e2f5e202ab35ca9673bcef9f37466df49",
+      "sourceBytes": 6424,
+      "integratedSHA256": "19727469bb6768b617434f790258f92e2f5e202ab35ca9673bcef9f37466df49",
+      "integratedBytes": 6424,
+      "originalUnchanged": true
+    },
+    {
+      "source": "ProductScene.swift",
+      "target": "ProductScene.swift",
+      "sourceSHA256": "4c3ea4e5f33242796e47b12f29357124809fce69ee6e601bcecc8c11f0703d17",
+      "sourceBytes": 13320,
+      "integratedSHA256": "5995c08e4163b126d07c197b02358aaff08d4961e418a69bb27f33c3894c6182",
+      "integratedBytes": 13912,
+      "originalUnchanged": true
+    },
+    {
+      "source": "InstructionPointer.swift",
+      "target": "InstructionPointer.swift",
+      "sourceSHA256": "2352e462401ab46c9820797f437203bb29a64e2146dd60312ba2a4f8063bb9f4",
+      "sourceBytes": 3602,
+      "integratedSHA256": "2352e462401ab46c9820797f437203bb29a64e2146dd60312ba2a4f8063bb9f4",
+      "integratedBytes": 3602,
+      "originalUnchanged": true
+    },
+    {
+      "source": "AR/ProductARController.swift",
+      "target": "AR/ProductARController.swift",
+      "sourceSHA256": "4d46c1159107cabafbd0c9ec5c5236b154e4666a33866599c4ac39c110d03066",
+      "sourceBytes": 27342,
+      "integratedSHA256": "6aa13d2939398ecd141f36e535aa23b4b4694980637ce4ef8816f1dfd47cbcd0",
+      "integratedBytes": 30674,
+      "originalUnchanged": true
+    },
+    {
+      "source": "AerisManualApp.swift",
+      "target": "AerisManualModuleView.swift",
+      "sourceSHA256": "bab444a20c57898e3598b396db387a671380967d289a161935b8483fea6b7cd9",
+      "sourceBytes": 13468,
+      "integratedSHA256": "e21411a5f2acbb000a22bb017f43f9aea55ca8b2c92c2964bc0ec2515c862e82",
+      "integratedBytes": 15208,
+      "originalUnchanged": true
+    },
+    {
+      "source": "Resources/aeris-one.usdz",
+      "target": "Resources/aeris-one.usdz",
+      "sourceSHA256": "3b405825eaacb6eb7591251e7c3d2ef9bb0c31cc02dd97c63f5fa4d258f17f95",
+      "sourceBytes": 3653362,
+      "integratedSHA256": "3b405825eaacb6eb7591251e7c3d2ef9bb0c31cc02dd97c63f5fa4d258f17f95",
+      "integratedBytes": 3653362,
+      "originalUnchanged": true
+    }
+  ],
+  "integrationNotes": [
+    "Native view module in Protacta; no separate application entry point.",
+    "The USDZ is byte-identical to the original concept asset.",
+    "Lifecycle and asynchronous cancellation guards were added in copied source only.",
+    "AR places a virtual model on a detected surface and does not register a real appliance."
+  ]
+}

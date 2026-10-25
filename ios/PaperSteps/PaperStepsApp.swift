@@ -3,6 +3,15 @@ import StoreKit
 
 @main
 struct ProtactaApp: App {
+    init() {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("--ui-testing") && args.contains("--reset-everyday-progress") {
+            let store = EverydayTutorialProgressStore.appDefault()
+            for id in EverydayTutorialID.allCases { store.clear(courseID: id) }
+        }
+        #endif
+    }
     private var isLogicTestHost: Bool {
         #if DEBUG
         return NSClassFromString("XCTestCase") != nil &&
@@ -17,7 +26,18 @@ struct ProtactaApp: App {
             // renderer here adds unrelated simulator shader work before XCTest
             // connects; UI tests still launch the full application below.
             if isLogicTestHost { Color.clear }
-            else { PaperStepsView().preferredColorScheme(.light) }
+            else {
+                #if DEBUG
+                if ProcessInfo.processInfo.arguments.contains("--ui-testing") &&
+                    !ProcessInfo.processInfo.arguments.contains("--tutorial-hub") {
+                    // Existing focused origami tests retain their direct entry.
+                    // Hub tests explicitly exercise the normal app destination.
+                    PaperStepsView().preferredColorScheme(.light)
+                } else { ProtactaHomeView().preferredColorScheme(.light) }
+                #else
+                ProtactaHomeView().preferredColorScheme(.light)
+                #endif
+            }
         }
     }
 }
@@ -31,6 +51,8 @@ private enum Palette {
 }
 
 struct PaperStepsView: View {
+    let onExit: (() -> Void)?
+    init(onExit: (() -> Void)? = nil) { self.onExit = onExit }
     @StateObject private var controller = LessonController()
     @StateObject private var purchases = PurchaseStore()
     @StateObject private var voice = VoiceGuide()
@@ -186,8 +208,16 @@ struct PaperStepsView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "leaf.fill")
-                .font(.system(size: 20, weight: .medium)).foregroundStyle(Palette.accent)
+            if let onExit {
+                Button {
+                    voice.stop(); controller.shutdown(); onExit()
+                } label: {
+                    Image(systemName: "house").font(.system(size: 19, weight: .medium)).frame(width: 30, height: 44)
+                }.accessibilityLabel("All tutorials").accessibilityIdentifier("returnTutorialHub")
+            } else {
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 20, weight: .medium)).foregroundStyle(Palette.accent)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text("PROTACTA").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.4)
                 Text(controller.isPaperGuide ? "On your paper" : controller.isAR ? "On your table" : controller.lesson.title)

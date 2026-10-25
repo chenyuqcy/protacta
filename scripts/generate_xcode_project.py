@@ -14,7 +14,7 @@ SOURCE_NAMES = {APP: "PaperSteps", APP + "Tests": "PaperStepsTests", APP + "UITe
 TEAM = "67P96Z83PX"
 BUNDLE = "org.realitycore.protacta.prototype"
 VERSION = "0.1.0"
-BUILD = "4"
+BUILD = "5"
 TARGETS = [APP, APP + "Tests", APP + "UITests"]
 objects = []
 
@@ -59,6 +59,8 @@ for name in TARGETS:
     if is_app:
         resource_dir = source_dir / "Resources"
         candidates += sorted(p for p in resource_dir.rglob("*") if p.is_file() and not p.name.startswith("."))
+        product_resources = source_dir / "ProductManual" / "Resources"
+        candidates += sorted(p for p in product_resources.rglob("*") if p.is_file() and not p.name.startswith("."))
         assets = source_dir / "Assets.xcassets"
         assets.mkdir(parents=True, exist_ok=True)
         (assets / "Contents.json").write_text('{"info":{"author":"xcode","version":1}}\n')
@@ -108,9 +110,9 @@ for name in TARGETS:
             settings.update({
                 "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
                 "INFOPLIST_KEY_CFBundleDisplayName": "Protacta",
-                "INFOPLIST_KEY_NSCameraUsageDescription": "Use the camera to align fold guidance with your paper or place a 3D lesson on a table. Images are processed on your device, not uploaded.",
+                "INFOPLIST_KEY_NSCameraUsageDescription": "Use the camera to align guidance with supported paper states or place a 3D product lesson on a table. Images are processed on your device, not uploaded.",
                 "INFOPLIST_KEY_NSMicrophoneUsageDescription": "Optionally use the microphone for hands-free English lesson commands such as Next step, Previous step and Show me again. Audio is not saved or uploaded by Protacta.",
-                "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "Optionally recognize English folding commands on your device. Protacta only enables voice control when on-device recognition is available.",
+                "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "Optionally recognize English tutorial commands on your device. Protacta only enables voice control when on-device recognition is available.",
                 "INFOPLIST_KEY_UILaunchScreen_Generation": "YES",
                 "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
                 "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",

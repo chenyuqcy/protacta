@@ -11,8 +11,8 @@ correction help, real-device acceptance and the beginner trial.
 | One complete supported course | Ten actions, separate explicit confirmations, help/3D return and persistence; full UI flow | Software flow implemented; physical follow-through/review missing |
 | Fixed CV checks distinguish match, adjustment, unknown | Restricted outline checker, negative/shadow/projection tests and isolated comparison history | Prototype implemented; independent real examples and calibration missing |
 | Reviewed correction help | Authored per-action draft, manual comparison and replay | Real-paper review not performed; cannot claim approved correction |
-| Appropriate automated tests | Build 4: 195 native logic/synthetic cases, 24 Python cases; phone/tablet UI, native-to-offline contract and generic unsigned builds | Recorded software checks; earlier framework UI launch crash/retest retained |
-| Real iPhone/iPad acceptance | Build 4 signed, installed and launched wirelessly on iPhone 17 Pro Max; camera/course acceptance not recorded; iPad not installed | Installation gate achieved on iPhone; feature acceptance outstanding |
+| Appropriate automated tests | Build 5: 220 native focused cases and course-hub UI; prior 24 Python evaluator cases/contract remain recorded separately | Software checks recorded with failed UI attempts and focused repairs retained |
+| Real iPhone/iPad acceptance | Build 5 signed, installed and launched wirelessly on iPhone 17 Pro Max; camera/course acceptance not recorded; iPad not installed | Installation gate achieved on iPhone; feature acceptance outstanding |
 | About ten beginners and matched tutorial comparison | Protocol only; no participants, task records or observed outcomes | Not achieved |
 | Honest evidence boundaries | Synthetic source guards, independent annotations, no automated MVP-pass output | Implemented; does not replace missing physical evidence |
 
@@ -39,6 +39,12 @@ Software checks and visual review are recorded in VALIDATION_VISUAL_FEEDBACK.md.
 No new device inventory or installation was requested during this iteration.
 This meaningful local progress does not satisfy the physical acceptance rows.
 The complete-course objective is unchanged and has not been marked complete.
+
+The user later expanded this iteration to five everyday skill courses and the
+AERIS manual. Build 5 implements their native teaching flows while retaining the
+original physical acceptance requirements. New courses are authored illustrations
+and manual comparisons, not additional calibrated camera graders. The user chose
+to defer cloud AI. See INTEGRATION_BUILD_5.md for current validation/installation.
 
 The user subsequently requested installation and unlocked the paired phone.
 Build 4 was signed, installed and launched on the iPhone 17 Pro Max over the local
