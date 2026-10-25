@@ -1,0 +1,348 @@
+{
+  "source": "/Users/adrian/Desktop/QCRI/origami_ar_demo",
+  "version": "1.0.1",
+  "build": "11",
+  "purpose": "Isolated Protacta development baseline; original Foliafold project untouched",
+  "files": [
+    {
+      "path": "ios/PaperSteps/AROcclusionConfiguration.swift",
+      "sha256": "15812024aedea5665d38e4f306a8eaa8e53591d0b8db2fe7fa1f2cb075126192"
+    },
+    {
+      "path": "ios/PaperSteps/AROcclusionHelpView.swift",
+      "sha256": "0774e669f5972c93842b66568639f18031def4677e8e826ecaa3492f701a93e5"
+    },
+    {
+      "path": "ios/PaperSteps/AnimalGeometry.swift",
+      "sha256": "a21a85a3fe23aeea935c49fc1822a922573542fd59a6867e8bd16663f9803867"
+    },
+    {
+      "path": "ios/PaperSteps/AnimalLessonContent.swift",
+      "sha256": "aa52688cdcf2b6573c5e79b2e1a3d53cf2e2d0cf2d501c3556d3e8d333e91c5c"
+    },
+    {
+      "path": "ios/PaperSteps/Assets.xcassets/AppIcon.appiconset/AppIcon.png",
+      "sha256": "607200221007e5ffd1de93c737c7447b7ddfae1be486bf5b358fe75f5fef1779"
+    },
+    {
+      "path": "ios/PaperSteps/Assets.xcassets/AppIcon.appiconset/Contents.json",
+      "sha256": "67ceb115e05128ae0e5387c137e7082faeb58e2f99c0edd19e15081a10c32783"
+    },
+    {
+      "path": "ios/PaperSteps/Assets.xcassets/Contents.json",
+      "sha256": "10e3b5dc202f1cd9fad1f688c8fc9fe9e9669bf3f8295e67d216b10fd99b6f49"
+    },
+    {
+      "path": "ios/PaperSteps/CraneGeometry.swift",
+      "sha256": "271c880c049025b2a64551f7eaafae4ac0424bfe5b821ea9ad5e10fce8a87561"
+    },
+    {
+      "path": "ios/PaperSteps/CraneLessonContent.swift",
+      "sha256": "3c537f8a773ee1069d3ec908306dba60780d96133e93476e4b3497a4df9ec876"
+    },
+    {
+      "path": "ios/PaperSteps/ElephantAssemblyGeometry.swift",
+      "sha256": "f6ef0fb935dcf06220ea920016b0a41e61462f4f9aafbb256fc79642001a23c9"
+    },
+    {
+      "path": "ios/PaperSteps/ElephantGeometry.swift",
+      "sha256": "347e0a4e35c1d134c01daff9e3f2442ff658c28cf8c6e2badc0843212737a5b6"
+    },
+    {
+      "path": "ios/PaperSteps/ElephantStandingStudy.swift",
+      "sha256": "28490aedf3aac600892c84c903a756040c3d6b14388af37a0d0b6e055adec81a"
+    },
+    {
+      "path": "ios/PaperSteps/FoldHelp.swift",
+      "sha256": "d5ef9f4d7b134f805b859079039ed0ae7fbeca6ac96b78b01328a698dba44f0c"
+    },
+    {
+      "path": "ios/PaperSteps/FoldHelpPanel.swift",
+      "sha256": "ab4e7356c2071699257d379760dae8d8e1625750f2377284764821e8d2530252"
+    },
+    {
+      "path": "ios/PaperSteps/FrogGeometry.swift",
+      "sha256": "7619cd5dec03eb4f56e94c8420e5cb191f6e3849ba6a4afecc5a66b24afa4e59"
+    },
+    {
+      "path": "ios/PaperSteps/FrogLessonContent.swift",
+      "sha256": "2532de9f3d29fd1ed0ecc7645845ab8853b2f03368e7e81868f7021977f259cd"
+    },
+    {
+      "path": "ios/PaperSteps/FullFoxGeometry.swift",
+      "sha256": "439665164e730e19b7d19102c47c4edf3d19a8fdaa8435d9d0a62d423fe136d2"
+    },
+    {
+      "path": "ios/PaperSteps/FullFoxLessonContent.swift",
+      "sha256": "8e79c551bbe8d31b4d59f06d2d53f45e6e608d3ba9e8716273ede2edb40db089"
+    },
+    {
+      "path": "ios/PaperSteps/FullFoxOutlineGeometry.swift",
+      "sha256": "64d8c1588e6c14973d49e3de520cb01652031efa59cb6f123364ac96fd216d66"
+    },
+    {
+      "path": "ios/PaperSteps/FullFoxReverseGeometry.swift",
+      "sha256": "253c1a44fdc89c39ddd26478e030429ba671967e7fc65dbc165a3cb12d018fe8"
+    },
+    {
+      "path": "ios/PaperSteps/FullRabbitGeometry.swift",
+      "sha256": "a734d11c493b54a145d21d455cea6648fea4b9004d60c7bc3423213d8e9ce3ba"
+    },
+    {
+      "path": "ios/PaperSteps/FullRabbitLessonContent.swift",
+      "sha256": "9c69af846ba245e9425a5a45a90e621afb47ab0a0c0ca158a1f88389508381e6"
+    },
+    {
+      "path": "ios/PaperSteps/LearningProgressStore.swift",
+      "sha256": "4b8e18f8c0f60ecbe6e67f90b17a645b9437cd5d7746a52b5810e9780af54cb9"
+    },
+    {
+      "path": "ios/PaperSteps/LessonContent.swift",
+      "sha256": "a4a57a1b65132de292c4092acf274b35a9f6a5975e82f0f66507d162ddd56fba"
+    },
+    {
+      "path": "ios/PaperSteps/LessonController.swift",
+      "sha256": "8d753dfd491e84b059167a212abe5bed21f23a39234829f5c32def0650638e17"
+    },
+    {
+      "path": "ios/PaperSteps/LessonVoiceActions.swift",
+      "sha256": "adf5ed0b1e78d7e3c0efa894f5e27fee5b6161845f2d34c04d5708b46d584f74"
+    },
+    {
+      "path": "ios/PaperSteps/OrigamiLesson.swift",
+      "sha256": "ca663714eb08f7fe15766bcdc63d6f3f302ce0745a033264547f548d4fbf1e16"
+    },
+    {
+      "path": "ios/PaperSteps/PaperGeometry.swift",
+      "sha256": "0e179deed65e907631db1324d3170672e1f15a602c1b87f50d441b2a17e1de1b"
+    },
+    {
+      "path": "ios/PaperSteps/PaperModel.swift",
+      "sha256": "b08d6f2f75ee518101b75b7598642f6f09efa4a4f7b1598a8eebb704570095cc"
+    },
+    {
+      "path": "ios/PaperSteps/PaperStepsApp.swift",
+      "sha256": "4a2a9f93e4eff5f5eb17e80912b11f31671f86098af6a711467509a1a8a3a001"
+    },
+    {
+      "path": "ios/PaperSteps/PurchaseStore.swift",
+      "sha256": "c62e2291690cdd573d09cd98127076d22a784c04e6ef91a83c59ae37aa8f1bc2"
+    },
+    {
+      "path": "ios/PaperSteps/Resources/FoliafoldTesting.storekit",
+      "sha256": "73db11eef352fefc5f60719c3c2e397e722e1c44beec2596432d1de3c837f400"
+    },
+    {
+      "path": "ios/PaperSteps/Resources/PrivacyInfo.xcprivacy",
+      "sha256": "57d586c0fb9d1ba6e91cab96eb827df27aa52455f73043f277da141bc7ccd5f5"
+    },
+    {
+      "path": "ios/PaperSteps/SceneDepthMesher.swift",
+      "sha256": "6c116cc9f0944b27c7750850f87e0b3da8b3a4d1b0c0d9ec7d01aee054cc1a56"
+    },
+    {
+      "path": "ios/PaperSteps/SceneDepthOcclusion.swift",
+      "sha256": "e03fe2ee705b7e0457c655834d9c8f0d7b30748af9676cf1c2da959a025b9c69"
+    },
+    {
+      "path": "ios/PaperSteps/ShoulderClosure.swift",
+      "sha256": "e9c95b55d281a5681f46194a0a2db614ad81bc0eddc8a953f6da22700401f839"
+    },
+    {
+      "path": "ios/PaperSteps/SittingDogGeometry.swift",
+      "sha256": "0c566df210ee168c5c3da8c78312ef35489877e0cfebe8940bec3bd91bd94e1c"
+    },
+    {
+      "path": "ios/PaperSteps/SittingDogLessonContent.swift",
+      "sha256": "d317e8d360de89aa8a1936339b4266a28d0dfd0d344f608fb4fb961377177a13"
+    },
+    {
+      "path": "ios/PaperSteps/StarGeometry.swift",
+      "sha256": "1438f99c3d49ec2400af57df45f9edd5d5bb21981d990c84beb4a1890da7fc5b"
+    },
+    {
+      "path": "ios/PaperSteps/StarLessonContent.swift",
+      "sha256": "0580b86340dc63a4960fefc831dea76858438aa1527dde56d912744aec51d917"
+    },
+    {
+      "path": "ios/PaperSteps/TurtleGeometry.swift",
+      "sha256": "1ed14d9f2a8547829860bcf457f9e7df801216eaffbef39a73eb1268d98d0f5a"
+    },
+    {
+      "path": "ios/PaperSteps/TurtleLessonContent.swift",
+      "sha256": "1913fe2dca43dc4bba345cdfcb70fb6271b81df65067df75403ed29e462044f3"
+    },
+    {
+      "path": "ios/PaperSteps/VoiceCommand.swift",
+      "sha256": "cdcaeb82ed2fd390a7b389f2a0bf426c348761c4d7bda577331ce61dfd0bc6f6"
+    },
+    {
+      "path": "ios/PaperSteps/VoiceGuide.swift",
+      "sha256": "56a77db22d0348b6200883240476dfc8840cbc981a49da1c3edd3fc8c64ca711"
+    },
+    {
+      "path": "ios/PaperSteps/VoiceGuidePanel.swift",
+      "sha256": "a045e14c631a09925e325208d266b11b09a51935fc05a13592503242de5e8789"
+    },
+    {
+      "path": "ios/PaperSteps/VoiceRecoveryPolicy.swift",
+      "sha256": "280a4d6560edc80dab8b6a58f7351ba79e0882ef0083450c5de389f36be714e5"
+    },
+    {
+      "path": "ios/PaperSteps/elephant-final-content.swift",
+      "sha256": "b935876a6a9e47ab59f57dcf885cdb287288f1d209c6513719d0ff9f939ce125"
+    },
+    {
+      "path": "ios/PaperSteps/elephant-render-surface.swift",
+      "sha256": "2bacb25a0a2e72d887c318d0d6b79b4dfe59be933075ddc69c05d0728645eaa7"
+    },
+    {
+      "path": "ios/PaperSteps/head-squash-authored-study.swift",
+      "sha256": "de2b07a056ea5e2bf3cbc6745b86d63d4ded14529ac913d848baf9273dd07447"
+    },
+    {
+      "path": "ios/PaperSteps/rear-squash-study.swift",
+      "sha256": "ba5b200aed5d422d91bf9f0487ad74e73141762450387018cfe7c77d30a70f8b"
+    },
+    {
+      "path": "ios/PaperSteps/trunk-finish-study.swift",
+      "sha256": "5750ae4b491e50c23457af889816ea5dc4eb86ec82d1319e8580cabd7beaf515"
+    },
+    {
+      "path": "ios/PaperStepsTests/AROcclusionConfigurationTests.swift",
+      "sha256": "6a3340287b6e9f00617fe83d22880753dcde99d6a809663d340141947b1c9e6b"
+    },
+    {
+      "path": "ios/PaperStepsTests/AdvancedGeometryTests.swift",
+      "sha256": "e39e0e0e88acddcb74257d2057524e54f8b1012f5253badc2be5ec4c3d68266d"
+    },
+    {
+      "path": "ios/PaperStepsTests/AnimalGeometryTests.swift",
+      "sha256": "1e2d1b3396bd40e5d5548ba286674d9a66cae9e86cee29ab14261069fd43b032"
+    },
+    {
+      "path": "ios/PaperStepsTests/ElephantCompleteGeometryTests.swift",
+      "sha256": "a5f654c36761df96263b13469c85ba9260c98f75a673d84e7d371ae012ec4c4c"
+    },
+    {
+      "path": "ios/PaperStepsTests/FoldHelpTests.swift",
+      "sha256": "36a5931d49cf42eccdd151e05f2b8c86fc0942bdcc7084f554f4ce118cab37e0"
+    },
+    {
+      "path": "ios/PaperStepsTests/FrogGeometryTests.swift",
+      "sha256": "d3f02d67ff3baffc3db3bc75928979d1fa559cd9e9d46b36ff66e626c3cc0083"
+    },
+    {
+      "path": "ios/PaperStepsTests/FullFoxGeometryTests.swift",
+      "sha256": "6a9486aa0d2bd3b1e2597143ed6cac77eb3b80abee5abe4da27c73a7f8990500"
+    },
+    {
+      "path": "ios/PaperStepsTests/FullRabbitGeometryTests.swift",
+      "sha256": "06538c0b0ee6a01baecabecf91e95412985f127c2dc7550ec87e637a26497dad"
+    },
+    {
+      "path": "ios/PaperStepsTests/LearningControllerTests.swift",
+      "sha256": "2d7700c2c9e725e674b261f872ad7fbdf4dd39415019af0371d32bc5c02c588d"
+    },
+    {
+      "path": "ios/PaperStepsTests/LearningProgressStoreTests.swift",
+      "sha256": "fb7e131473b34da1d431af9ce18a10d489fe5ff5bb4fc0e7be73161e1773dd2a"
+    },
+    {
+      "path": "ios/PaperStepsTests/LessonVoiceActionsTests.swift",
+      "sha256": "3f9688b0185883ddb2e97c86cb852a7ba7534c6c36f4fd129fe239015ba1d456"
+    },
+    {
+      "path": "ios/PaperStepsTests/LibraryAccessTests.swift",
+      "sha256": "816585727c6583cb447300acc1f0af7ca643b0ba854ebd4e66239a18096a0970"
+    },
+    {
+      "path": "ios/PaperStepsTests/PaperGeometryTests.swift",
+      "sha256": "e92e814f0b8435a76109c4df77a37b21410dd8c6ed2d10141c391509ca169de5"
+    },
+    {
+      "path": "ios/PaperStepsTests/PaperModelCachingTests.swift",
+      "sha256": "b97fe52d1d44d4e04e6b6ea2caebd9c3ed889c2d540f683b024fa017e47b0200"
+    },
+    {
+      "path": "ios/PaperStepsTests/PurchaseStoreTests.swift",
+      "sha256": "e781a6746b365371611ba4c7127a8919867aba7e565275f6cbf6dda9b080f847"
+    },
+    {
+      "path": "ios/PaperStepsTests/Resources/FoliafoldTesting.storekit",
+      "sha256": "73db11eef352fefc5f60719c3c2e397e722e1c44beec2596432d1de3c837f400"
+    },
+    {
+      "path": "ios/PaperStepsTests/SceneDepthMesherTests.swift",
+      "sha256": "73a9ebe9130a0e167830dfe84d65ee8aaf5359e7e0b771a47aa1c8a618cae74b"
+    },
+    {
+      "path": "ios/PaperStepsTests/SceneDepthOcclusionTests.swift",
+      "sha256": "d2229ed3f55657cdff03e609a0e5c3288124c9713c6a6bb083bd5a0560d8a2f4"
+    },
+    {
+      "path": "ios/PaperStepsTests/SittingDogGeometryTests.swift",
+      "sha256": "9325237fa638962c3973cc2c3e9cfd5cad1baf2474d3b052b070533cfe200818"
+    },
+    {
+      "path": "ios/PaperStepsTests/TurtleGeometryTests.swift",
+      "sha256": "1fed81f8f01ea75cb204f6e74d1fade4004c3534b93c29ab61a137a227a25dea"
+    },
+    {
+      "path": "ios/PaperStepsTests/VoiceCommandTests.swift",
+      "sha256": "4036a9e01b1a7fa24877ddf2ecd80547125b5a3930dd4f63b70cb50128e74eb5"
+    },
+    {
+      "path": "ios/PaperStepsTests/VoiceGuideStateTests.swift",
+      "sha256": "58b5ab56000a17a38cd764281a24ceb872519e1088cefa02c71a30f6dff38f5a"
+    },
+    {
+      "path": "ios/PaperStepsTests/VoiceRecoveryPolicyTests.swift",
+      "sha256": "95f9a749f4d409d4a36ce742f46b2b00231cb3ffaca5969a0e3ccfb5addc35c8"
+    },
+    {
+      "path": "ios/PaperStepsUITests/AROcclusionHelpUITests.swift",
+      "sha256": "e47f2d171fffe06ae2ddf8f1d8ae7540f97807d735da985b08568b8b8256812d"
+    },
+    {
+      "path": "ios/PaperStepsUITests/AdvancedLessonUITests.swift",
+      "sha256": "40841c388a2aa6f9c364e89c6ffa789adaf288fbf07fccb7d6e3b0efe68c3d17"
+    },
+    {
+      "path": "ios/PaperStepsUITests/AnimalLessonUITests.swift",
+      "sha256": "8c0906591db4bb8014e6b4189609fdd02d2907b01c87ad5c803f584d1ae4a7c9"
+    },
+    {
+      "path": "ios/PaperStepsUITests/ComplexAnimalUITests.swift",
+      "sha256": "e37fb65224f24042c03e529f72d5cb89c90880f22cd914b4225c5d9d2f77b80f"
+    },
+    {
+      "path": "ios/PaperStepsUITests/LearningResumeUITests.swift",
+      "sha256": "a60d3d710fd24e854c55821a01ef8a828dabdf67ba95411e739111c453809f77"
+    },
+    {
+      "path": "ios/PaperStepsUITests/PaperStepsUITests.swift",
+      "sha256": "26e2baf6eb1870d92fdcc2a3cb0ed884b703f295cc01e7be799378f6b114eb8e"
+    },
+    {
+      "path": "ios/PaperStepsUITests/ReleaseScreenshotUITests.swift",
+      "sha256": "34d85daf23a9aeca01e0becd6461148cede313094eecde7966ab67d1637affef"
+    },
+    {
+      "path": "ios/PaperStepsUITests/Resources/FoliafoldTesting.storekit",
+      "sha256": "73db11eef352fefc5f60719c3c2e397e722e1c44beec2596432d1de3c837f400"
+    },
+    {
+      "path": "ios/PaperStepsUITests/TabletLayoutUITests.swift",
+      "sha256": "eda0b1c0fd3b63bfa1765694b9b05fcbf156899a666ae9d8678d88a659d9cf55"
+    },
+    {
+      "path": "ios/PaperStepsUITests/VoiceHelpUITests.swift",
+      "sha256": "ebe4c606d5a4c96791231131ee08f19ea74f234e33c7027e8518124df620370a"
+    },
+    {
+      "path": "scripts/generate_xcode_project.py",
+      "sha256": "a6dc38cf3fb3a081f3e9e79dcb7f2f6e1949bccf5a6b96d1557caa023ee7d884"
+    }
+  ]
+}

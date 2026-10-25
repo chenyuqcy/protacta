@@ -1,0 +1,85 @@
+{
+  "identifier": "A19B64D2-0DFB-4354-BCDD-8229D42B9C19",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "49.90",
+      "familyShareable": false,
+      "internalID": "5194092601",
+      "localizations": [
+        {
+          "description": "Lifetime access to the Foliafold origami lesson library.",
+          "displayName": "Foliafold Lifetime",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "org.realitycore.foliafold.complete",
+      "referenceName": "Foliafold Lifetime",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": [],
+    "_timeRate": 0,
+    "_billingGracePeriodEnabled": false,
+    "_renewalBillingIssuesEnabled": false
+  },
+  "subscriptionGroups": [
+    {
+      "id": "F01AFC01",
+      "localizations": [],
+      "name": "Foliafold Membership",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "2.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "F01AFC02",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Access the Foliafold origami lesson library. Renews every month.",
+              "displayName": "Foliafold Monthly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "org.realitycore.foliafold.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Foliafold Monthly",
+          "subscriptionGroupID": "F01AFC01",
+          "type": "RecurringSubscription"
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "26.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "F01AFC03",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Access the Foliafold origami lesson library. Renews every year.",
+              "displayName": "Foliafold Annual",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "org.realitycore.foliafold.annual",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Foliafold Annual",
+          "subscriptionGroupID": "F01AFC01",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

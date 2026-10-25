@@ -1,0 +1,9 @@
+.DS_Store
+output/
+DerivedData/
+build/
+**/xcuserdata/
+*.xcuserstate
+__pycache__/
+.env
+.env.*
