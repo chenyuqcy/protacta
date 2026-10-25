@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the standalone Foliafold Xcode project without dependencies.
+"""Generate the standalone Protacta Xcode project without dependencies.
 
 Re-run whenever Swift files or bundle resources are added. IDs are deterministic,
 so generating again does not reorder the project or affect existing source files.
@@ -9,12 +9,12 @@ import hashlib
 import json
 
 ROOT = Path(__file__).resolve().parents[1] / "ios"
-APP = "Foliafold"
+APP = "Protacta"
 SOURCE_NAMES = {APP: "PaperSteps", APP + "Tests": "PaperStepsTests", APP + "UITests": "PaperStepsUITests"}
 TEAM = "67P96Z83PX"
-BUNDLE = "org.realitycore.foliafold"
-VERSION = "1.0.1"
-BUILD = "11"
+BUNDLE = "org.realitycore.protacta.prototype"
+VERSION = "0.1.0"
+BUILD = "1"
 TARGETS = [APP, APP + "Tests", APP + "UITests"]
 objects = []
 
@@ -66,9 +66,9 @@ for name in TARGETS:
     else:
         # UI test runners have a separate main bundle. The local StoreKit
         # fixture belongs to tests, and is excluded from release app bundles.
-        fixture = source_dir / "Resources" / "FoliafoldTesting.storekit"
+        fixture = source_dir / "Resources" / "ProtactaTesting.storekit"
         fixture.parent.mkdir(parents=True, exist_ok=True)
-        fixture.write_bytes((ROOT / "PaperSteps/Resources/FoliafoldTesting.storekit").read_bytes())
+        fixture.write_bytes((ROOT / "PaperSteps/Resources/ProtactaTesting.storekit").read_bytes())
         candidates.append(fixture)
     for path in candidates:
         relative = path.relative_to(ROOT)
@@ -107,10 +107,10 @@ for name in TARGETS:
         if is_app:
             settings.update({
                 "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
-                "INFOPLIST_KEY_CFBundleDisplayName": "Foliafold",
-                "INFOPLIST_KEY_NSCameraUsageDescription": "Use the camera to find a table and place the origami lesson in your real surroundings. Camera images are not uploaded.",
-                "INFOPLIST_KEY_NSMicrophoneUsageDescription": "Optionally use the microphone for hands-free English lesson commands such as Next step, Previous step and Show me again. Audio is not saved or uploaded by Foliafold.",
-                "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "Optionally recognize English folding commands on your device. Foliafold only enables voice control when on-device recognition is available.",
+                "INFOPLIST_KEY_CFBundleDisplayName": "Protacta",
+                "INFOPLIST_KEY_NSCameraUsageDescription": "Use the camera to align fold guidance with your paper or place a 3D lesson on a table. Images are processed on your device, not uploaded.",
+                "INFOPLIST_KEY_NSMicrophoneUsageDescription": "Optionally use the microphone for hands-free English lesson commands such as Next step, Previous step and Show me again. Audio is not saved or uploaded by Protacta.",
+                "INFOPLIST_KEY_NSSpeechRecognitionUsageDescription": "Optionally recognize English folding commands on your device. Protacta only enables voice control when on-device recognition is available.",
                 "INFOPLIST_KEY_UILaunchScreen_Generation": "YES",
                 "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
                 "INFOPLIST_KEY_UISupportedInterfaceOrientations": "UIInterfaceOrientationPortrait",
@@ -120,7 +120,7 @@ for name in TARGETS:
                 "CURRENT_PROJECT_VERSION": BUILD,
             })
             if config == "Release":
-                settings["EXCLUDED_SOURCE_FILE_NAMES"] = "FoliafoldTesting.storekit"
+                settings["EXCLUDED_SOURCE_FILE_NAMES"] = "ProtactaTesting.storekit"
         elif name == APP + "Tests":
             settings.update({"TEST_HOST": f"$(BUILT_PRODUCTS_DIR)/{APP}.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/{APP}", "BUNDLE_LOADER": "$(TEST_HOST)"})
         else:
@@ -165,7 +165,7 @@ scheme_file.parent.mkdir(parents=True, exist_ok=True)
 scheme_file.write_text(scheme)
 # An explicitly named local billing scheme opts into Xcode's purchase server.
 # The normal run/archive scheme always uses App Store / sandbox products.
-fixture_path = ROOT / "PaperSteps/Resources/FoliafoldTesting.storekit"
+fixture_path = ROOT / "PaperSteps/Resources/ProtactaTesting.storekit"
 testing_scheme = scheme.replace("</LaunchAction>", f'<StoreKitConfigurationFileReference identifier="{fixture_path}"/></LaunchAction>')
 (scheme_file.parent / f"{APP}-StoreKit.xcscheme").write_text(testing_scheme)
 print(project)

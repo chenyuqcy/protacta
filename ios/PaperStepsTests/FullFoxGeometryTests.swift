@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 /// Tests the authored long-tail variation's retained square, strict hinge
 /// geometry and display metadata. Does not establish layer collision, physical

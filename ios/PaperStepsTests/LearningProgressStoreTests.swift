@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// Uses isolated defaults suites or nil; never changes production learning
 /// history, purchases or spatial placement, and never creates an AR session.
@@ -187,7 +187,7 @@ final class LearningProgressStoreTests: XCTestCase {
 
     @MainActor
     private func withDefaults(_ body: (UserDefaults) throws -> Void) throws {
-        let suite = "org.realitycore.foliafold.tests.learning.\(UUID().uuidString)"
+        let suite = "org.realitycore.protacta.prototype.tests.learning.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         try body(defaults)

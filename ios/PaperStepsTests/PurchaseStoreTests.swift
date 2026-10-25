@@ -1,14 +1,14 @@
 import XCTest
 import StoreKit
 import StoreKitTest
-@testable import Foliafold
+@testable import Protacta
 
 /// StoreKit's local environment is shared: run this class serially. The tests
 /// exercise real StoreKit verification/events rather than injecting unlocks.
 final class PurchaseStoreTests: XCTestCase {
     @MainActor
     private func session() throws -> SKTestSession {
-        let session = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        let session = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         session.resetToDefaultState()
         session.clearTransactions()
         session.disableDialogs = true

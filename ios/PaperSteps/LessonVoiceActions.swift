@@ -38,7 +38,7 @@ extension LessonController {
             return .message(slowMotion ? "Playback set to half speed." : "Playback set to normal speed.")
         case .next, .back, .replay, .restart, .resume:
             guard canAnimate else {
-                return .message("Place the paper and wait for stable tracking before playing a fold.")
+                return .message(isPaperGuide ? "Use the 3D guide to play the fold animation. The paper guide shows the center crease on your real sheet." : "Place the paper and wait for stable tracking before playing a fold.")
             }
             switch command {
             case .next:

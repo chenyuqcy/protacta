@@ -8,11 +8,11 @@ final class ComplexAnimalUITests: XCTestCase {
 
     override func setUp() async throws {
         continueAfterFailure = false
-        storeSession = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        storeSession = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
-        _ = try await storeSession.buyProduct(identifier: "org.realitycore.foliafold.complete")
+        _ = try await storeSession.buyProduct(identifier: "org.realitycore.protacta.prototype.complete")
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()

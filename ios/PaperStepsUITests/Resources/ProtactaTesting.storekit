@@ -8,13 +8,13 @@
       "internalID": "5194092601",
       "localizations": [
         {
-          "description": "Lifetime access to the Foliafold origami lesson library.",
-          "displayName": "Foliafold Lifetime",
+          "description": "Lifetime access to the Protacta origami lesson library.",
+          "displayName": "Protacta Lifetime",
           "locale": "en_US"
         }
       ],
-      "productID": "org.realitycore.foliafold.complete",
-      "referenceName": "Foliafold Lifetime",
+      "productID": "org.realitycore.protacta.prototype.complete",
+      "referenceName": "Protacta Lifetime",
       "type": "NonConsumable"
     }
   ],
@@ -31,7 +31,7 @@
     {
       "id": "F01AFC01",
       "localizations": [],
-      "name": "Foliafold Membership",
+      "name": "Protacta Membership",
       "subscriptions": [
         {
           "adHocOffers": [],
@@ -43,14 +43,14 @@
           "introductoryOffer": null,
           "localizations": [
             {
-              "description": "Access the Foliafold origami lesson library. Renews every month.",
-              "displayName": "Foliafold Monthly",
+              "description": "Access the Protacta origami lesson library. Renews every month.",
+              "displayName": "Protacta Monthly",
               "locale": "en_US"
             }
           ],
-          "productID": "org.realitycore.foliafold.monthly",
+          "productID": "org.realitycore.protacta.prototype.monthly",
           "recurringSubscriptionPeriod": "P1M",
-          "referenceName": "Foliafold Monthly",
+          "referenceName": "Protacta Monthly",
           "subscriptionGroupID": "F01AFC01",
           "type": "RecurringSubscription"
         },
@@ -64,14 +64,14 @@
           "introductoryOffer": null,
           "localizations": [
             {
-              "description": "Access the Foliafold origami lesson library. Renews every year.",
-              "displayName": "Foliafold Annual",
+              "description": "Access the Protacta origami lesson library. Renews every year.",
+              "displayName": "Protacta Annual",
               "locale": "en_US"
             }
           ],
-          "productID": "org.realitycore.foliafold.annual",
+          "productID": "org.realitycore.protacta.prototype.annual",
           "recurringSubscriptionPeriod": "P1Y",
-          "referenceName": "Foliafold Annual",
+          "referenceName": "Protacta Annual",
           "subscriptionGroupID": "F01AFC01",
           "type": "RecurringSubscription"
         }

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// Routes parsed commands through the production lesson controller. These tests
 /// do not request microphone/camera access or claim speech recognition, audible

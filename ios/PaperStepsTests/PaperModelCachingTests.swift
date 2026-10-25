@@ -2,7 +2,7 @@ import Foundation
 import RealityKit
 import UIKit
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// Checks actual generated mesh contents against the cache-disabled renderer.
 /// Local timing measures synchronous pose work, not real-camera frame rate or

@@ -17,6 +17,37 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var slowMotion = false
     @Published var hintsVisible = true
     @Published var isAR = false
+    @Published private(set) var isPaperGuide = false
+    @Published private(set) var paperGuide = PaperGuideSession()
+    private let paperVision = PaperVisionTracker()
+    private var paperGuideGeneration = 0
+    private var paperViewportSize: CGSize = .zero
+    private var paperViewOrientation: UIInterfaceOrientation = .unknown
+    private var lastPaperExpiry: TimeInterval = 0
+    private var fixtureSheetVisible = true
+
+    var isPaperGuideFixture: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        return ProcessInfo.processInfo.arguments.contains("--ui-testing") &&
+            ProcessInfo.processInfo.arguments.contains("--paper-guide-fixture")
+        #else
+        return false
+        #endif
+    }
+    var supportsCurrentPaperGuideStep: Bool { lesson == .dart && stepIndex <= 1 && !completed }
+    var paperGuideMessage: String {
+        if let cameraError { return cameraError }
+        if !supportsCurrentPaperGuideStep { return "This paper guide starts with the center crease on a flat A4 sheet. Use 3D for the other folds." }
+        if !Self.supportsAR && !isPaperGuideFixture { return "Live paper guidance needs a supported iPhone or iPad camera. You can still use the 3D lesson here." }
+        if needsRescan { return "The camera session paused. Tap Find sheet again to restart." }
+        switch paperGuide.status {
+        case .searching: return "Place one whole A4 sheet flat on a clear, well-lit table. Keep your hands away while it aligns."
+        case .needsDirection: return "Check the highlighted TOP edge. Turn the guide if needed, then confirm the direction."
+        case .aligned: return "Bring the left long edge onto the right long edge. Match the corners, then press the fold."
+        case .reacquiring: return "The sheet is no longer aligned. Lay it flat with its corners visible, then check the direction again."
+        case .unsupported: return "Use the 3D guide for this shape. This first paper guide needs a flat A4 sheet."
+        }
+    }
     @Published var placed = false
     @Published var canPlace = false
     @Published var trackingReady = false
@@ -54,6 +85,11 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private var lastAssessment: TimeInterval = 0
     private var lastDiagnostic: TimeInterval = 0
     private var sessionGeneration = 0
+    private var cameraStartRevision: Int?
+    var cameraSessionRevision: Int { sessionGeneration }
+    func acceptsCameraAuthorization(revision: Int) -> Bool {
+        isAR && !needsRescan && revision == sessionGeneration
+    }
     private var configured = false
     private var lastCollisionUpdate: CFTimeInterval = 0
     private var lastViewportSize: CGSize = .zero
@@ -62,7 +98,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     init(progressStore: LearningProgressStore? = nil) {
         self.progressStore = progressStore ?? Self.makeProgressStore()
         super.init()
-        lesson = self.progressStore.latestLesson ?? .crane
+        lesson = self.progressStore.latestLesson ?? .dart
     }
 
     private static func makeProgressStore() -> LearningProgressStore {
@@ -70,8 +106,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         // UI persistence tests use their own domain; other tests stay in memory.
         // Neither path grants lesson access or changes production purchase state.
         if process.arguments.contains("--ui-testing") {
-            if let suite = process.environment["FOLIAFOLD_PROGRESS_TEST_SUITE"],
-               suite.hasPrefix("org.realitycore.foliafold.uitests."),
+            if let suite = process.environment["PROTACTA_PROGRESS_TEST_SUITE"],
+               suite.hasPrefix("org.realitycore.protacta.prototype.uitests."),
                let defaults = UserDefaults(suiteName: suite) {
                 if process.arguments.contains("--reset-learning-progress") {
                     defaults.removePersistentDomain(forName: suite)
@@ -124,7 +160,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     func toggleSlowMotion() { slowMotion.toggle(); saveLearningProgress() }
 
     var placementGesturesEnabled: Bool {
-        isAR && placed && trackingReady && !needsRescan && cameraError == nil && hasLessonAccess && !positionLocked
+        isAR && !isPaperGuide && placed && trackingReady && !needsRescan && cameraError == nil && hasLessonAccess && !positionLocked
     }
 
     func togglePositionLock() {
@@ -147,7 +183,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     static var supportsAR: Bool { ARWorldTrackingConfiguration.isSupported }
     var currentStep: LessonStep { lesson.steps[stepIndex] }
     var lastStep: Int { lesson.lastStep }
-    var canAnimate: Bool { hasLessonAccess && (!isAR || (placed && trackingReady && !needsRescan)) }
+    var canAnimate: Bool { hasLessonAccess && !isPaperGuide && (!isAR || (placed && trackingReady && !needsRescan)) }
     var nextTitle: String {
         if completed { return "Fold again" }
         if progress < 0.999 { return "Finish this fold" }
@@ -243,6 +279,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         started = true; completed = false; stepIndex = 0; progress = 1
         isPlaying = false; updateCamera(); applyPose()
         saveLearningProgress()
+        if isPaperGuide { restartPaperGuideTracking() }
         recordDiagnostic(force: true)
     }
 
@@ -319,6 +356,14 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     fileprivate func advanceFrame(_ link: CADisplayLink) {
+        if isPaperGuide, link.timestamp - lastPaperExpiry >= 0.1 {
+            lastPaperExpiry = link.timestamp
+            if isPaperGuideFixture {
+                updatePaperGuideFixture()
+            } else if paperGuide.quadrilateral != nil {
+                paperGuide.expire(at: CACurrentMediaTime())
+            }
+        }
         // SwiftUI can resize the renderer after a lesson card changes height or
         // iPad multitasking changes width, even while playback is paused.
         if !isAR, let size = arView?.bounds.size, size != lastViewportSize { updateCamera() }
@@ -416,6 +461,105 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         updateCamera()
     }
 
+    func enterPaperGuide() {
+        guard lesson == .dart, hasLessonAccess else { return }
+        if isAR { leaveAR() }
+        isPaperGuide = true
+        enterAR()
+        restartPaperGuideTracking()
+        if isPaperGuideFixture { updatePaperGuideFixture() }
+    }
+
+    func restartPaperGuideTracking() {
+        guard isPaperGuide else { return }
+        if isPaperGuideFixture { needsRescan = false }
+        // Registration revisions must not cancel the camera permission Task.
+        paperGuideGeneration += 1
+        paperVision.reset(generation: paperGuideGeneration)
+        paperGuide.start(generation: paperGuideGeneration)
+        paperGuide.setSupported(supportsCurrentPaperGuideStep)
+        fixtureSheetVisible = true
+        paperViewportSize = arView?.bounds.size ?? .zero
+        paperViewOrientation = arView?.window?.windowScene?.interfaceOrientation ?? .portrait
+        if Self.supportsAR, let view = arView, cameraStartRevision == nil,
+           needsRescan || cameraError != nil || view.session.configuration == nil {
+            sessionGeneration += 1
+            needsRescan = false
+            requestCameraStart(generation: sessionGeneration)
+        }
+    }
+
+    func confirmPaperGuideDirection() { paperGuide.confirmDirection() }
+    func rotatePaperGuideDirection() { paperGuide.rotateDirection() }
+
+    func startPaperGuideWithNewSheet() {
+        guard isPaperGuide else { return }
+        begin()
+    }
+
+    func showFirstFoldIn3D() {
+        leaveAR()
+        if !started { begin() }
+        goToStep(1)
+    }
+
+    func confirmFirstPaperFold() {
+        guard isPaperGuide, supportsCurrentPaperGuideStep else { return }
+        // This is the learner's confirmation, never a camera assessment.
+        leaveAR()
+        started = true; completed = false; stepIndex = 1; progress = 1; isPlaying = false
+        applyPose(); saveLearningProgress()
+        status = "You confirmed the center crease. Continue in the 3D guide."
+    }
+
+    func setPaperGuideFixtureVisible(_ visible: Bool) {
+        guard isPaperGuideFixture, isPaperGuide else { return }
+        fixtureSheetVisible = visible
+        updatePaperGuideFixture()
+    }
+
+    private func updatePaperGuideFixture() {
+        guard isPaperGuideFixture, isPaperGuide, !needsRescan else { return }
+        let now = CACurrentMediaTime()
+        let quad = fixtureSheetVisible ? PaperQuadrilateral(
+            topLeft: CGPoint(x: 0.22, y: 0.12), topRight: CGPoint(x: 0.78, y: 0.12),
+            bottomRight: CGPoint(x: 0.78, y: 0.88), bottomLeft: CGPoint(x: 0.22, y: 0.88)) : nil
+        paperGuide.receive(quad: quad, timestamp: now, generation: paperGuideGeneration, now: now)
+    }
+
+    private func assessPaperGuide(_ frame: ARFrame) {
+        guard supportsCurrentPaperGuideStep else { paperGuide.setSupported(false); return }
+        guard let view = arView, view.bounds.width > 1, view.bounds.height > 1 else { return }
+        let orientation = view.window?.windowScene?.interfaceOrientation ?? .portrait
+        if paperViewportSize != view.bounds.size || paperViewOrientation != orientation {
+            restartPaperGuideTracking()
+        }
+        guard case .normal = frame.camera.trackingState else {
+            paperGuide.receive(quad: nil, timestamp: frame.timestamp, generation: paperGuideGeneration, now: CACurrentMediaTime())
+            return
+        }
+        // Vision runs on the raw sensor image with .up. ARKit's display transform
+        // then handles orientation and aspect-fill exactly once for the viewport.
+        let viewportSize = view.bounds.size
+        let transform = frame.displayTransform(for: orientation, viewportSize: viewportSize)
+        let generation = paperGuideGeneration
+        let cameraGeneration = sessionGeneration
+        paperVision.submit(pixelBuffer: frame.capturedImage, timestamp: frame.timestamp, generation: generation) { [weak self] result in
+            let quad = result.observation.flatMap {
+                PaperImageCoordinates.viewportQuadrilateral(visionCorners: $0.corners, displayTransform: transform)
+            }
+            Task { @MainActor [weak self] in
+                guard let self, self.isPaperGuide, !self.needsRescan,
+                      result.generation == self.paperGuideGeneration,
+                      cameraGeneration == self.sessionGeneration,
+                      self.arView?.bounds.size == viewportSize,
+                      (self.arView?.window?.windowScene?.interfaceOrientation ?? .portrait) == orientation else { return }
+                self.paperGuide.receive(quad: quad, timestamp: result.timestamp,
+                                       generation: result.generation, now: CACurrentMediaTime())
+            }
+        }
+    }
+
     func enterAR() {
         guard hasLessonAccess else { return }
         if !started { continueLearning() }
@@ -432,11 +576,19 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         view.environment.lighting.resource = nil
         view.environment.lighting.intensityExponent = 0
         view.renderOptions.remove(.disablePersonOcclusion)
-        view.environment.sceneUnderstanding.options = AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
+        view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.session.delegate = self
         view.session.delegateQueue = .main
-        view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapSurface(_:))))
+        if !isPaperGuide {
+            view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(tapSurface(_:))))
+        }
         status = "Allow the camera, then slowly scan your table."
+        requestCameraStart(generation: generation)
+    }
+
+    private func requestCameraStart(generation: Int) {
+        guard UIApplication.shared.applicationState != .background else { needsRescan = true; return }
+        cameraStartRevision = generation
         Task { [weak self] in
             let allowed: Bool
             switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -444,23 +596,31 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             case .notDetermined: allowed = await AVCaptureDevice.requestAccess(for: .video)
             default: allowed = false
             }
-            guard let self, self.isAR, generation == self.sessionGeneration else { return }
-            if allowed { self.runSession() }
-            else { self.cameraError = "Camera access is off. You can allow it in Settings or continue in the 3D guide." }
+            guard let self, self.cameraStartRevision == generation else { return }
+            self.cameraStartRevision = nil
+            guard self.acceptsCameraAuthorization(revision: generation),
+                  UIApplication.shared.applicationState != .background else { return }
+            if allowed {
+                self.cameraError = nil
+                self.runSession()
+            } else {
+                self.cameraError = "Camera access is off. You can allow it in Settings or continue in the 3D guide."
+            }
         }
     }
 
     private func runSession(resetTracking: Bool = true) {
-        guard let view = arView, isAR else { return }
-        let config = AROcclusionConfiguration.make(mode: occlusionMode, capabilities: occlusionCapabilities)
+        guard let view = arView, isAR, !needsRescan,
+              AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { return }
+        let config = isPaperGuide ? ARWorldTrackingConfiguration() : AROcclusionConfiguration.make(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.renderOptions.remove(.disablePersonOcclusion)
-        view.environment.sceneUnderstanding.options = AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
+        view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         depthOcclusion.reset()
         view.environment.background = .cameraFeed()
         view.session.run(config, options: resetTracking ? [.resetTracking, .removeExistingAnchors] : [])
         // Attach only after resetting the AR session. A mode change keeps the
         // paper's existing ARAnchor, position, lesson and partial fold.
-        if occlusionMode == .automatic && occlusionCapabilities.sceneDepth { depthOcclusion.configure(in: view) }
+        if !isPaperGuide && occlusionMode == .automatic && occlusionCapabilities.sceneDepth { depthOcclusion.configure(in: view) }
         if resetTracking {
             lastAssessment = 0
             status = "Move slowly across a well-lit table."
@@ -493,10 +653,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             ?? view.raycast(from: point, allowing: .estimatedPlane, alignment: .horizontal).first
     }
     @objc private func tapSurface(_ tap: UITapGestureRecognizer) {
-        if !placed { place(at: tap.location(in: arView)) }
+        if !isPaperGuide, !placed { place(at: tap.location(in: arView)) }
     }
     func place(at point: CGPoint? = nil) {
-        guard isAR, !placed, !needsRescan, let view = arView,
+        guard isAR, !isPaperGuide, !placed, !needsRescan, let view = arView,
               let frame = view.session.currentFrame, case .normal = frame.camera.trackingState else { return }
         guard let hit = surfaceHit(point ?? placementPoint) else {
             canPlace = false; status = "Aim at the table and move slowly to find a surface."; return
@@ -551,6 +711,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         runSession()
     }
     func leaveAR() {
+        cameraStartRevision = nil
+        paperGuide.invalidate()
+        isPaperGuide = false
+        paperVision.reset(generation: paperGuideGeneration + 1)
         saveLearningProgress()
         sessionGeneration += 1
         positionLocked = true
@@ -558,6 +722,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         configureStudio(); recordDiagnostic(force: true)
     }
     func background() {
+        sessionGeneration += 1
+        cameraStartRevision = nil
+        paperGuide.invalidate()
+        paperVision.reset(generation: paperGuideGeneration + 1)
         pauseAndSave()
         if isAR {
             depthOcclusion.reset()
@@ -566,6 +734,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         }
     }
     func shutdown() {
+        sessionGeneration += 1
+        cameraStartRevision = nil
+        paperGuide.invalidate()
+        paperVision.reset(generation: paperGuideGeneration + 1)
         pauseAndSave()
         depthOcclusion.reset()
         displayLink?.invalidate(); displayLink = nil
@@ -577,6 +749,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
     private func assess(_ frame: ARFrame) {
         guard isAR, !needsRescan else { return }
+        if isPaperGuide { assessPaperGuide(frame); return }
         if occlusionMode == .automatic && occlusionCapabilities.sceneDepth {
             depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil)
         }
@@ -622,12 +795,21 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         // possible mode switch instead of queuing a task that could hide 3D.
         MainActor.assumeIsolated {
             guard isAR, arView?.session === session else { return }
-            cameraError = "AR could not continue: \(message)"
+            handleCameraFailure(message)
             depthOcclusion.reset()
             needsRescan = true
             pauseForTracking("AR paused. Return to the 3D guide or scan the table again.")
         }
     }
+    func handleCameraFailure(_ message: String) {
+        sessionGeneration += 1
+        cameraStartRevision = nil
+        paperGuide.invalidate()
+        paperVision.reset(generation: paperGuideGeneration + 1)
+        cameraError = "AR could not continue: \(message)"
+        needsRescan = true
+    }
+
     private func recordDiagnostic(force: Bool = false) {
         let now = CACurrentMediaTime()
         guard force || now - lastDiagnostic > 1 else { return }

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 final class VoiceCommandTests: XCTestCase {
     func testEveryDisplayedCommandCanBeSpokenWithCasePunctuationAndCourtesyWords() {

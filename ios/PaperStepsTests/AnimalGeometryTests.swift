@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 final class AnimalGeometryTests: XCTestCase {
     private let expectedArea = AnimalGeometry.sideLength * AnimalGeometry.sideLength

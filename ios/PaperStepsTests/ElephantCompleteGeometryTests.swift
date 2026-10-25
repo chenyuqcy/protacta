@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 /// Source continuity and action regression checks. The final body opening is
 /// a bounded flexible forming model; it is deliberately not checked as rigid.

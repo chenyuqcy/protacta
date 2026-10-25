@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 /// Geometry checks cover material continuity and the explicitly bounded forming
 /// approximation. Native rendering and paper follow-along are separate checks.

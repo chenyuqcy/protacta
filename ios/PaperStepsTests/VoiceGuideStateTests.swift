@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 final class VoiceGuideStateTests: XCTestCase {
     func testStablePartialDispatchesOnceEvenWhenFinalResultArrives() throws {

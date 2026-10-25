@@ -2,7 +2,7 @@ import SwiftUI
 import StoreKit
 
 @main
-struct FoliafoldApp: App {
+struct ProtactaApp: App {
     var body: some Scene {
         WindowGroup { PaperStepsView().preferredColorScheme(.light) }
     }
@@ -39,9 +39,19 @@ struct PaperStepsView: View {
         VStack(spacing: 0) {
             header
             viewport
-            if !controller.started { introduction }
+            if controller.isPaperGuide { PaperGuideCard(controller: controller) }
+            else if !controller.started { introduction }
             else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
             else { lessonCard }
+            if controller.lesson == .dart && !controller.isAR {
+                Button { voice.stop(); controller.enterPaperGuide() } label: {
+                    Label("Guide on my paper", systemImage: "viewfinder")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(.bordered).tint(Palette.ink)
+                    .padding(.horizontal, 22).padding(.bottom, 10)
+                    .accessibilityIdentifier("openPaperGuide")
+            }
         }
         .background(Palette.background)
         .foregroundStyle(Palette.ink)
@@ -153,8 +163,8 @@ struct PaperStepsView: View {
             Image(systemName: "leaf.fill")
                 .font(.system(size: 20, weight: .medium)).foregroundStyle(Palette.accent)
             VStack(alignment: .leading, spacing: 2) {
-                Text("FOLIAFOLD").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.4)
-                Text(controller.isAR ? "On your table" : controller.lesson.title)
+                Text("PROTACTA").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.4)
+                Text(controller.isPaperGuide ? "On your paper" : controller.isAR ? "On your table" : controller.lesson.title)
                     .font(.system(size: 11)).foregroundStyle(Palette.muted)
             }
             Spacer(minLength: 4)
@@ -180,7 +190,10 @@ struct PaperStepsView: View {
     private var viewport: some View {
         ZStack {
             PaperViewport(controller: controller)
-            if controller.isAR && LessonController.supportsAR && !controller.placed && controller.cameraError == nil {
+            if controller.isPaperGuide {
+                PaperGuideOverlay(session: controller.paperGuide, isFixture: controller.isPaperGuideFixture)
+            }
+            if controller.isAR && !controller.isPaperGuide && LessonController.supportsAR && !controller.placed && controller.cameraError == nil {
                 GeometryReader { geometry in
                     Image(systemName: "viewfinder")
                         .font(.system(size: 42, weight: .ultraLight))
@@ -189,7 +202,7 @@ struct PaperStepsView: View {
                         .position(x: geometry.size.width / 2, y: geometry.size.height * 0.40)
                 }.allowsHitTesting(false)
             }
-            if controller.isAR && !LessonController.supportsAR {
+            if controller.isAR && !controller.isPaperGuide && !LessonController.supportsAR {
                 Palette.background.opacity(0.96)
                 VStack(spacing: 14) {
                     Image(systemName: "arkit").font(.system(size: 42, weight: .light))
@@ -212,13 +225,13 @@ struct PaperStepsView: View {
                             Button("Angle") { controller.setAngleView() }.accessibilityIdentifier("angleView")
                         }.font(.system(size: 11, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 9)
                             .background(.regularMaterial, in: Capsule())
-                    } else if controller.placed {
+                    } else if controller.placed && !controller.isPaperGuide {
                         Label(controller.trackingReady ? "ANCHORED TO YOUR TABLE" : "RECOVERING TRACKING", systemImage: "circle.fill")
                             .font(.system(size: 9, weight: .semibold)).tracking(1)
                             .padding(10).background(.regularMaterial, in: Capsule())
                         Spacer()
                     }
-                    if controller.isAR {
+                    if controller.isAR && !controller.isPaperGuide {
                         if !controller.placed { Spacer() }
                         Button { showARHelp = true } label: {
                             Label("AR help", systemImage: "hand.raised")
@@ -257,7 +270,7 @@ struct PaperStepsView: View {
                     }.padding(10).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                         .padding(.horizontal, 22)
                 }
-                if controller.isAR && controller.placed {
+                if controller.isAR && !controller.isPaperGuide && controller.placed {
                     HStack {
                         Button { controller.togglePositionLock() } label: {
                             Label(controller.positionLocked ? "Move paper" : "Lock position",
@@ -494,9 +507,9 @@ struct PaperStepsView: View {
                     manageSubscriptionsLink
                     Button("Restore Purchases") { Task { await purchases.restore() } }.disabled(purchases.isBusy)
                     if let message = purchases.message { Text(message).font(.caption).foregroundStyle(Palette.muted) }
-                    Link("Contact support", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Foliafold%20Support")!)
+                    Link("Contact support", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Protacta%20Support")!)
                     Button("Privacy Policy") { afterAbout = "privacy"; showAbout = false }
-                    Text("Foliafold · RealityCore\nVersion \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"))")
+                    Text("Protacta · RealityCore\nVersion \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0.0") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"))")
                         .font(.caption).foregroundStyle(Palette.muted)
                 }.lineSpacing(4).padding(25)
             }.background(Palette.background).foregroundStyle(Palette.ink)
@@ -549,7 +562,7 @@ struct PaperStepsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack(spacing: 10) {
                         Image(systemName: "leaf").font(.system(size: 26, weight: .light))
-                        Text("FOLIAFOLD COMPLETE").font(.system(size: 10, weight: .bold)).tracking(1.7)
+                        Text("PROTACTA COMPLETE").font(.system(size: 10, weight: .bold)).tracking(1.7)
                     }.foregroundStyle(Palette.accent)
                     Text("Small folds.\nMore possibilities.").font(.system(size: 32, weight: .regular, design: .serif))
                     Text("Explore the complete tutorial library, one animated fold at a time. Choose monthly or annual access, or a one-time lifetime unlock.")
@@ -687,19 +700,19 @@ struct PaperStepsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Privacy, simply.").font(.system(size: 30, weight: .regular, design: .serif))
-                    Text("Foliafold Privacy Policy · September 13, 2026").font(.caption).foregroundStyle(Palette.muted)
+                    Text("Protacta Privacy Policy · September 13, 2026").font(.caption).foregroundStyle(Palette.muted)
                     Text("Your camera and surroundings").font(.headline)
-                    Text("Foliafold uses the camera and on-device depth information to place and display origami in your surroundings. Camera images, depth maps and room geometry are processed on your device. We do not record them or send them to a server.")
+                    Text("Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Paper boundary and hand observations, camera images, depth maps and room geometry are processed on your device. We do not record camera images or send them to a server.")
                     Text("Optional voice control and reading aloud").font(.headline)
-                    Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Foliafold does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
+                    Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Protacta does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
                     Text("Purchases and local data").font(.headline)
-                    Text("Apple processes purchases and restores. Foliafold checks Apple's verified purchase information to unlock lessons. We do not receive your payment card details. The app keeps a small local status file for troubleshooting; it contains the lesson, step and AR status, but no camera images or room coordinates. It is not automatically uploaded.")
+                    Text("Apple processes purchases and restores. Protacta checks Apple's verified purchase information to unlock lessons. We do not receive your payment card details. The app keeps a small local status file for troubleshooting; it contains the lesson, step and AR status, but no camera images or room coordinates. It is not automatically uploaded.")
                     Text("Your lesson progress, completion state, playback speed and hint preference are saved locally so you can continue later. These records do not include camera images, room positions or purchase credentials, and are not automatically uploaded. Start over begins a fresh attempt; deleting the app removes its local learning records.")
                     Text("No account, ads or tracking").font(.headline)
-                    Text("Foliafold does not require an app account. We do not use advertising SDKs, third-party analytics or cross-app tracking. Tutorials are included in the app. Opening a reference link uses the linked site's own privacy policy.")
+                    Text("Protacta does not require an app account. We do not use advertising SDKs, third-party analytics or cross-app tracking. Tutorials are included in the app. Opening a reference link uses the linked site's own privacy policy.")
                     Text("Support and your choices").font(.headline)
                     Text("If you email support, we receive the address and information you choose to send and use it to respond. You can request deletion of support correspondence. You can turn off camera access in Settings and keep using the 3D guide, or delete the app to remove its local files. Apple manages purchase records under its own privacy policy.")
-                    Link("adrianchenyuqiu@gmail.com", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Foliafold%20Privacy")!)
+                    Link("adrianchenyuqiu@gmail.com", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Protacta%20Privacy")!)
                     Link("Apple Privacy Policy", destination: URL(string: "https://www.apple.com/legal/privacy/")!)
                 }.font(.subheadline).lineSpacing(5).padding(26)
             }.background(Palette.background).foregroundStyle(Palette.ink)

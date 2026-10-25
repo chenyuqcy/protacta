@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 final class PaperGeometryTests: XCTestCase {
     private let distanceTolerance: Float = 0.000003

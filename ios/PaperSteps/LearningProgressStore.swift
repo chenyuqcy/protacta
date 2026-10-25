@@ -16,7 +16,7 @@ final class LearningProgressStore {
         let updatedAt: Date
     }
 
-    static let storageKey = "org.realitycore.foliafold.learningProgress"
+    static let storageKey = "org.realitycore.protacta.prototype.learningProgress"
     private static let schemaVersion = 1
     private let defaults: UserDefaults?
     private let now: () -> Date
@@ -106,7 +106,7 @@ final class LearningProgressStore {
         "butterfly": 1, "dart": 1, "fox": 1, "rabbit": 1
     ]
     private static let contentRevisions: [String: String] = Dictionary(uniqueKeysWithValues: OrigamiLesson.allCases.map { lesson in
-        var fields = ["Foliafold lesson content v1", lesson.rawValue,
+        var fields = ["Protacta lesson content v1", lesson.rawValue,
                       String(animationRevisions[lesson.rawValue] ?? 1)]
         for step in lesson.steps {
             fields.append(contentsOf: [String(step.id), step.title, step.instruction, step.cue, step.explanation])

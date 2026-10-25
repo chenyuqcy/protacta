@@ -1,6 +1,6 @@
 import RealityKit
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// These scene-lifecycle checks intentionally use a non-AR view. They do not
 /// stand in for a real-camera depth/hand-occlusion acceptance test.

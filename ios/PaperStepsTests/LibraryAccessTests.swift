@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// Controller-boundary tests use the entitlement update API directly. StoreKit
 /// verification and transaction events are covered separately by PurchaseStoreTests.

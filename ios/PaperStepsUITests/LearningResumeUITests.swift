@@ -8,7 +8,7 @@ final class LearningResumeUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchEnvironment["FOLIAFOLD_PROGRESS_TEST_SUITE"] = "org.realitycore.foliafold.uitests.\(UUID().uuidString)"
+        app.launchEnvironment["PROTACTA_PROGRESS_TEST_SUITE"] = "org.realitycore.protacta.prototype.uitests.\(UUID().uuidString)"
         app.launchArguments = ["--ui-testing", "--reset-learning-progress"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))

@@ -62,7 +62,7 @@ struct VoiceGuidePanel: View {
                     if !voice.lastHeard.isEmpty {
                         Text("Heard: \(voice.lastHeard)").font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("Explanations come from this lesson's written guidance. Foliafold does not listen until you turn voice control on, save recordings, or judge your real paper.")
+                    Text("Explanations come from this lesson's written guidance. Protacta does not listen until you turn voice control on, save recordings, or judge your real paper.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)
             }.background(Color(red: 0.96, green: 0.96, blue: 0.93))

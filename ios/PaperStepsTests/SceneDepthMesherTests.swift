@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 final class SceneDepthMesherTests: XCTestCase {
     private func plane(depth: Float = 0.5, width: Int = 5, height: Int = 5) -> SceneDepthSnapshot {

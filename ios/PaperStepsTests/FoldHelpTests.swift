@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 final class FoldHelpTests: XCTestCase {
     private let authoredSteps: [(lesson: OrigamiLesson, id: Int, title: String)] = [

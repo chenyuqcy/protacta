@@ -10,7 +10,7 @@ import UIKit
 final class ReleaseScreenshotUITests: XCTestCase {
     private var app: XCUIApplication!
     private var storeSession: SKTestSession!
-    private let productID = "org.realitycore.foliafold.complete"
+    private let productID = "org.realitycore.protacta.prototype.complete"
     private var fixturePrice = ""
     private var captureRecords = [[String: Any]]()
     private var acceptedFixturePurchase = false
@@ -33,7 +33,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
         XCTAssertGreaterThan(pixels.height, pixels.width, "Use portrait orientation")
         XCTAssertGreaterThanOrEqual(pixels.width, 1242, "Use a large portrait iPhone simulator")
 
-        storeSession = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        storeSession = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
@@ -42,7 +42,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
 
         // Read the same controlled expectation as LibraryPurchaseUITests. The
         // app still loads Product.displayPrice and purchases through StoreKit.
-        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "FoliafoldTesting", withExtension: "storekit"))
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "ProtactaTesting", withExtension: "storekit"))
         let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         let settings = try XCTUnwrap(fixture["settings"] as? [String: Any])
         XCTAssertEqual(settings["_storefront"] as? String, "USA")
@@ -81,7 +81,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
                 "configuration": "Release",
                 "captureMethod": "XCUIScreen.main.screenshot; original full native pixels",
                 "environment": "iPhone simulator; 3D studio; no physical camera AR evidence",
-                "billing": "FoliafoldTesting local StoreKit fixture; displayed fixture price is not approved production pricing",
+                "billing": "ProtactaTesting local StoreKit fixture; displayed fixture price is not approved production pricing",
                 "purchaseProductID": productID,
                 "appAcceptedLocalStoreKitPurchase": acceptedFixturePurchase,
                 "simulatorModel": ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"] ?? "unreported",

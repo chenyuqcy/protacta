@@ -6,11 +6,11 @@ import StoreKitTest
 final class TabletLayoutUITests: XCTestCase {
     private var app: XCUIApplication!
     private var storeSession: SKTestSession!
-    private let productID = "org.realitycore.foliafold.complete"
+    private let productID = "org.realitycore.protacta.prototype.complete"
 
     override func setUp() async throws {
         continueAfterFailure = false
-        storeSession = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        storeSession = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true

@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 /// Material and annotation regressions; native rendering, paper contact and
 /// hands-on foldability remain separate evidence.

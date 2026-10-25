@@ -10,11 +10,11 @@ final class AnimalLessonUITests: XCTestCase {
 
     override func setUp() async throws {
         continueAfterFailure = false
-        storeSession = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        storeSession = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
-        _ = try await storeSession.buyProduct(identifier: "org.realitycore.foliafold.complete")
+        _ = try await storeSession.buyProduct(identifier: "org.realitycore.protacta.prototype.complete")
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()
@@ -166,18 +166,18 @@ final class LibraryPurchaseUITests: XCTestCase {
     private var storeSession: SKTestSession!
     private var expectedPrice: String!
     private var expectedPlanPrices = [String: String]()
-    private let productID = "org.realitycore.foliafold.complete"
+    private let productID = "org.realitycore.protacta.prototype.complete"
 
     override func setUp() async throws {
         continueAfterFailure = false
-        storeSession = try SKTestSession(configurationFileNamed: "FoliafoldTesting")
+        storeSession = try SKTestSession(configurationFileNamed: "ProtactaTesting")
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
         // Product.products queried from the UI runner has the runner's bundle
         // identity, not the app's StoreKit catalog. Read the controlled fixture
         // expectation here; the app must still fetch and purchase via StoreKit.
-        let fixtureURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "FoliafoldTesting", withExtension: "storekit"))
+        let fixtureURL = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "ProtactaTesting", withExtension: "storekit"))
         let fixture = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any])
         let settings = try XCTUnwrap(fixture["settings"] as? [String: Any])
         XCTAssertEqual(settings["_storefront"] as? String, "USA")
@@ -294,7 +294,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         assertPaywall()
         for (plan, term) in [("monthly", "/month"), ("annual", "/year")] {
             selectPlan(plan)
-            let id = "org.realitycore.foliafold.\(plan)"
+            let id = "org.realitycore.protacta.prototype.\(plan)"
             let price = expectedPlanPrices[id]!
             let choice = app.buttons["purchasePlan_\(plan)"]
             XCTAssertTrue(choice.label.contains(price))
@@ -320,7 +320,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [unlocked], timeout: 15), .completed)
         absent(app.buttons["closeUnlock"])
         XCTAssertTrue(storeSession.allTransactions().contains {
-            $0.productIdentifier == "org.realitycore.foliafold.monthly"
+            $0.productIdentifier == "org.realitycore.protacta.prototype.monthly"
         }, "The selected monthly plan must be the product purchased through the real paywall")
         capture("Subscriptions_Monthly_LOCAL_PURCHASE_UNLOCKED")
     }

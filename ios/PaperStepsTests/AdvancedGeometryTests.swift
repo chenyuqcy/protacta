@@ -1,6 +1,6 @@
 import XCTest
 import simd
-@testable import Foliafold
+@testable import Protacta
 
 /// These tests establish render stability, retained material identity and lesson
 /// continuity. They do not certify rigid folding, collision freedom or physical

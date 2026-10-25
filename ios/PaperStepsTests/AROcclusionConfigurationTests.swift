@@ -1,7 +1,7 @@
 import ARKit
 import RealityKit
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// These tests validate configuration and lesson-state contracts only. They do
 /// not run a camera session or establish physical hand/object occlusion quality.

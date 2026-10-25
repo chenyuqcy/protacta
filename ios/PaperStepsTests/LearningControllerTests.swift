@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 /// Persistence and interaction-policy contracts. No camera session, physical
 /// placement, real hand occlusion, or StoreKit transaction is simulated here.

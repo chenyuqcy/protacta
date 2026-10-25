@@ -1,5 +1,5 @@
 import XCTest
-@testable import Foliafold
+@testable import Protacta
 
 final class VoiceRecoveryPolicyTests: XCTestCase {
     private let failure = VoiceTaskFailure(NSError(domain: "TestSpeechTask", code: 1))

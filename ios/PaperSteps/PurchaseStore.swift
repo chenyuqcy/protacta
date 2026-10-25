@@ -8,9 +8,9 @@ enum PurchasePlan: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var productID: String {
         switch self {
-        case .monthly: return "org.realitycore.foliafold.monthly"
-        case .annual: return "org.realitycore.foliafold.annual"
-        case .lifetime: return "org.realitycore.foliafold.complete"
+        case .monthly: return "org.realitycore.protacta.prototype.monthly"
+        case .annual: return "org.realitycore.protacta.prototype.annual"
+        case .lifetime: return "org.realitycore.protacta.prototype.complete"
         }
     }
     var displayName: String {
