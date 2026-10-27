@@ -266,3 +266,12 @@ validation targets. A first-fold technical demo is not the complete MVP.
   to the master and all four portrait clips, preserving the silent set and SRTs.
 - [x] Verified five complete audio/video decodes and sampled all 37 caption cues.
   See `DEMO_NARRATION_2026-10-26.md` for provenance, artifacts and validation scope.
+
+## First TestFlight submission — 2026-10-27
+
+- [x] Created the independent Protacta App Store Connect record, archived and
+  distribution-signed 0.1.0 (8), uploaded and verified Apple processing.
+- [x] Saved beta review information, submitted Build 8 to external beta review,
+  and created `https://testflight.apple.com/join/wa2yVmvs` (100-tester cap).
+- [ ] External availability: Apple currently reports Waiting for Review and
+  blocks public joining until approval. See `TESTFLIGHT_BUILD_8.md`.

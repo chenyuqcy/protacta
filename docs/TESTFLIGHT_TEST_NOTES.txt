@@ -1,0 +1,27 @@
+Protacta 0.1.0 (8) — What to Test
+
+Explore the free prototype tutorials. No app account or purchase is required.
+
+1. Paper & Craft > Classic Dart: try 3D playback, replay, view controls, step help,
+   and the complete ten-action practice. Confirm your own progress separately from
+   the animation. Little Fox is also available as a free 3D reference.
+
+2. Everyday Skills: try T-shirt, towel, flat bedsheet, square-knot and tie lessons.
+   Test playback, Start/Target references, help, manual confirmation, and saved
+   progress after leaving and reopening a course. These are authored diagrams,
+   without clothing or knot camera grading.
+
+3. AERIS One: follow the virtual filter walkthrough. Press the highlighted release
+   tab, open the rear cover, and inspect the filter movement. This is a concept
+   model, rather than a manufacturer-approved manual for a real appliance.
+
+4. Optional camera testing: use a whole flat A4 sheet for the first-fold guide.
+   Check direction confirmation, hidden cues after losing the sheet, and recovery
+   when it returns. Complete-course paper guidance uses the matching PTC2 revision-2
+   printed sheet. Camera comparisons are experimental and do not certify folds.
+
+5. Optional hands-free English commands require on-device speech recognition.
+   Check permission handling, stopping on completion, backgrounding and recovery.
+
+Report crashes, blocked navigation, unclear instructions and permission/recovery
+issues. Premium purchases and cloud AI chat are outside this beta's testing scope.
