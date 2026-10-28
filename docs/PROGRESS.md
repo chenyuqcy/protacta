@@ -340,7 +340,9 @@ validation targets. A first-fold technical demo is not the complete MVP.
   failure recovery, finishing before advancing, collapse, and later AR reentry.
 - [x] Release Build 10 compiled, passed strict code-signature verification,
   installed on the paired iPhone 17 Pro Max, and was confirmed in device app
-  inventory as 0.1.0 (10). Launch was refused because the iPhone was locked.
+  inventory as 0.1.0 (10). Launch was initially refused while the iPhone was
+  locked; after the user unlocked it, a subsequent launch succeeded and the
+  installed build was rechecked. This does not establish physical AR acceptance.
   This build has not been uploaded to TestFlight.
 - [ ] Visual QA found an iPad Simulator landscape preview defect: the 3D render
   retains/crops part of its portrait area while controls use the correct new
