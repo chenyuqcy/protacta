@@ -26,6 +26,15 @@ struct AROcclusionCapabilities: Equatable {
 }
 
 enum AROcclusionConfiguration {
+    static func renderOptions(isAR: Bool) -> ARView.RenderOptions {
+        var options: ARView.RenderOptions = [.disableMotionBlur, .disableDepthOfField]
+        // A teaching model can intersect real paper, hands and the table.
+        // Grounding adds ambient occlusion/contact shadows at that intersection;
+        // keep the camera image visible there instead of drawing a dark patch.
+        if isAR { options.insert(.disableGroundingShadows) }
+        return options
+    }
+
     static func make(mode: AROcclusionMode, capabilities: AROcclusionCapabilities) -> ARWorldTrackingConfiguration {
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal]
@@ -42,6 +51,7 @@ enum AROcclusionConfiguration {
     }
 
     static func sceneOptions(mode: AROcclusionMode, capabilities: AROcclusionCapabilities) -> ARView.Environment.SceneUnderstanding.Options {
-        mode == .automatic && capabilities.sceneMesh ? [.occlusion, .receivesLighting] : []
+        // Real geometry still hides the model, but must not receive its shadows.
+        mode == .automatic && capabilities.sceneMesh ? [.occlusion] : []
     }
 }

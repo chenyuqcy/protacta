@@ -273,5 +273,43 @@ validation targets. A first-fold technical demo is not the complete MVP.
   distribution-signed 0.1.0 (8), uploaded and verified Apple processing.
 - [x] Saved beta review information, submitted Build 8 to external beta review,
   and created `https://testflight.apple.com/join/wa2yVmvs` (100-tester cap).
-- [ ] External availability: Apple currently reports Waiting for Review and
-  blocks public joining until approval. See `TESTFLIGHT_BUILD_8.md`.
+- [ ] At submission, Apple reported Waiting for Review and blocked public
+  joining. Subsequent approval and tester invitations are recorded below.
+
+## External beta approval and team invitations — 2026-10-27
+
+- [x] Refreshed App Store Connect and verified 0.1.0 (8) was Approved.
+- [x] Added the four requested CMU recipients to Protacta Public Beta; all four
+  rows showed Invited. This establishes sent invitations, not acceptance or installation.
+- Public link remains `https://testflight.apple.com/join/wa2yVmvs`.
+- Local portal evidence: `output/testflight-2026-10-27/portal-proof/team-testers-invited.png`.
+
+## Tabletop AR contact-darkening correction — Build 9, 2026-10-28
+
+- The user reported a black region when virtual origami overlaps a real object
+  in Tabletop AR. The source enabled both virtual shadows on reconstructed real
+  surfaces and constant paper grounding shadows at contact. This is a supported
+  rendering diagnosis; no before/after physical image has established the sole cause.
+- Camera AR now disables grounding shadows/ambient contact darkening, prevents
+  paper entities from casting or receiving grounding shadows, and retains scene
+  occlusion without making real surfaces receive virtual shadows. Native person
+  occlusion and current scene-depth occlusion remain enabled when supported.
+- Session restart, rescan and occlusion-mode changes reapply that rendering
+  policy. Returning to the studio restores its previous paper lighting. Fold
+  geometry, registration, depth offsets and lesson progress are unchanged.
+- [x] 14 selected configuration/depth tests and 1 Simulator UI test passed.
+  The test command inadvertently specified the test action twice; the same 15
+  cases ran twice. The unique-case count is 15, not 30. The Simulator does not
+  establish the appearance of real-camera overlap.
+- [x] Release Build 9 compiled, passed strict code-signature verification, and
+  installed/launched on the paired iPhone 17 Pro Max. Device inventory confirmed
+  `org.realitycore.protacta.prototype`, version 0.1.0, build 9.
+- [ ] The user deferred physical overlap testing. Next: reproduce the original
+  table/object overlap, pass a hand in front of the paper, remove it and check
+  recovery, then return to the studio and verify the paused fold remains.
+- TestFlight remains Build 8; Build 9 is currently a direct device development
+  installation and has not been uploaded to Apple.
+- Receipts and Simulator screenshots: `output/ar-contact-shadow-2026-10-28/`.
+- Apple references: [grounding shadow/AO option](https://developer.apple.com/documentation/realitykit/arview/renderoptions-swift.struct/disablegroundingshadows),
+  [constant contact fade](https://developer.apple.com/documentation/realitykit/groundingshadowcomponent/fadebehaviornearphysicalobjects-swift.enum/constant),
+  and [scene understanding lighting](https://developer.apple.com/videos/play/wwdc2020/10612/).

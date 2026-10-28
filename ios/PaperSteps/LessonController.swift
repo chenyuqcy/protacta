@@ -229,7 +229,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         arView = view
         configured = true
         view.accessibilityIdentifier = "paperViewport"
-        view.renderOptions = [.disableMotionBlur, .disableDepthOfField]
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: false)
         view.isMultipleTouchEnabled = true
         configureStudio()
         let proxy = TickProxy(owner: self)
@@ -269,6 +269,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard let view = arView else { return }
         clearScene()
         view.cameraMode = .nonAR
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: false)
+        paper.setGroundingShadowsEnabled(true)
         view.environment.background = .color(UIColor(red: 0.91, green: 0.925, blue: 0.91, alpha: 1))
         view.environment.sceneUnderstanding.options = []
         view.environment.lighting.resource = nil
@@ -678,7 +680,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         view.environment.background = .cameraFeed()
         view.environment.lighting.resource = nil
         view.environment.lighting.intensityExponent = 0
-        view.renderOptions.remove(.disablePersonOcclusion)
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        paper.setGroundingShadowsEnabled(false)
         view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.session.delegate = self
         view.session.delegateQueue = .main
@@ -716,7 +719,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard let view = arView, isAR, !needsRescan,
               AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { return }
         let config = isPaperGuide ? ARWorldTrackingConfiguration() : AROcclusionConfiguration.make(mode: occlusionMode, capabilities: occlusionCapabilities)
-        view.renderOptions.remove(.disablePersonOcclusion)
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        paper.setGroundingShadowsEnabled(false)
         view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         depthOcclusion.reset()
         view.environment.background = .cameraFeed()
@@ -962,6 +966,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "Native hands supported": flag(occlusionCapabilities.personDepth),
             "Live object depth supported": flag(occlusionCapabilities.sceneDepth),
             "Native hand rendering enabled": flag(personRenderingEnabled),
+            "Contact shadows disabled": flag(arView?.renderOptions.contains(.disableGroundingShadows) == true),
+            "Real surfaces receive virtual shadows": flag(arView?.environment.sceneUnderstanding.options.contains(.receivesLighting) == true),
             "Person mask received": flag(frame?.segmentationBuffer != nil),
             "Person depth received": flag(frame?.estimatedDepthData != nil),
             "Raw depth requested": flag(rawRequested),

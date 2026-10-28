@@ -121,17 +121,24 @@ final class PaperModel {
             root.addChild(entity)
         }
         setPose(step: 0, progress: 0)
+        setGroundingShadowsEnabled(true)
         if #available(iOS 18.0, *) {
-            // ARView already provides default grounding shadows. Explicit
-            // constant fade keeps a thin sheet grounded close to a real table.
-            for entity in [front, back, activeFront, activeBack] {
-                entity.components.set(GroundingShadowComponent(castsShadow: true, receivesShadow: true,
-                                                                 fadeBehaviorNearPhysicalObjects: .constant))
-            }
             // Guides are annotations, so they must not cast artificial shadows
             // onto the paper or the physical table beneath it.
             for entity in [edges, activeEdges, crease, arrow] {
                 entity.components.set(GroundingShadowComponent(castsShadow: false, receivesShadow: false))
+            }
+        }
+    }
+
+    /// Studio lighting gives the folds depth; camera AR must not darken real
+    /// objects where the teaching model intersects them. This changes lighting
+    /// participation only, preserving the current pose and cached mesh resources.
+    func setGroundingShadowsEnabled(_ enabled: Bool) {
+        if #available(iOS 18.0, *) {
+            for entity in [front, back, activeFront, activeBack] {
+                entity.components.set(GroundingShadowComponent(castsShadow: enabled, receivesShadow: enabled,
+                                                                 fadeBehaviorNearPhysicalObjects: .constant))
             }
         }
     }

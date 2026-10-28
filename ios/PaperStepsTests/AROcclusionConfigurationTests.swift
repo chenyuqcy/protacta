@@ -23,6 +23,7 @@ final class AROcclusionConfigurationTests: XCTestCase {
                     XCTAssertFalse(configuration.frameSemantics.contains(.smoothedSceneDepth), context)
                     XCTAssertEqual(configuration.sceneReconstruction, sceneMesh ? .meshWithClassification : [], context)
                     XCTAssertEqual(options.contains(.occlusion), sceneMesh, context)
+                    XCTAssertFalse(options.contains(.receivesLighting), "Real objects must not receive dark virtual contact patches: \(context)")
                 }
             }
         }
@@ -45,8 +46,53 @@ final class AROcclusionConfigurationTests: XCTestCase {
                     XCTAssertFalse(configuration.frameSemantics.contains(.smoothedSceneDepth), context)
                     XCTAssertEqual(configuration.sceneReconstruction, [], context)
                     XCTAssertFalse(options.contains(.occlusion), context)
+                    XCTAssertFalse(options.contains(.receivesLighting), context)
                 }
             }
+        }
+    }
+
+    @MainActor
+    func testCameraRenderingRemovesContactDarkeningAndRetainsPersonOcclusion() {
+        let cameraOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        XCTAssertTrue(cameraOptions.contains(.disableGroundingShadows))
+        XCTAssertFalse(cameraOptions.contains(.disablePersonOcclusion), "Removing contact darkening must not expose the model through a hand")
+        XCTAssertFalse(cameraOptions.contains(.disableAREnvironmentLighting), "Paper shading still uses real scene lighting")
+        let studioOptions = AROcclusionConfiguration.renderOptions(isAR: false)
+        XCTAssertFalse(studioOptions.contains(.disableGroundingShadows), "Returning to the studio restores its normal fold shading")
+    }
+
+    @MainActor
+    func testPaperLightingSwitchPreservesPartialFoldAndMeshAcrossARAndStudio() throws {
+        guard #available(iOS 18.0, *) else { throw XCTSkip("Per-entity grounding components require iOS 18") }
+        let paper = PaperModel()
+        paper.setPose(lesson: .dart, step: 3, progress: 0.4)
+        let originalFrame = paper.frame
+        let front = try XCTUnwrap(paper.root.findEntity(named: "Paper front") as? ModelEntity)
+        let mesh = try XCTUnwrap(front.model?.mesh)
+        paper.resetDiagnostics()
+
+        // Repeat the AR setting to cover session recovery and mode changes,
+        // then restore the studio without rebuilding/advancing the fold.
+        for enabled in [false, false, true] {
+            paper.setGroundingShadowsEnabled(enabled)
+            for name in ["Paper front", "Paper reverse", "Moving flap front", "Moving flap reverse"] {
+                let entity = try XCTUnwrap(paper.root.findEntity(named: name))
+                let shadow = try XCTUnwrap(entity.components[GroundingShadowComponent.self])
+                XCTAssertEqual(shadow.castsShadow, enabled, name)
+                XCTAssertEqual(shadow.receivesShadow, enabled, name)
+            }
+            for name in ["Paper edges", "Moving flap outline", "Crease guide", "Fold direction"] {
+                let entity = try XCTUnwrap(paper.root.findEntity(named: name))
+                let shadow = try XCTUnwrap(entity.components[GroundingShadowComponent.self])
+                XCTAssertFalse(shadow.castsShadow, name)
+                XCTAssertFalse(shadow.receivesShadow, name)
+            }
+            XCTAssertTrue(front.model?.mesh === mesh)
+            XCTAssertEqual(paper.frame.bounds.minimum, originalFrame.bounds.minimum)
+            XCTAssertEqual(paper.frame.bounds.maximum, originalFrame.bounds.maximum)
+            XCTAssertEqual(paper.diagnostics.poseEvaluations, 0)
+            XCTAssertEqual(paper.diagnostics.meshGenerationCalls, 0)
         }
     }
 
