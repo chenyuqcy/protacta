@@ -83,44 +83,25 @@ struct PaperStepsView: View {
     @State private var showFoldHelp = false
     @State private var practiceToolsPresented = false
     @State private var voiceFeedback = ""
+    @State private var voiceFeedbackRevision = 0
     @State private var selectedPurchasePlan: PurchasePlan = .annual
     @State private var afterAbout: String?
     @State private var selectedStepToReplay: Int?
+    @State private var isARFullScreen = false
+    @State private var compactVoiceFeedbackVisible = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            viewport
-            if controller.isDartPractice {
-                DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() },
-                                 onConfirmAction: { DartPracticeVoiceBoundary.confirm(controller: controller, stopVoice: { voice.stop() }) },
-                                 onPracticeToolsPresented: { presented in
-                    practiceToolsPresented = presented
-                    if presented { voice.stop(); controller.pauseAndSave() }
-                }) {
-                    voiceControlButton
-                }
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                if !isARFullScreen { header }
+                // Keep this renderer at one stable location. Expanding the
+                // layout must not create a second ARView or restart tracking.
+                viewport(safeAreaInsets: geometry.safeAreaInsets)
+                if !isARFullScreen { lessonPanels }
             }
-            else if controller.isPaperGuide { PaperGuideCard(controller: controller) }
-            else if !controller.started { introduction }
-            else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
-            else { lessonCard }
-            if controller.lesson == .dart && !controller.isAR {
-                Button { voice.stop(); controller.enterDartPractice() } label: {
-                    Label(controller.practiceReferenceActive ? "Return to my practice" : "Practice the complete Dart", systemImage: "hand.draw")
-                        .font(.system(size: 14, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
-                }.buttonStyle(.borderedProminent).tint(Palette.ink).foregroundStyle(.white)
-                    .padding(.horizontal, 22).padding(.top, 6)
-                    .accessibilityIdentifier("openDartPractice")
-                Button { voice.stop(); controller.enterPaperGuide() } label: {
-                    Label("Guide on my paper", systemImage: "viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }.buttonStyle(.bordered).tint(Palette.ink)
-                    .padding(.horizontal, 22).padding(.bottom, 10)
-                    .accessibilityIdentifier("openPaperGuide")
-            }
+            .ignoresSafeArea(.container, edges: isARFullScreen ? .all : [])
         }
+        .statusBarHidden(isARFullScreen)
         .background(Palette.background)
         .foregroundStyle(Palette.ink)
         .sheet(isPresented: $showNotes) { notesSheet }
@@ -159,15 +140,27 @@ struct PaperStepsView: View {
             if phase == .active { controller.resumeScreenAwake(); voice.handleSceneActive(); Task { await purchases.refresh() } }
         }
         .onAppear { configureVoiceCommands() }
-        .onDisappear { voice.stop(); voice.onCommand = nil; practiceToolsPresented = false }
+        .task(id: voiceFeedbackRevision) {
+            compactVoiceFeedbackVisible = !voiceFeedback.isEmpty
+            guard !voiceFeedback.isEmpty else { return }
+            try? await Task.sleep(for: .seconds(4))
+            if !Task.isCancelled { compactVoiceFeedbackVisible = false }
+        }
+        .onDisappear { voice.stop(); voice.onCommand = nil; practiceToolsPresented = false; isARFullScreen = false }
         .onChange(of: controller.stepIndex) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.dartPractice.currentAction) { _, _ in voice.contextDidChange() }
         .onChange(of: controller.dartPractice.completed) { _, completed in
             if completed && controller.isDartPractice { closeVoiceTools() }
         }
         .onChange(of: controller.lesson) { _, _ in voice.stop() }
-        .onChange(of: controller.isAR) { _, _ in voice.stop() }
-        .onChange(of: controller.placed) { _, placed in if !placed { voice.stop() } }
+        .onChange(of: controller.isAR) { _, active in
+            voice.stop()
+            if !active { isARFullScreen = false }
+        }
+        .onChange(of: controller.isPaperGuide) { _, active in if active { isARFullScreen = false } }
+        .onChange(of: controller.placed) { _, placed in
+            if !placed { voice.stop(); isARFullScreen = false }
+        }
         .onChange(of: controller.started) { _, started in if !started { closeVoiceTools() } }
         .onChange(of: blockingSheetPresented) { _, presented in
             if presented { voice.stop(); controller.pauseAndSave() }
@@ -177,6 +170,40 @@ struct PaperStepsView: View {
             controller.updateLibraryAccess(unlocked)
             if unlocked { showUnlock = false }
             if !controller.hasLessonAccess { closeVoiceTools() }
+        }
+    }
+
+    private var lessonPanels: some View {
+        VStack(spacing: 0) {
+            if controller.isDartPractice {
+                DartPracticeCard(controller: controller, onOpenComparison: { voice.stop(); controller.pauseAndSave() },
+                                 onConfirmAction: { DartPracticeVoiceBoundary.confirm(controller: controller, stopVoice: { voice.stop() }) },
+                                 onPracticeToolsPresented: { presented in
+                    practiceToolsPresented = presented
+                    if presented { voice.stop(); controller.pauseAndSave() }
+                }) {
+                    voiceControlButton
+                }
+            }
+            else if controller.isPaperGuide { PaperGuideCard(controller: controller) }
+            else if !controller.started { introduction }
+            else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
+            else { lessonCard }
+            if controller.lesson == .dart && !controller.isAR {
+                Button { voice.stop(); controller.enterDartPractice() } label: {
+                    Label(controller.practiceReferenceActive ? "Return to my practice" : "Practice the complete Dart", systemImage: "hand.draw")
+                        .font(.system(size: 14, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(.borderedProminent).tint(Palette.ink).foregroundStyle(.white)
+                    .padding(.horizontal, 22).padding(.top, 6)
+                    .accessibilityIdentifier("openDartPractice")
+                Button { voice.stop(); controller.enterPaperGuide() } label: {
+                    Label("Guide on my paper", systemImage: "viewfinder")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }.buttonStyle(.bordered).tint(Palette.ink)
+                    .padding(.horizontal, 22).padding(.bottom, 10)
+                    .accessibilityIdentifier("openPaperGuide")
+            }
         }
     }
 
@@ -192,6 +219,7 @@ struct PaperStepsView: View {
 
     private func configureVoiceCommands() {
         let feedback = $voiceFeedback
+        let feedbackRevision = $voiceFeedbackRevision
         let practiceTools = $practiceToolsPresented
         voice.onCommand = { [weak controller, weak voice] command in
             guard let controller, let voice else { return }
@@ -199,6 +227,7 @@ struct PaperStepsView: View {
                                                                     practiceCompleted: controller.isDartPractice && controller.dartPractice.completed,
                                                                     stopVoice: { voice.stop() },
                                                                     perform: controller.performVoiceCommand) else { return }
+            feedbackRevision.wrappedValue &+= 1
             switch response {
             case .message(let text): feedback.wrappedValue = text
             case .narration(let text):
@@ -220,10 +249,7 @@ struct PaperStepsView: View {
 
     private var voiceControlButton: some View {
         HStack(spacing: 4) {
-            Button {
-                if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
-                else { startHandsFree() }
-            } label: {
+            Button(action: toggleHandsFree) {
                 Label(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Hands-free",
                       systemImage: voice.isEnabled ? "mic.slash" : voice.isSpeaking ? "speaker.slash" : "mic")
                     .frame(minHeight: 44)
@@ -232,6 +258,11 @@ struct PaperStepsView: View {
                 Image(systemName: "questionmark.circle").frame(width: 36, height: 44)
             }.accessibilityLabel("Voice commands and help").accessibilityIdentifier("openVoiceGuide")
         }
+    }
+
+    private func toggleHandsFree() {
+        if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
+        else { startHandsFree() }
     }
 
     private var header: some View {
@@ -271,7 +302,7 @@ struct PaperStepsView: View {
         }.padding(.horizontal, 22).padding(.vertical, 12).layoutPriority(2)
     }
 
-    private var viewport: some View {
+    private func viewport(safeAreaInsets: EdgeInsets) -> some View {
         ZStack {
             PaperViewport(controller: controller)
             if controller.isDartPractice {
@@ -297,7 +328,7 @@ struct PaperStepsView: View {
                         .position(x: geometry.size.width / 2, y: geometry.size.height * 0.40)
                 }.allowsHitTesting(false)
             }
-            if controller.isAR && !controller.isPaperGuide && !LessonController.supportsAR {
+            if controller.isAR && !controller.isPaperGuide && !LessonController.supportsAR && !controller.isTabletopLayoutFixture {
                 Palette.background.opacity(0.96)
                 VStack(spacing: 14) {
                     Image(systemName: "arkit").font(.system(size: 42, weight: .light))
@@ -308,99 +339,200 @@ struct PaperStepsView: View {
                         .buttonStyle(.borderedProminent).tint(Palette.ink).accessibilityIdentifier("returnTo3D")
                 }.padding(24)
             }
-            VStack {
-                HStack {
-                    if !controller.isAR {
-                        Text(controller.started ? "DRAG TO EXPLORE" : controller.lesson.title.uppercased())
-                            .font(.system(size: 9, weight: .semibold)).tracking(1.8).foregroundStyle(Palette.muted)
-                        Spacer()
-                        HStack(spacing: 0) {
-                            Button("Top") { controller.setTopView() }.accessibilityIdentifier("topView")
-                            Divider().frame(height: 12).padding(.horizontal, 10)
-                            Button("Angle") { controller.setAngleView() }.accessibilityIdentifier("angleView")
-                        }.font(.system(size: 11, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 9)
-                            .background(.regularMaterial, in: Capsule())
-                    } else if controller.placed && !controller.isPaperGuide {
-                        Label(controller.trackingReady ? "ANCHORED TO YOUR TABLE" : "RECOVERING TRACKING", systemImage: "circle.fill")
-                            .font(.system(size: 9, weight: .semibold)).tracking(1)
-                            .padding(10).background(.regularMaterial, in: Capsule())
-                        Spacer()
-                    }
-                    if controller.isAR && !controller.isPaperGuide {
-                        if !controller.placed { Spacer() }
-                        Button { showARHelp = true } label: {
-                            Label("AR help", systemImage: "hand.raised")
-                                .font(.system(size: 10, weight: .medium)).padding(10)
-                                .background(.regularMaterial, in: Capsule())
-                        }.accessibilityIdentifier("openARHelp")
-                    }
-                }.padding(.horizontal, 22).padding(.top, 14)
-                Spacer()
-                if voice.isEnabled || voice.isSpeaking {
-                    Label(voice.isSpeaking ? "Reading aloud" : voice.isListening ? "Listening for a command" : voice.status,
-                          systemImage: voice.isSpeaking ? "speaker.wave.2.fill" : "mic.fill")
-                        .font(.system(size: 11, weight: .medium)).padding(10)
-                        .background(.regularMaterial, in: Capsule())
-                        .accessibilityIdentifier("activeVoiceStatus")
-                    if voice.isEnabled && !voice.isSpeaking {
-                        Text("Next step · Previous step · Show me again")
-                            .font(.system(size: 10, weight: .medium))
-                            .padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(.regularMaterial, in: Capsule())
-                            .accessibilityIdentifier("handsFreeCommandHint")
-                    }
-                    if voice.isEnabled && !voiceFeedback.isEmpty {
-                        Text(voiceFeedback).font(.system(size: 11)).lineLimit(2)
-                            .padding(8).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
-                            .padding(.horizontal, 22).accessibilityIdentifier("activeVoiceFeedback")
-                    }
-                }
-                if let message = voice.recoveryMessage, controller.canUseVoiceGuide {
-                    VStack(spacing: 4) {
-                        Text(message).font(.system(size: 11)).multilineTextAlignment(.center)
-                            .accessibilityIdentifier("voiceRecoveryMessage")
-                        Button("Try voice again") { startHandsFree() }
-                            .font(.system(size: 12, weight: .semibold)).frame(minHeight: 44)
-                            .accessibilityIdentifier("retryHandsFree")
-                    }.padding(10).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal, 22)
-                }
-                if controller.isAR && !controller.isPaperGuide && controller.placed {
-                    HStack {
-                        Button { controller.togglePositionLock() } label: {
-                            Label(controller.positionLocked ? "Move paper" : "Lock position",
-                                  systemImage: controller.positionLocked ? "lock.fill" : "lock.open")
-                                .font(.system(size: 12, weight: .semibold))
-                                .padding(.horizontal, 15).frame(minHeight: 44)
-                                .background(.regularMaterial, in: Capsule())
-                        }.accessibilityIdentifier("togglePositionLock")
-                            .accessibilityValue(controller.positionLocked ? "Locked" : "Movable")
-                            .disabled(!controller.trackingReady || controller.needsRescan || controller.cameraError != nil)
-                        Spacer()
-                    }.padding(.horizontal, 22).padding(.bottom, 8)
-                }
-                if controller.started && (!controller.isAR || controller.placed) {
-                    HStack {
-                        if controller.isAR {
-                            Button { controller.placeAgain() } label: { Label("Place again", systemImage: "viewfinder") }
-                                .accessibilityIdentifier("placeAgain")
-                        } else {
-                            Label("Pinch to zoom", systemImage: "hand.pinch")
-                        }
-                        Spacer()
-                        voiceControlButton
-                        Spacer()
-                        Button { controller.toggleHints() } label: {
-                            Label(controller.hintsVisible ? "Hints on" : "Hints off", systemImage: controller.hintsVisible ? "arrow.turn.up.right" : "eye.slash")
-                        }.accessibilityIdentifier("toggleHints")
-                    }.font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 13).padding(.vertical, 10).background(.regularMaterial, in: Capsule())
-                        .padding(.horizontal, 22).padding(.bottom, 12)
-                }
+            if controller.isTabletopLayoutFixture && controller.isAR {
+                VStack {
+                    Text("AR LAYOUT PREVIEW · NO LIVE CAMERA")
+                        .font(.system(size: 10, weight: .bold)).foregroundStyle(.black)
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(.yellow, in: Capsule())
+                        .accessibilityIdentifier("arLayoutFixtureLabel")
+                    Spacer()
+                }.padding(.top, isARFullScreen ? safeAreaInsets.top + 60 : 68)
+                    .allowsHitTesting(false)
+            }
+            if isARFullScreen {
+                fullScreenARControls(safeAreaInsets: safeAreaInsets)
+            } else {
+                standardViewportControls
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
+    }
+
+    private var standardViewportControls: some View {
+        VStack {
+            HStack {
+                if !controller.isAR {
+                    Text(controller.started ? "DRAG TO EXPLORE" : controller.lesson.title.uppercased())
+                        .font(.system(size: 9, weight: .semibold)).tracking(1.8).foregroundStyle(Palette.muted)
+                    Spacer()
+                    HStack(spacing: 0) {
+                        Button("Top") { controller.setTopView() }.accessibilityIdentifier("topView")
+                        Divider().frame(height: 12).padding(.horizontal, 10)
+                        Button("Angle") { controller.setAngleView() }.accessibilityIdentifier("angleView")
+                    }.font(.system(size: 11, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 9)
+                        .background(.regularMaterial, in: Capsule())
+                } else if controller.placed && !controller.isPaperGuide {
+                    Label(controller.trackingReady ? "ANCHORED TO YOUR TABLE" : "RECOVERING TRACKING", systemImage: "circle.fill")
+                        .font(.system(size: 9, weight: .semibold)).tracking(1)
+                        .padding(10).background(.regularMaterial, in: Capsule())
+                    Spacer()
+                }
+                if controller.isAR && !controller.isPaperGuide {
+                    if !controller.placed { Spacer() }
+                    if controller.placed {
+                        Button { isARFullScreen = true } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(width: 44, height: 44)
+                                .background(.regularMaterial, in: Circle())
+                        }.accessibilityLabel("Full screen AR")
+                            .accessibilityHint("Show a larger view with next fold and voice controls. Exit full screen to adjust the model position.")
+                            .accessibilityIdentifier("enterARFullScreen")
+                    }
+                    Button { showARHelp = true } label: {
+                        Label("AR help", systemImage: "hand.raised")
+                            .font(.system(size: 10, weight: .medium)).padding(10)
+                            .background(.regularMaterial, in: Capsule())
+                    }.accessibilityIdentifier("openARHelp")
+                }
+            }.padding(.horizontal, 22).padding(.top, 14)
+            Spacer()
+            if voice.isEnabled || voice.isSpeaking {
+                Label(voice.isSpeaking ? "Reading aloud" : voice.isListening ? "Listening for a command" : voice.status,
+                      systemImage: voice.isSpeaking ? "speaker.wave.2.fill" : "mic.fill")
+                    .font(.system(size: 11, weight: .medium)).padding(10)
+                    .background(.regularMaterial, in: Capsule())
+                    .accessibilityIdentifier("activeVoiceStatus")
+                if voice.isEnabled && !voice.isSpeaking {
+                    Text("Next step · Previous step · Show me again")
+                        .font(.system(size: 10, weight: .medium))
+                        .padding(.horizontal, 12).padding(.vertical, 7)
+                        .background(.regularMaterial, in: Capsule())
+                        .accessibilityIdentifier("handsFreeCommandHint")
+                }
+                if voice.isEnabled && !voiceFeedback.isEmpty {
+                    Text(voiceFeedback).font(.system(size: 11)).lineLimit(2)
+                        .padding(8).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+                        .padding(.horizontal, 22).accessibilityIdentifier("activeVoiceFeedback")
+                }
+            }
+            if let message = voice.recoveryMessage, controller.canUseVoiceGuide {
+                VStack(spacing: 4) {
+                    Text(message).font(.system(size: 11)).multilineTextAlignment(.center)
+                        .accessibilityIdentifier("voiceRecoveryMessage")
+                    Button("Try voice again") { startHandsFree() }
+                        .font(.system(size: 12, weight: .semibold)).frame(minHeight: 44)
+                        .accessibilityIdentifier("retryHandsFree")
+                }.padding(10).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 22)
+            }
+            if controller.isAR && !controller.isPaperGuide && controller.placed {
+                HStack {
+                    Button { controller.togglePositionLock() } label: {
+                        Label(controller.positionLocked ? "Move paper" : "Lock position",
+                              systemImage: controller.positionLocked ? "lock.fill" : "lock.open")
+                            .font(.system(size: 12, weight: .semibold))
+                            .padding(.horizontal, 15).frame(minHeight: 44)
+                            .background(.regularMaterial, in: Capsule())
+                    }.accessibilityIdentifier("togglePositionLock")
+                        .accessibilityValue(controller.positionLocked ? "Locked" : "Movable")
+                        .disabled(!controller.trackingReady || controller.needsRescan || controller.cameraError != nil)
+                    Spacer()
+                }.padding(.horizontal, 22).padding(.bottom, 8)
+            }
+            if controller.started && (!controller.isAR || controller.placed) {
+                HStack {
+                    if controller.isAR {
+                        Button { controller.placeAgain() } label: { Label("Place again", systemImage: "viewfinder") }
+                            .accessibilityIdentifier("placeAgain")
+                    } else {
+                        Label("Pinch to zoom", systemImage: "hand.pinch")
+                    }
+                    Spacer()
+                    voiceControlButton
+                    Spacer()
+                    Button { controller.toggleHints() } label: {
+                        Label(controller.hintsVisible ? "Hints on" : "Hints off", systemImage: controller.hintsVisible ? "arrow.turn.up.right" : "eye.slash")
+                    }.accessibilityIdentifier("toggleHints")
+                }.font(.system(size: 10, weight: .medium))
+                    .padding(.horizontal, 13).padding(.vertical, 10).background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 22).padding(.bottom, 12)
+            }
+        }
+    }
+
+    private func fullScreenARControls(safeAreaInsets: EdgeInsets) -> some View {
+        VStack(spacing: 12) {
+            HStack {
+                Button { isARFullScreen = false } label: {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 17, weight: .semibold)).frame(width: 44, height: 44)
+                        .background(Palette.ink.opacity(0.94), in: Circle())
+                }.accessibilityLabel("Exit full screen")
+                    .accessibilityIdentifier("exitARFullScreen")
+                Spacer()
+                Text(controller.stepIndex == 0 ? "Before you begin" : "Step \(controller.stepIndex) of \(controller.lastStep)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .padding(.horizontal, 12).padding(.vertical, 9)
+                    .background(Palette.ink.opacity(0.94), in: Capsule())
+                    .accessibilityIdentifier("compactARStep")
+            }
+            Spacer(minLength: 12)
+            if controller.needsRescan || !controller.trackingReady || controller.cameraError != nil {
+                VStack(spacing: 8) {
+                    Text(controller.cameraError ?? controller.status)
+                        .font(.system(size: 13, weight: .medium)).multilineTextAlignment(.center)
+                        .accessibilityIdentifier("compactARTrackingStatus")
+                    if controller.needsRescan {
+                        Button("Scan table again") { isARFullScreen = false; controller.placeAgain() }
+                            .font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
+                            .accessibilityIdentifier("compactARRescan")
+                    } else if controller.cameraError != nil {
+                        Button("Show camera help") { isARFullScreen = false }
+                            .font(.system(size: 14, weight: .semibold)).frame(minHeight: 44)
+                    }
+                }.padding(14).frame(maxWidth: 360)
+                    .background(Palette.ink.opacity(0.94), in: RoundedRectangle(cornerRadius: 16))
+            }
+            if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission || voice.recoveryMessage != nil {
+                Text(voice.recoveryMessage ?? voice.status)
+                    .font(.system(size: 12, weight: .medium)).multilineTextAlignment(.center).lineLimit(3)
+                    .padding(.horizontal, 14).padding(.vertical, 9).frame(maxWidth: 360)
+                    .background(Palette.ink.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
+                    .accessibilityIdentifier("compactARVoiceStatus")
+            }
+            if compactVoiceFeedbackVisible && !voiceFeedback.isEmpty {
+                Text(voiceFeedback).font(.system(size: 12, weight: .medium))
+                    .multilineTextAlignment(.center).lineLimit(2)
+                    .padding(.horizontal, 14).padding(.vertical, 9).frame(maxWidth: 360)
+                    .background(Palette.ink.opacity(0.94), in: RoundedRectangle(cornerRadius: 14))
+                    .accessibilityIdentifier("compactARVoiceFeedback")
+            }
+            HStack(spacing: 12) {
+                Button(action: toggleHandsFree) {
+                    Image(systemName: voice.isEnabled || voice.isRequestingPermission ? "mic.fill" : voice.isSpeaking ? "speaker.wave.2.fill" : "mic")
+                        .font(.system(size: 20, weight: .medium)).frame(width: 52, height: 52)
+                        .background(Palette.ink.opacity(0.94), in: Circle())
+                }.accessibilityLabel(voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission ? "Stop voice" : "Start voice control")
+                    .accessibilityValue(voice.status).accessibilityIdentifier("compactARVoice")
+                    .disabled(!controller.canUseVoiceGuide)
+                Button { voice.contextDidChange(); controller.next() } label: {
+                    Label(controller.isPlaying ? "Folding…" : controller.nextTitle,
+                          systemImage: controller.completed ? "arrow.counterclockwise" : "arrow.right")
+                        .font(.system(size: 15, weight: .semibold)).lineLimit(2)
+                        .padding(.horizontal, 22).frame(minHeight: 52)
+                        .background(Palette.ink.opacity(controller.isPlaying || !controller.canAnimate ? 0.6 : 0.94), in: Capsule())
+                }.accessibilityIdentifier("compactARNext")
+                    .disabled(controller.isPlaying || !controller.canAnimate)
+            }
+        }
+        .buttonStyle(.plain).foregroundStyle(.white)
+        .padding(.top, max(12, safeAreaInsets.top + 8))
+        .padding(.bottom, max(16, safeAreaInsets.bottom + 12))
+        .padding(.leading, max(16, safeAreaInsets.leading + 12))
+        .padding(.trailing, max(16, safeAreaInsets.trailing + 12))
     }
 
     private var introduction: some View {

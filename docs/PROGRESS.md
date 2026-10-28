@@ -313,3 +313,62 @@ validation targets. A first-fold technical demo is not the complete MVP.
 - Apple references: [grounding shadow/AO option](https://developer.apple.com/documentation/realitykit/arview/renderoptions-swift.struct/disablegroundingshadows),
   [constant contact fade](https://developer.apple.com/documentation/realitykit/groundingshadowcomponent/fadebehaviornearphysicalobjects-swift.enum/constant),
   and [scene understanding lighting](https://developer.apple.com/videos/play/wwdc2020/10612/).
+
+## Full-screen tabletop learning — Build 10, 2026-10-28
+
+- Added an expand control after tabletop placement. The same existing ARView
+  fills the screen; the lesson header, instruction card and placement tools hide.
+  The compact overlay retains exit, the current step, Next/Finish this fold and
+  a direct voice toggle. Controls respect safe areas and have 44-point or larger
+  touch targets; the model's position, scale, lock and fold state are preserved.
+- Switching layout does not start a new camera session, request permissions or
+  stop an already-enabled voice guide. The existing Next semantics and tracking
+  gates remain authoritative. Tracking loss shows recovery; failed voice input
+  leaves touch navigation available. Voice acknowledgements appear briefly.
+- Exiting AR, removing placement, or entering real-paper guidance clears the
+  full-screen preference. Full-screen tabletop remains a virtual 3D reference;
+  it does not establish registration with a physical sheet or confirm a fold.
+- Simulator UI tests use an explicit DEBUG/Simulator-only layout preview which
+  retains the studio renderer and is visibly marked NO LIVE CAMERA. It cannot
+  run in a physical-device Release build or replace real-camera acceptance.
+- Validation and installation receipts: `output/ar-fullscreen-2026-10-28/`.
+  Physical camera continuity, full-screen hand gestures and real speech still
+  require iPhone review. The previous contact-darkening correction is included.
+- [x] 20 existing logic contracts passed; the iPhone full-screen interaction
+  test and the iPad portrait/landscape control-bounds test both passed. The
+  iPhone case covers viewport enlargement, partial-fold preservation, voice
+  failure recovery, finishing before advancing, collapse, and later AR reentry.
+- [x] Release Build 10 compiled, passed strict code-signature verification,
+  installed on the paired iPhone 17 Pro Max, and was confirmed in device app
+  inventory as 0.1.0 (10). Launch was refused because the iPhone was locked.
+  This build has not been uploaded to TestFlight.
+- [ ] Visual QA found an iPad Simulator landscape preview defect: the 3D render
+  retains/crops part of its portrait area while controls use the correct new
+  bounds. Portrait and iPhone previews are clean. The control test is not a
+  landscape rendering acceptance; no unverified drawable workaround was added
+  to the real-camera path. Real iPad AR remains untested.
+- An additional legacy TabletLayoutUITests case failed in setup: it waits for
+  a paid-lesson Unlock label although the current initial lesson is the free
+  Dart (the captured label was Start folding). That existing test was not
+  modified, and its result is retained separately from full-screen validation.
+- The initial layout-preview test stopped at the live-camera playback guard.
+  Its explicit Simulator-only fixture now uses studio playback, still with a
+  persistent NO LIVE CAMERA label; Release and physical-device guards are unchanged.
+
+## Recommended next product work — reviewed 2026-10-28
+
+1. Complete a real-device acceptance run: black-region overlap, hand occlusion,
+   tracking recovery, full-screen continuity, flat-A4 alignment/loss/recovery,
+   and the ten Dart actions. Preserve the distinction between a working build
+   and measured physical or beginner-learning outcomes.
+2. Clarify the three entry points and materials: tabletop 3D reference, ordinary
+   A4 first-fold alignment, and PTC2 printed-sheet complete practice. Keep the
+   distinction visible before someone starts the camera.
+3. Improve each action's visual teaching: optional short spoken instruction,
+   start/target comparison and a closer view of the moving flap. Reuse current
+   replay, slow playback and authored explanations; cloud AI remains deferred.
+4. Add an explicit user-triggered current-step feedback flow with version,
+   course, action and mode. Images remain optional and are never sent silently.
+5. Physically review a second everyday course before expanding the catalog.
+   Label 3D, illustrated and experimental camera capabilities precisely; the
+   existing everyday courses do not grade real garments or knots.

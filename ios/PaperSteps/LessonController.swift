@@ -58,6 +58,17 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         return false
         #endif
     }
+
+    /// Explicit layout-only preview for Simulator UI tests. It keeps the studio
+    /// renderer and never starts a camera session or supplies real depth data.
+    var isTabletopLayoutFixture: Bool {
+        #if DEBUG && targetEnvironment(simulator)
+        return !isPaperGuide && ProcessInfo.processInfo.arguments.contains("--ui-testing") &&
+            ProcessInfo.processInfo.arguments.contains("--tabletop-layout-fixture")
+        #else
+        return false
+        #endif
+    }
     var supportsCurrentPaperGuideStep: Bool {
         if isDartPractice {
             return !dartPractice.completed && DartPracticeCourse.supportsPlanarCue(beforeState: dartPractice.currentAction - 1)
@@ -413,9 +424,9 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         }
         // SwiftUI can resize the renderer after a lesson card changes height or
         // iPad multitasking changes width, even while playback is paused.
-        if !isAR, let size = arView?.bounds.size, size != lastViewportSize { updateCamera() }
+        if !isAR || isTabletopLayoutFixture, let size = arView?.bounds.size, size != lastViewportSize { updateCamera() }
         guard isPlaying else { lastTick = 0; return }
-        if isAR {
+        if isAR && !isTabletopLayoutFixture {
             guard canAnimate, let frame = arView?.session.currentFrame,
                   case .normal = frame.camera.trackingState,
                   CACurrentMediaTime() - frame.timestamp < 1,
@@ -470,7 +481,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     func setTopView() { followsAnglePreset = false; yaw = 0; pitch = 1.49; zoomMultiplier = 1; updateCamera() }
     func setAngleView() { followsAnglePreset = true; yaw = 0.55; pitch = 0.82; zoomMultiplier = 1; updateCamera() }
     private func updateCamera() {
-        guard !isAR else { return }
+        guard !isAR || isTabletopLayoutFixture else { return }
         if followsAnglePreset && lesson.presentsStandingFinish {
             // Lower the studio angle as the final sheet stands up, so its head
             // and feet stay legible. A chosen top view or manual orbit is kept.
@@ -673,6 +684,13 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         cameraError = nil; placed = false; canPlace = false; trackingReady = false; needsRescan = false
         sessionGeneration += 1
         let generation = sessionGeneration
+        #if DEBUG && targetEnvironment(simulator)
+        if isTabletopLayoutFixture {
+            placed = true; trackingReady = true
+            status = "AR layout preview only. No live camera or physical placement."
+            return
+        }
+        #endif
         guard Self.supportsAR else { status = "AR needs a real iPhone or iPad."; return }
         clearScene()
         guard let view = arView else { return }
