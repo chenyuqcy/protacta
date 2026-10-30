@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-30",
+  "date": "2026-10-31",
   "baselineCommit": "6073275211606960398c3f34cb461e88469e138e",
   "objective": "Reusable 3D tutorials for everyday skills, equipment and large machinery",
   "stages": [
@@ -52,8 +52,8 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "13",
-    "downloadDecision": "Deferred by user; do not request login repeatedly",
+    "build": "14",
+    "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
       "features": [
@@ -78,7 +78,8 @@
         "Focused selected-part camera view",
         "JSON-authored equipment courses",
         "In-app model credits, licenses and scope",
-        "Adaptive wide-screen model and instruction columns; stable renderer across layout changes"
+        "Adaptive wide-screen model and instruction columns; stable renderer across layout changes",
+        "Visible voice feedback in compact and expanded views; unavailable-input messages survive step changes while touch remains usable"
       ],
       "limits": [
         "Linear part displacement; no imported animation-clip support yet",
@@ -111,6 +112,12 @@
       "iPadPro13M5": "EquipmentTabletWide.xcresult: two portrait/landscape and compact-mode flows passed; screenshots reviewed",
       "iPadMiniA17Pro": "EquipmentSmallTablet.xcresult: three native asset checks and two rotation/compact UI flows passed; screenshots reviewed",
       "scope": "Simulator rendering and controls only; not physical-device performance, speech or AR acceptance"
+    },
+    "voiceRecoveryEvidence": {
+      "baseline": "EquipmentVoiceFailureBaseline.xcresult: reproduced hidden unavailable-input feedback",
+      "iPhone17": "EquipmentVoiceRecoveryFinal.xcresult: nine voice state tests and two equipment/AERIS UI flows passed",
+      "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
+      "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
     }
   },
   "nextGates": [

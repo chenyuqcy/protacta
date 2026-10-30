@@ -2,6 +2,26 @@ import XCTest
 @testable import Protacta
 
 final class VoiceGuideStateTests: XCTestCase {
+    @MainActor
+    func testUnavailableVoiceFeedbackRemainsVisibleWhileDisabledAndStopClearsIt() async throws {
+        #if !targetEnvironment(simulator)
+        throw XCTSkip("This unavailable-input check must never request physical microphone permission.")
+        #else
+        let voice = VoiceGuide()
+        XCTAssertNil(voice.feedbackMessage)
+        await voice.startListening()
+        XCTAssertFalse(voice.isEnabled)
+        XCTAssertFalse(voice.isListening)
+        XCTAssertNotNil(voice.feedbackMessage)
+        XCTAssertEqual(voice.feedbackMessage, voice.status)
+        let failure = voice.feedbackMessage
+        voice.contextDidChange()
+        XCTAssertEqual(voice.feedbackMessage, failure, "Moving to another step does not repair unavailable voice input")
+        voice.stop()
+        XCTAssertNil(voice.feedbackMessage)
+        #endif
+    }
+
     func testStablePartialDispatchesOnceEvenWhenFinalResultArrives() throws {
         var gate = VoiceUtteranceGate()
         gate.update("Next fold")

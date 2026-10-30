@@ -508,3 +508,40 @@ validation targets. A first-fold technical demo is not the complete MVP.
 - Release Build 13 compiled and passed strict signature verification. Keep the
   user's deferred installation decision: this is a local signed candidate;
   phone installation and TestFlight upload have not been performed.
+
+## Visible voice recovery in equipment courses — Build 14, 2026-10-31
+
+- The goal audit found a functional gap: equipment voice startup failures set
+  voice to disabled, so the full panel replaced the error with its ordinary
+  footer; compact mode displayed no voice status at all. A focused Simulator UI
+  test reproduced the missing feedback before the fix. Baseline evidence is
+  `EquipmentVoiceFailureBaseline.xcresult` in the existing output directory.
+- VoiceGuide now exposes feedback separately from its enabled flag. Recovery
+  messages remain available when the user changes animation steps; explicit
+  stop clears them. Current speaking/listening/permission status takes priority
+  while active. The existing recognition, privacy and retry behavior is retained.
+- Compact equipment views show a small status panel at the bottom of the model
+  viewport. It does not intercept touch gestures. The expanded panel shows the
+  same feedback beside the model credits. The mic's Stop label also reflects
+  narration and permission-request states, matching what the button does.
+- Final verification: nine voice state tests and two iPhone UI flows passed in
+  `EquipmentVoiceRecoveryFinal.xcresult`. A further iPad mini UI flow passed in
+  `EquipmentTabletVoiceRecovery.xcresult`, covering portrait/landscape compact
+  feedback and the expanded sidebar. Retry stays reachable, Next advances,
+  feedback survives the step change, and the existing AERIS return gate still
+  works. Final screenshots were inspected for clipping and control overlap.
+- These checks exercise the explicitly unavailable automated-input branch and
+  presentation of its feedback. They do not establish real microphone behavior,
+  permission-denial handling on a phone, narration quality or speech accuracy.
+  The first partial fix also exposed loss of feedback on step change; that
+  intermediate failed result is retained as `EquipmentVoiceRecovery.xcresult`.
+- The audit also rechecked the unchanged original motor, clean pinned engine
+  checkout/license/source hashes, bundled derivatives and retained Build 13 ZIP.
+  Earlier towel geometry/renderer code is unchanged, and its two final UI tests
+  were confirmed in the existing result bundle. Device performance, real speech,
+  physical towel follow-through and independent learning review remain open;
+  the full goal remains active. No phone installation or TestFlight upload was
+  attempted, in accordance with the user's deferred-installation instruction.
+- Release Build 14 compiled and passed strict code-signature verification. Its
+  bundled models and course resources match the reviewed Build 13 content. Keep
+  its signed local bundle and test receipts alongside the earlier candidates.

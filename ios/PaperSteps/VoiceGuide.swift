@@ -49,15 +49,23 @@ struct VoiceUtteranceGate {
 /// Transcripts exist only in memory; no audio files or network fallback are used.
 @MainActor
 final class VoiceGuide: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    private static let offStatus = "Voice commands are off."
     @Published private(set) var isEnabled = false
     @Published private(set) var isListening = false
     @Published private(set) var isSpeaking = false
     @Published private(set) var isRequestingPermission = false
-    @Published private(set) var status = "Voice commands are off."
+    @Published private(set) var status = VoiceGuide.offStatus
     @Published private(set) var lastHeard = ""
     @Published private(set) var recoveryMessage: String?
 
     var onCommand: ((VoiceCommand) -> Void)?
+
+    /// Failures remain useful feedback after listening has been disabled.
+    /// Read-aloud can also report an unavailable state without owning the mic.
+    var feedbackMessage: String? {
+        if isSpeaking || isListening || isRequestingPermission { return status }
+        return recoveryMessage ?? (status == Self.offStatus ? nil : status)
+    }
 
     private let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
     private var recoveryPolicy = VoiceRecoveryPolicy()
@@ -190,7 +198,7 @@ final class VoiceGuide: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
         deactivateAudio()
         lastHeard = ""
         recoveryMessage = nil
-        status = "Voice commands are off."
+        status = Self.offStatus
     }
 
     func contextDidChange() {
@@ -204,7 +212,7 @@ final class VoiceGuide: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
             scheduleRearm(generation: generation)
         } else {
             deactivateAudio()
-            status = isRequestingPermission ? "Waiting for speech and microphone permission." : "Voice commands are off."
+            status = isRequestingPermission ? "Waiting for speech and microphone permission." : Self.offStatus
         }
     }
 
@@ -448,7 +456,7 @@ final class VoiceGuide: NSObject, ObservableObject, AVSpeechSynthesizerDelegate 
             scheduleRearm(generation: generation, delayNanoseconds: 500_000_000)
         } else {
             deactivateAudio()
-            status = "Voice commands are off."
+            status = Self.offStatus
         }
     }
 

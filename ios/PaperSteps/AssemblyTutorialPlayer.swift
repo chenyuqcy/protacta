@@ -49,6 +49,15 @@ struct AssemblyTutorialPlayer: View {
                                     .accessibilityLabel("Interactive assembly model")
                                     .accessibilityValue(scene.isLoaded ? "Model loaded" : "Loading")
                                     .accessibilityIdentifier("assemblyViewportRegion")
+                                    .overlay(alignment: .bottom) {
+                                        if !showDetails, let feedback = voice.feedbackMessage {
+                                            Text(feedback).font(.system(size: 12, weight: .medium))
+                                                .fixedSize(horizontal: false, vertical: true)
+                                                .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                                .padding(8).accessibilityIdentifier("assemblyVoiceStatus")
+                                                .allowsHitTesting(false)
+                                        }
+                                    }
                             }
                         }.frame(minHeight: 160)
                         if let failure = scene.failure {
@@ -149,8 +158,8 @@ struct AssemblyTutorialPlayer: View {
                 Button {
                     if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
                     else { isPlaying = false; Task { await voice.startListening() } }
-                } label: { Image(systemName: voice.isEnabled ? "mic.fill" : "mic").frame(width: 44, height: 44) }
-                    .accessibilityLabel(voice.isEnabled ? "Stop voice" : "Hands-free voice").accessibilityIdentifier("assemblyVoice")
+                } label: { Image(systemName: voiceIsActive ? "mic.fill" : "mic").frame(width: 44, height: 44) }
+                    .accessibilityLabel(voiceIsActive ? "Stop voice" : "Hands-free voice").accessibilityIdentifier("assemblyVoice")
                 Spacer(minLength: 0)
                 Button { next() } label: {
                     Label(scene.stepIndex == scene.tutorial.steps.count - 1 ? "Restart" : "Next step", systemImage: "arrow.right")
@@ -159,8 +168,10 @@ struct AssemblyTutorialPlayer: View {
             }
             if showDetails {
                 HStack {
-                    Text(voice.isEnabled || voice.isSpeaking ? voice.status : "Virtual structure walkthrough")
+                    Text(voice.feedbackMessage ?? "Virtual structure walkthrough")
                         .font(.system(size: 10)).foregroundStyle(TutorialColors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("assemblyVoiceStatus")
                     Spacer(minLength: 4)
                     Button("Model credits & scope") { isPlaying = false; voice.stop(); showCredits = true }
                         .font(.system(size: 10, weight: .medium)).frame(minHeight: 44)
@@ -171,6 +182,7 @@ struct AssemblyTutorialPlayer: View {
     }
 
     private func go(to index: Int) { isPlaying = false; voice.contextDidChange(); scene.setStep(index) }
+    private var voiceIsActive: Bool { voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission }
     private func next() { go(to: scene.stepIndex + 1 < scene.tutorial.steps.count ? scene.stepIndex + 1 : 0) }
     private func close() { isPlaying = false; voice.stop(); screenAwake.release(); onExit() }
 

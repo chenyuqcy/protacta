@@ -18,6 +18,45 @@ final class EquipmentTutorialUITests: XCTestCase {
     func testMotorFiveActionExteriorWalkthroughAndCredits() { run("gearmotor", count: 5, scope: "internal rotor") }
     func testTurbofanSixActionStructurePreviewAndCredits() { run("turbofan", count: 6, scope: "not manufacturer CAD") }
 
+    func testCompactVoiceFailureExplainsTouchFallbackAndCanBeRetried() {
+        let card = app.buttons["hubEquipment_gearmotor"]; reveal(card); card.tap()
+        XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
+        app.buttons["assemblyToggleDetails"].tap()
+        app.buttons["assemblyVoice"].tap()
+        let status = app.staticTexts["assemblyVoiceStatus"]
+        XCTAssertTrue(status.waitForExistence(timeout: 3), "Voice failure must stay visible with the instructions hidden")
+        XCTAssertTrue(status.label.contains("Voice input is unavailable in automated tests"))
+        XCTAssertTrue(status.label.contains("buttons"))
+        XCTAssertTrue(app.frame.contains(status.frame))
+        XCTAssertTrue(app.buttons["assemblyVoice"].isHittable)
+        XCTAssertTrue(app.buttons["assemblyNext"].isEnabled)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+        XCTAssertFalse(XCUIApplication(bundleIdentifier: "com.apple.springboard").alerts.firstMatch.exists)
+        capture("equipment_compact_voice_unavailable_touch_fallback")
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            XCUIDevice.shared.orientation = .landscapeLeft
+            let rotated = XCTNSPredicateExpectation(predicate: NSPredicate { [weak self] _, _ in
+                guard let frame = self?.app.frame else { return false }
+                return frame.width > frame.height
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [rotated], timeout: 8), .completed)
+            XCTAssertTrue(app.frame.contains(status.frame))
+            capture("equipment_landscape_compact_voice_unavailable_touch_fallback")
+        }
+        app.buttons["assemblyVoice"].tap()
+        XCTAssertTrue(status.waitForExistence(timeout: 3))
+        app.buttons["assemblyNext"].tap()
+        XCTAssertTrue(app.staticTexts["assemblyCounter"].label.contains("2/5"))
+        app.buttons["assemblyToggleDetails"].tap()
+        XCTAssertTrue(status.waitForExistence(timeout: 3), "The full panel must retain the same recovery message")
+        XCTAssertTrue(status.label.contains("Voice input is unavailable in automated tests"))
+        XCTAssertTrue(app.frame.contains(status.frame))
+        XCTAssertTrue(app.buttons["assemblyNext"].isHittable)
+        capture("equipment_expanded_voice_unavailable_touch_fallback")
+        app.buttons["assemblyClose"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+    }
+
     func testIPadMotorRotationPreservesPartialMovementAndCompactControls() throws {
         try checkTabletRotation("gearmotor", count: 5)
     }
