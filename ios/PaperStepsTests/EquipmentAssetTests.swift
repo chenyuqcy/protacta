@@ -44,6 +44,15 @@ final class EquipmentAssetTests: XCTestCase {
         XCTAssertEqual(extent.x, 5, accuracy: 0.0001)
         XCTAssertEqual(extent.z, 2.44, accuracy: 0.0001)
         XCTAssertEqual(descendants(entity).filter { $0 is ModelEntity }.count, 36)
+        // The course names must point at the intended physical positions in the
+        // authored model, not merely resolve to seven distinct named entities.
+        let coreOrder = ["fan", "booster", "hpc", "combustor", "hpt", "lpt", "exhaust"]
+        let centers = try coreOrder.map { id -> Float in
+            let part = try XCTUnwrap(course.parts.first { $0.id == id })
+            let node = try XCTUnwrap(entity.findEntity(named: part.entityName))
+            return node.visualBounds(relativeTo: nil).center.x
+        }
+        for pair in zip(centers, centers.dropFirst()) { XCTAssertLessThan(pair.0, pair.1) }
         try exercise(course, entity: entity)
     }
 

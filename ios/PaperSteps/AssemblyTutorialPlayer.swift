@@ -21,37 +21,45 @@ struct AssemblyTutorialPlayer: View {
     var body: some View {
         ZStack {
             Color(red: 0.91, green: 0.94, blue: 0.92).ignoresSafeArea()
-            VStack(spacing: 12) {
-                HStack(alignment: .top) {
-                    Button { close() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
-                        .background(.regularMaterial, in: Circle()).accessibilityLabel("Close full-screen 3D")
-                        .accessibilityIdentifier("assemblyClose")
-                    Spacer(minLength: 8)
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(scene.tutorial.title).font(.system(size: 16, weight: .semibold, design: .rounded))
-                        Text("VIRTUAL WALKTHROUGH · \(scene.stepIndex + 1)/\(scene.tutorial.steps.count)")
-                            .font(.system(size: 10, weight: .bold)).tracking(0.6)
-                            .accessibilityIdentifier("assemblyCounter")
-                    }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 15))
-                }
-                // Keep the live viewport in one stable branch. Resizing the
-                // controls changes its bounds, never creates another renderer.
-                GeometryReader { geometry in
-                    if scene.isLoaded {
-                    AssemblySceneView(controller: scene, isActive: phase == .active)
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .accessibilityLabel("Interactive assembly model")
-                        .accessibilityValue(scene.isLoaded ? "Model loaded" : "Loading")
-                        .accessibilityIdentifier("assemblyViewportRegion")
+            GeometryReader { geometry in
+                let sidebar = showDetails && geometry.size.width >= 900 && geometry.size.height >= 650
+                    && geometry.size.width > geometry.size.height
+                VStack(spacing: 12) {
+                    HStack(alignment: .top) {
+                        Button { close() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                            .background(.regularMaterial, in: Circle()).accessibilityLabel("Close full-screen 3D")
+                            .accessibilityIdentifier("assemblyClose")
+                        Spacer(minLength: 8)
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(scene.tutorial.title).font(.system(size: 16, weight: .semibold, design: .rounded))
+                            Text("VIRTUAL WALKTHROUGH · \(scene.stepIndex + 1)/\(scene.tutorial.steps.count)")
+                                .font(.system(size: 10, weight: .bold)).tracking(0.6)
+                                .accessibilityIdentifier("assemblyCounter")
+                        }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 15))
                     }
-                }.frame(minHeight: 160)
-                if let failure = scene.failure {
-                    Text(failure).font(.callout).padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                        .accessibilityIdentifier("assemblyFailure")
-                } else if !scene.isLoaded {
-                    ProgressView("Loading 3D model…").padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                } else { controls }
-            }.padding(16).frame(maxWidth: 720).frame(maxWidth: .infinity)
+                    // AnyLayout preserves the viewport's identity across rotation
+                    // and compact mode. Only its bounds and control placement change.
+                    let layout = sidebar ? AnyLayout(HStackLayout(alignment: .center, spacing: 20))
+                        : AnyLayout(VStackLayout(spacing: 12))
+                    layout {
+                        GeometryReader { geometry in
+                            if scene.isLoaded {
+                                AssemblySceneView(controller: scene, isActive: phase == .active)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .accessibilityLabel("Interactive assembly model")
+                                    .accessibilityValue(scene.isLoaded ? "Model loaded" : "Loading")
+                                    .accessibilityIdentifier("assemblyViewportRegion")
+                            }
+                        }.frame(minHeight: 160)
+                        if let failure = scene.failure {
+                            Text(failure).font(.callout).padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                                .accessibilityIdentifier("assemblyFailure")
+                        } else if !scene.isLoaded {
+                            ProgressView("Loading 3D model…").padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        } else { controls.frame(width: sidebar ? 380 : nil).frame(maxWidth: sidebar ? 380 : 720) }
+                    }
+                }.padding(16)
+            }
         }
         .foregroundStyle(TutorialColors.ink).preferredColorScheme(.light)
         .sheet(isPresented: $showCredits) { credits }
@@ -109,6 +117,7 @@ struct AssemblyTutorialPlayer: View {
                     .font(.system(size: 14)).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
                 if let part = scene.selectedPart {
                     Text(part.detail).font(.system(size: 12)).foregroundStyle(TutorialColors.muted)
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("assemblyPartDetail")
                 }
                 Text("Drag to rotate · Pinch to zoom · Tap a part")

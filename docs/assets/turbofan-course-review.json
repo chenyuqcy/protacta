@@ -1,0 +1,98 @@
+{
+  "reviewDate": "2026-10-30",
+  "scope": "Local authored-geometry and instruction/pose consistency review",
+  "assetSHA256": "30bf7afdad2ea8370fb011af59a7581d6d24a2c46621b001b31a5dd19385a6bf",
+  "courseSHA256": "3e3202d230e23034f712e78c4e0a167a7b6d66c8d3da6b69002c9ba355a2521d",
+  "method": "OpenUSD world-aligned bounds of the bundled USDZ modules; compare X centers and authored JSON target poses",
+  "sourceAxis": "X increasing from front fan toward exhaust in this authored model",
+  "coreOrder": [
+    "fan",
+    "booster",
+    "hpc",
+    "combustor",
+    "hpt",
+    "lpt",
+    "exhaust"
+  ],
+  "moduleBoundsMetres": {
+    "nacelle": {
+      "entityName": "n001_nacelle",
+      "xMin": -2.6,
+      "xMax": 0.981469,
+      "centerX": -0.809265
+    },
+    "fan": {
+      "entityName": "n005_fan",
+      "xMin": -2.11,
+      "xMax": -1.327084,
+      "centerX": -1.718542
+    },
+    "booster": {
+      "entityName": "n012_booster",
+      "xMin": -1.43,
+      "xMax": -1.08,
+      "centerX": -1.255
+    },
+    "hpc": {
+      "entityName": "n017_hpc",
+      "xMin": -1.17,
+      "xMax": -0.474978,
+      "centerX": -0.822489
+    },
+    "combustor": {
+      "entityName": "n022_combustor",
+      "xMin": -0.565,
+      "xMax": -0.115,
+      "centerX": -0.34
+    },
+    "hpt": {
+      "entityName": "n027_hpt",
+      "xMin": -0.12,
+      "xMax": 0.11,
+      "centerX": -0.005
+    },
+    "lpt": {
+      "entityName": "n032_lpt",
+      "xMin": 0.1,
+      "xMax": 0.625,
+      "centerX": 0.3625
+    },
+    "exhaust": {
+      "entityName": "n037_exhaust",
+      "xMin": 0.615,
+      "xMax": 2.4,
+      "centerX": 1.5075
+    },
+    "cowl": {
+      "entityName": "n040_cowl",
+      "xMin": -1.43,
+      "xMax": 1.45,
+      "centerX": 0.01
+    },
+    "shafts": {
+      "entityName": "n042_shafts",
+      "xMin": -1.705,
+      "xMax": 0.715,
+      "centerX": -0.495
+    },
+    "accessory": {
+      "entityName": "n045_accessory",
+      "xMin": -1.606931,
+      "xMax": -0.024773,
+      "centerX": -0.815852
+    }
+  },
+  "checks": {
+    "moduleCenterOrder": true,
+    "combustorInspectionKeepsPreviousPose": true,
+    "shaftInspectionKeepsPreviousPose": true,
+    "lastActionReturnsToSourceAssembly": true
+  },
+  "nativeRegression": "EquipmentAssetTests.testTurbofanLoadsElevenIndependentModulesAtSourceScale also checks native module center order",
+  "independentLearnerReview": "pending",
+  "manufacturerMaintenanceApproval": false,
+  "limitations": [
+    "Center ordering and consistent target poses do not prove teaching effectiveness",
+    "Virtual separations are not a physical removal procedure"
+  ]
+}

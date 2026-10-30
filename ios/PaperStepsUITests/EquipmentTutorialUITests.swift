@@ -1,17 +1,82 @@
 import XCTest
+import UIKit
 
 /// Native imported structure walkthroughs, not real repairs or camera tests.
 final class EquipmentTutorialUITests: XCTestCase {
     private var app: XCUIApplication!
     override func setUpWithError() throws {
         continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
         app = XCUIApplication(); app.launchArguments = ["--ui-testing", "--tutorial-hub"]; app.launch()
         XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 15))
     }
-    override func tearDownWithError() throws { app?.terminate(); app = nil }
+    override func tearDownWithError() throws {
+        app?.terminate(); app = nil
+        XCUIDevice.shared.orientation = .portrait
+    }
 
     func testMotorFiveActionExteriorWalkthroughAndCredits() { run("gearmotor", count: 5, scope: "internal rotor") }
     func testTurbofanSixActionStructurePreviewAndCredits() { run("turbofan", count: 6, scope: "not manufacturer CAD") }
+
+    func testIPadMotorRotationPreservesPartialMovementAndCompactControls() throws {
+        try checkTabletRotation("gearmotor", count: 5)
+    }
+
+    func testIPadTurbofanRotationPreservesPartialMovementAndCompactControls() throws {
+        try checkTabletRotation("turbofan", count: 6)
+    }
+
+    private func checkTabletRotation(_ id: String, count: Int) throws {
+        guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("iPad viewport and rotation review") }
+        let card = app.buttons["hubEquipment_\(id)"]; reveal(card); card.tap()
+        XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
+        app.sliders["assemblySlider"].adjust(toNormalizedSliderPosition: 1)
+        app.buttons["assemblyNext"].tap()
+        let slider = app.sliders["assemblySlider"]
+        slider.adjust(toNormalizedSliderPosition: 0.45)
+        let partial = try XCTUnwrap(slider.value as? String)
+        let selected = app.buttons["assemblyPartMenu"].label
+        for landscape in [false, true, false] {
+            XCUIDevice.shared.orientation = landscape ? .landscapeLeft : .portrait
+            let rotated = XCTNSPredicateExpectation(predicate: NSPredicate { [weak self] _, _ in
+                guard let frame = self?.app.frame else { return false }
+                return landscape ? frame.width > frame.height : frame.height > frame.width
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [rotated], timeout: 8), .completed)
+            XCTAssertTrue(app.staticTexts["assemblyCounter"].label.contains("2/\(count)"))
+            XCTAssertEqual(slider.value as? String, partial, "Rotation must not finish or restart the movement")
+            XCTAssertEqual(app.buttons["assemblyPartMenu"].label, selected)
+            assertTabletBounds()
+            capture("\(id)_iPad_\(landscape ? "landscape" : "portrait")_partial_movement")
+            app.buttons["assemblyToggleDetails"].tap()
+            XCTAssertFalse(slider.exists)
+            assertTabletBounds()
+            capture("\(id)_iPad_\(landscape ? "landscape" : "portrait")_compact")
+            app.buttons["assemblyToggleDetails"].tap()
+            XCTAssertEqual(slider.value as? String, partial)
+        }
+        app.buttons["assemblyClose"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+    }
+
+    private func assertTabletBounds(file: StaticString = #filePath, line: UInt = #line) {
+        let viewport = app.descendants(matching: .any).matching(identifier: "assemblyViewportRegion").firstMatch
+        XCTAssertTrue(viewport.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertGreaterThan(viewport.frame.height, 160, file: file, line: line)
+        XCTAssertGreaterThan(viewport.frame.width, 300, file: file, line: line)
+        XCTAssertTrue(app.frame.insetBy(dx: -1, dy: -1).contains(viewport.frame), file: file, line: line)
+        for id in ["assemblyClose", "assemblyPartMenu", "assemblyNext", "assemblyVoice", "assemblyToggleDetails"] {
+            let button = app.buttons[id]
+            XCTAssertTrue(button.isHittable, id, file: file, line: line)
+            XCTAssertTrue(app.frame.insetBy(dx: -1, dy: -1).contains(button.frame), id, file: file, line: line)
+            XCTAssertGreaterThanOrEqual(button.frame.height, 44, id, file: file, line: line)
+        }
+        XCTAssertFalse(viewport.frame.intersects(app.buttons["assemblyNext"].frame), file: file, line: line)
+        if app.frame.width > app.frame.height && app.sliders["assemblySlider"].exists {
+            XCTAssertGreaterThan(viewport.frame.width, app.frame.width * 0.6, "Wide layouts should give the model most of the width", file: file, line: line)
+            XCTAssertLessThanOrEqual(viewport.frame.maxX, app.buttons["assemblyPartMenu"].frame.minX, "The instructions belong beside the wide model", file: file, line: line)
+        }
+    }
 
     private func run(_ id: String, count: Int, scope: String) {
         let card = app.buttons["hubEquipment_\(id)"]; reveal(card); card.tap()

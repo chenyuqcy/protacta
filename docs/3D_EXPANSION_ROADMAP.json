@@ -52,7 +52,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "12",
+    "build": "13",
     "downloadDecision": "Deferred by user; do not request login repeatedly",
     "towel": {
       "status": "simulator_checked",
@@ -77,7 +77,8 @@
         "Non-destructive 3D selection frame",
         "Focused selected-part camera view",
         "JSON-authored equipment courses",
-        "In-app model credits, licenses and scope"
+        "In-app model credits, licenses and scope",
+        "Adaptive wide-screen model and instruction columns; stable renderer across layout changes"
       ],
       "limits": [
         "Linear part displacement; no imported animation-clip support yet",
@@ -103,13 +104,20 @@
       "modules": 11,
       "triangles": 273916,
       "scope": "Educational turbofan interpretation; no maintenance approval"
+    },
+    "engineContentReview": "docs/assets/turbofan-course-review.json: authored module order, unchanged inspection poses and reassembly verified; independent learner review pending",
+    "layoutEvidence": {
+      "iPhone17": "EquipmentPhoneLayout.xcresult: three course/return UI flows passed",
+      "iPadPro13M5": "EquipmentTabletWide.xcresult: two portrait/landscape and compact-mode flows passed; screenshots reviewed",
+      "iPadMiniA17Pro": "EquipmentSmallTablet.xcresult: three native asset checks and two rotation/compact UI flows passed; screenshots reviewed",
+      "scope": "Simulator rendering and controls only; not physical-device performance, speech or AR acceptance"
     }
   },
   "nextGates": [
-    "Review new motor/engine views and local speech on the iPhone when installation resumes",
-    "Check legibility and viewport behavior on iPad without conflating control bounds and 3D rendering",
-    "Review learning clarity of motor and engine courses with an independent learner; virtual motions do not certify real work",
-    "Continue improving visible motion relationships and model-specific explanations from review evidence"
+    "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
+    "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
+    "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
+    "Use the recorded manualAcceptance procedures and attach actual results; leave untested cases unaccepted"
   ],
   "constraints": [
     "Keep original downloads unchanged",
@@ -139,5 +147,50 @@
       "downloaded": false,
       "qualified": false
     }
-  ]
+  ],
+  "manualAcceptance": {
+    "status": "not_run",
+    "installationDecision": "Deferred by user; keep signed local builds and wait for the user to resume device installation",
+    "deviceChecks": [
+      {
+        "id": "equipment_render_and_controls",
+        "procedure": "On the iPhone, open both equipment courses, scrub every action, select/focus parts, restore overview, explode/reassemble and switch compact controls. Check visible geometry, original materials and reachable controls. Background and reopen each course.",
+        "record": "Build/device/OS, any clipped or stale frame, crash or unexpected pose change, screenshots only when useful",
+        "result": null
+      },
+      {
+        "id": "equipment_performance",
+        "procedure": "Measure first and repeated native model load, frame timing during orbit and movement, and peak memory during a complete turbofan walkthrough using device profiling. Include device/OS and repeat conditions.",
+        "record": "Actual load durations, frame-time distribution and memory; Simulator load timings cannot fill this result",
+        "result": null
+      },
+      {
+        "id": "local_speech",
+        "procedure": "Use Read step and English next, back, replay, pause, resume and why commands. Confirm stopping voice and background return; with permission denied, touch navigation must remain usable.",
+        "record": "What was spoken and what happened on the real device; do not replace microphone evidence with command injection",
+        "result": null
+      }
+    ],
+    "learnerChecks": [
+      {
+        "id": "towel_follow_through",
+        "procedure": "Have a learner follow the three towel actions with a real towel. Record which instruction, camera angle or transition required extra help.",
+        "acceptance": "All three actions can be followed; any unclear step remains open for revision. One review is a usability check, not a learning-effectiveness statistic.",
+        "result": null
+      },
+      {
+        "id": "motor_virtual_relationships",
+        "procedure": "Without coaching, ask a learner to locate the terminal lid, fan cover and output shaft group, replay their movements, and return the model to its assembled pose.",
+        "acceptance": "The learner can identify the intended virtual parts and operate the viewer; no claim about repairing a real motor.",
+        "result": null
+      },
+      {
+        "id": "engine_virtual_relationships",
+        "procedure": "Ask a learner to locate the fan, compressors, combustor, turbines and exhaust, explain their order in this model, use a part close-up and return to the assembled overview.",
+        "acceptance": "Names, spatial order and virtual movements are understood. Resolve unclear course wording before calling the teaching sequence accepted.",
+        "result": null
+      }
+    ],
+    "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
+  }
 }

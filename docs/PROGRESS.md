@@ -469,3 +469,42 @@ validation targets. A first-fold technical demo is not the complete MVP.
   upload was attempted. The engine is still a local teaching candidate: measured
   phone load/memory/frame rate, real speech, iPad visual review and learner
   follow-through remain open. Earlier real-paper/AR acceptance remains open.
+
+## Equipment viewport and teaching review — Build 13, 2026-10-30
+
+- Reviewed the existing equipment player on the iPad Pro 13-inch Simulator.
+  Rotation and compact controls retained step, partial movement and selected
+  part; rendered screenshots showed no cropping. The initial landscape layout
+  still devoted much of the screen to a bottom instruction card, leaving a
+  relatively small model. Baseline evidence: `EquipmentTabletBaseline.xcresult`.
+- Added an adaptive wide-screen layout with the model on the left and a
+  380-point instruction panel on the right. The model receives most of the
+  screen width. Collapsing instructions returns to a wider viewport and compact
+  bottom controls. Portrait and narrow windows retain the vertical layout.
+  AnyLayout keeps the same viewport branch and renderer during layout changes;
+  rotation does not reload the model or reset the current movement.
+- Part descriptions now retain their full text instead of being compressed
+  into a truncated line. No model files, materials, course poses, voice service
+  or physical-camera paths changed in this increment.
+- Current-code validation: three native asset tests passed, including a new
+  check that the course's fan/compressor/combustor/turbine/exhaust labels point
+  to the intended front-to-rear positions in the imported model. Seven UI test
+  executions passed: three iPhone course/AERIS-return flows and two rotation/
+  compact flows on each of iPad Pro 13-inch and iPad mini A17 Pro Simulators.
+  Screenshots were reviewed for the wide model, full descriptions, compact
+  controls and return to portrait. Receipts: `EquipmentTabletWide.xcresult`,
+  `EquipmentPhoneLayout.xcresult` and `EquipmentSmallTablet.xcresult` in the
+  existing output directory. These are Simulator results, not real iPad review.
+- Recorded a local course/geometry review in `assets/turbofan-course-review.json`:
+  the source module centers agree with the written spatial order; the two
+  inspection actions preserve the preceding pose; final reassembly returns to
+  the original assembly. This checks authored consistency, not learner outcomes
+  or physical removal feasibility. The geometry and course hashes are recorded.
+- Added concrete device and learner review procedures to
+  `3D_EXPANSION_ROADMAP.json`, with results explicitly left unfilled. Remaining
+  gates are measured phone performance, real speech, real towel follow-through,
+  independent understanding of the virtual equipment, and physical tablet
+  review. Existing paper/AR acceptance remains separate and open.
+- Release Build 13 compiled and passed strict signature verification. Keep the
+  user's deferred installation decision: this is a local signed candidate;
+  phone installation and TestFlight upload have not been performed.
