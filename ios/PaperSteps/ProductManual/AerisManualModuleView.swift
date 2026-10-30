@@ -14,6 +14,7 @@ struct AerisManualModuleView: View {
     @State private var progress = ManualProgress()
     @State private var showAR = false
     @State private var showAppleAR = false
+    @State private var showAssembly = false
     @State private var showHelp = false
     @State private var exploring = false
     var body: some View {
@@ -43,6 +44,11 @@ struct AerisManualModuleView: View {
                     Text("Virtual concept product. This guide does not recognise or align to a real appliance.")
                         .font(.system(size: 11)).foregroundStyle(muted)
                     .accessibilityIdentifier("aerisScope")
+                    Button {
+                        scene.shutdown(); showAssembly = true
+                    } label: { Label("Full-screen 3D · Explore the parts", systemImage: "arrow.up.left.and.arrow.down.right") }
+                        .font(.system(size: 13, weight: .medium)).frame(minHeight: 44)
+                        .accessibilityIdentifier("aerisAssemblyPlayer")
                     HStack(spacing: 6) {
                         ForEach(progress.task.steps) { s in
                             Button { progress.go(to: s.id); applyCurrent() } label: {
@@ -59,6 +65,9 @@ struct AerisManualModuleView: View {
         .onChange(of: scene.isLoaded) { _, loaded in if loaded { applyCurrent(animated: false) } }
         .onChange(of: scene.releasePressed) { _, pressed in if pressed { progress.confirmAction() } }
         .fullScreenCover(isPresented: $showAR, onDismiss: { restoreStudio() }) { ProductARScreen(task: progress.task, sharedView: scene.view) }
+        .fullScreenCover(isPresented: $showAssembly, onDismiss: { restoreStudio() }) {
+            AssemblyTutorialPlayer(tutorial: .aeris, sharedView: scene.view, onExit: { showAssembly = false })
+        }
         .fullScreenCover(isPresented: $showAppleAR, onDismiss: { restoreStudio() }) {
             if let url = Bundle.main.url(forResource: "aeris-one", withExtension: "usdz") {
                 AppleARPreview(url: url, isPresented: $showAppleAR).ignoresSafeArea()
@@ -68,17 +77,17 @@ struct AerisManualModuleView: View {
         .onDisappear {
             // Covers borrow the already-prepared shared ARView. Do not clear a
             // new AR controller's scene while that cover is being presented.
-            if !showAR && !showAppleAR { scene.shutdown() }
+            if !showAR && !showAppleAR && !showAssembly { scene.shutdown() }
         }
         .onChange(of: phase) { _, phase in
-            if phase == .background, !showAR, !showAppleAR { scene.shutdown() }
-            if phase == .active, !showAR, !showAppleAR { restoreStudio() }
+            if phase == .background, !showAR, !showAppleAR, !showAssembly { scene.shutdown() }
+            if phase == .active, !showAR, !showAppleAR, !showAssembly { restoreStudio() }
         }
     }
     private var modelCard: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
-                if showAR || showAppleAR { paper.frame(height: 325) }
+                if showAR || showAppleAR || showAssembly { paper.frame(height: 325) }
                 else { ProductSceneView(controller: scene).frame(height: 325) }
                 HStack {
                     HStack(spacing: 5) { Circle().fill(scene.isAnimating ? Color.orange : forest).frame(width: 4, height: 4); Text(scene.isAnimating ? "PLAYING" : "INTERACTIVE 3D").font(.system(size: 8)).tracking(1) }
@@ -142,7 +151,7 @@ struct AerisManualModuleView: View {
         }
     }
     private func restoreStudio() {
-        guard !showAR, !showAppleAR, phase != .background else { return }
+        guard !showAR, !showAppleAR, !showAssembly, phase != .background else { return }
         _ = scene.makeView()
         if scene.isLoaded { applyCurrent(animated: false) }
     }

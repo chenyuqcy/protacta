@@ -14,6 +14,8 @@ struct EverydayTutorialPlayer: View {
     @State private var showHelp = false
     @State private var showSteps = false
     @State private var feedback = ""
+    @State private var shows3D = true
+    @State private var reset3DView = 0
 
     init(courseID: EverydayTutorialID, onExit: @escaping () -> Void) {
         self.courseID = courseID; self.onExit = onExit
@@ -89,7 +91,7 @@ struct EverydayTutorialPlayer: View {
                     .font(.system(size: 11, weight: .bold)).tracking(1.5)
                     .accessibilityIdentifier("everydayCounter")
                 Spacer()
-                Text("ILLUSTRATED GUIDE").font(.system(size: 9, weight: .medium)).foregroundStyle(TutorialColors.muted)
+                Text(courseID == .towel ? "3D + DIAGRAM GUIDE" : "ILLUSTRATED GUIDE").font(.system(size: 9, weight: .medium)).foregroundStyle(TutorialColors.muted)
             }
             Text(session.completed ? "You have practised every action." : action.title)
                 .font(.system(size: 27, weight: .semibold, design: .rounded)).tracking(-0.5)
@@ -102,9 +104,31 @@ struct EverydayTutorialPlayer: View {
 
     private var visualCard: some View {
         VStack(spacing: 12) {
+            if courseID == .towel {
+                Picker("Teaching view", selection: $shows3D) {
+                    Text("3D").tag(true)
+                    Text("Diagram").tag(false)
+                }.pickerStyle(.segmented).accessibilityIdentifier("everydayViewMode")
+            }
+            if courseID == .towel && shows3D {
+                Towel3DViewport(actionIndex: session.currentAction - 1, progress: progress,
+                                isActive: scenePhase == .active, resetToken: reset3DView)
+                    .frame(height: 320).clipped()
+                    .accessibilityLabel("Towel 3D teaching model")
+                    .accessibilityValue("Action \(session.currentAction), movement \(Int(progress * 100)) percent")
+                HStack {
+                    Text("Two-finger rotate · Pinch to zoom")
+                        .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
+                    Spacer(minLength: 4)
+                    Button("Reset view") { reset3DView &+= 1 }
+                        .font(.system(size: 11, weight: .semibold)).frame(minHeight: 44)
+                        .accessibilityIdentifier("resetTowel3DView")
+                }
+            } else {
             EverydayTutorialVisual(courseID: courseID.rawValue, stepIndex: session.currentAction - 1, progress: progress)
                 .frame(height: 360).clipped()
                 .accessibilityIdentifier("everydayVisual")
+            }
             HStack {
                 Text(progress < 0.01 ? "START POSITION" : progress >= 1 ? "TARGET POSITION" : "FOLLOW THE MOVEMENT")
                     .font(.system(size: 9, weight: .bold)).tracking(1)

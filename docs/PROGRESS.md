@@ -374,3 +374,51 @@ validation targets. A first-fold technical demo is not the complete MVP.
 5. Physically review a second everyday course before expanding the catalog.
    Label 3D, illustrated and experimental camera capabilities precisely; the
    existing everyday courses do not grade real garments or knots.
+
+## Native 3D expansion — Build 11, 2026-10-30
+
+- The user approved an active, staged engineering goal. Track deliverables and
+  acceptance gates in `3D_EXPANSION_ROADMAP.json`: asset qualification, reusable
+  player, first courses, then a reviewed aircraft-engine walkthrough. The full
+  goal remains active; this build is the first local increment.
+- Added an original three-action towel 3D schematic. Each action retains the
+  previous folds. The moving panel lifts and settles onto the earlier layers;
+  users can scrub, replay, slow down, rotate with two fingers and pinch to zoom.
+  The existing diagram remains available. Switching views does not confirm an
+  action or change saved course progress. This is not a fabric simulation.
+- Added a shared non-AR studio renderer and model-specific assembly adapter.
+  The adapter rejects missing, ambiguous, empty or nested animated part groups;
+  handles exporter conversion frames; restores original poses and materials;
+  and supports part picking, highlighting, exploded inspection and deterministic
+  movement replay. Camera framing includes the actual authored end poses.
+- The first assembly reference uses the existing original AERIS USDZ, unchanged
+  at SHA256 `3b405825eaacb6eb7591251e7c3d2ef9bb0c31cc02dd97c63f5fa4d258f17f95`.
+  Open AERIS from the hub, then **Full-screen 3D · Explore the parts**. It offers
+  three virtual structure movements, original-material restoration, compact
+  controls, read-aloud and the existing local English voice-command service.
+  Movements use authored linear displacements; imported animation clips and
+  manufacturer-approved repair sequences are not implemented here.
+- Visual QA caught an initially blank or stale assembly viewport when a second
+  renderer was created for the cover. The AERIS module and the full-screen
+  player now borrow one ARView, attach only after the model has loaded, and
+  resize it through a container. Cleanup only removes the explorer's own
+  anchor and gestures, protecting a restored product module. The original
+  AERIS release-tab interaction gate still applies after returning.
+- Local test receipts and screenshots are in
+  `output/3d-expansion-2026-10-30/`. Core course/visual/towel tests passed (24),
+  existing AERIS integration tests passed (7), and assembly runtime tests cover
+  part validation, exporter coordinates, replay, material restoration and view
+  handoff. Final towel and assembly UI checks include diagram switching,
+  manual confirmations, compact controls, background return and the original
+  guide's release-tab gate. Earlier failed attempts remain in that directory.
+- The motor and CFM56 candidate source/license metadata are recorded, but no
+  external motor or engine has been downloaded, inspected or added to the app.
+  The user deferred Sketchfab login and asked to continue local content. Their
+  filenames, independent parts, textures and mobile compatibility remain unknown.
+- Release Build 11 compiled and passed strict code-signature verification. An
+  installation attempt failed while mounting the developer image because the
+  iPhone was locked. The user then explicitly deferred installation; do not retry
+  until they resume that step. This build has not been uploaded to TestFlight.
+- Physical towel follow-through, real speech, iPad visual review and the earlier
+  real-paper/AR acceptance remain open. Simulator frames and a signed bundle
+  establish local behavior only. Cloud AI remains deferred.

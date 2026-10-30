@@ -45,7 +45,7 @@ struct ProtactaHomeView: View {
                         }
                     }
                     productCard
-                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use illustrated guidance.")
+                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use 3D or illustrated guidance.")
                         .font(.footnote).foregroundStyle(TutorialColors.muted)
                         .accessibilityIdentifier("hubCapabilityScope")
                 }.padding(22).frame(maxWidth: 900).frame(maxWidth: .infinity)
@@ -67,7 +67,7 @@ struct ProtactaHomeView: View {
                     VStack(alignment: .leading, spacing: 18) {
                         Text("Learn by looking and doing.").font(.title2.weight(.semibold))
                         Text("Choose paper folding, everyday skills or a product walkthrough. Each tutorial shows the movement and keeps your own confirmation separate from the animation.")
-                        Text("Classic Dart has experimental paper alignment and visible-outline checks. Everyday skills show authored animated diagrams; they do not inspect your clothes or knots. AERIS places a virtual concept product in AR; it does not recognize a real appliance.")
+                        Text("Classic Dart has experimental paper alignment and visible-outline checks. Everyday skills show authored 3D or animated diagrams; they do not inspect your clothes or knots. AERIS places a virtual concept product in AR; it does not recognize a real appliance.")
                         Text("New everyday tutorials are prototype teaching content awaiting physical follow-through review. Optional read-aloud and supported English commands run on device. Cloud AI chat is not enabled in this version.")
                         Text("Camera photos are not saved or uploaded in normal use. Everyday progress is stored locally. AERIS is an original concept, so follow your actual appliance's approved manual for maintenance.")
                     }.padding(22)
@@ -122,7 +122,7 @@ struct ProtactaHomeView: View {
                 Text(course.title).font(.system(size: 17, weight: .semibold, design: .rounded))
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(minHeight: 44, alignment: .topLeading)
-                Text("\(course.actions.count) actions · Illustrated guide")
+                Text("\(course.actions.count) actions · \(id == .towel ? "3D + diagram" : "Illustrated guide")")
                     .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
                 HStack(spacing: 5) {
                     Text(saved?.completed == true ? "Practise again" : saved == nil ? "Start learning" : "Continue action \(saved!.currentAction)")

@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-30",
+  "baselineCommit": "6073275211606960398c3f34cb461e88469e138e",
+  "objective": "Reusable 3D tutorials for everyday skills, equipment and large machinery",
+  "stages": [
+    {"id": "asset_review", "status": "in_progress", "acceptance": ["Source and license recorded", "Original files saved with hashes", "Part hierarchy and materials inspected", "Mobile import tested"], "currentConstraint": "User deferred Sketchfab login on 2026-10-30; continue local content without these downloads"},
+    {"id": "shared_player", "status": "in_progress", "acceptance": ["Reusable studio renderer", "Part selection and highlighting", "Exploded and assembled poses", "Step animation and replay", "Full-screen presentation and local voice", "Lifecycle and device checks"]},
+    {"id": "first_courses", "status": "in_progress", "acceptance": ["Three-action towel 3D", "Approximately five-step motor virtual assembly", "Aircraft engine structure preview", "Authored content and clear capability labels"]},
+    {"id": "engine_teaching", "status": "planned", "acceptance": ["Qualified separable engine asset", "Reviewed virtual disassembly sequence", "Focused part views and reassembly", "Device performance and content review"]}
+  ],
+  "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
+  "localDevelopment": {
+    "build": "11",
+    "downloadDecision": "Deferred by user; do not request login repeatedly",
+    "towel": {"status": "simulator_checked", "features": ["Three continuous 3D fold actions", "Two-finger orbit and pinch zoom", "3D/diagram switching", "Existing replay, speed, read-aloud and manual confirmation"]},
+    "assemblyPlayer": {"status": "simulator_checked", "referenceAsset": "Existing original AERIS One USDZ", "referenceAssetSHA256": "3b405825eaacb6eb7591251e7c3d2ef9bb0c31cc02dd97c63f5fa4d258f17f95", "features": ["Required-part validation", "Part picking and reversible highlighting", "Exploded/step poses", "Three authored movement steps", "Compact full-screen controls", "Local voice commands"], "limits": ["Linear part displacement; no imported animation-clip support yet", "AERIS is a concept model, not an electric motor or aircraft engine"]},
+    "deviceInstallation": "Deferred by user after iOS rejected the install because the phone was locked",
+    "physicalAcceptance": "Pending; no new physical evidence in this increment",
+    "testFlightUpload": false,
+    "externalMotorAndEngineInApp": false,
+    "evidenceDirectory": "output/3d-expansion-2026-10-30"
+  },
+  "nextGates": [
+    "Prepare local asset intake and course authoring tools while downloads are deferred",
+    "Install the signed local build when the user resumes phone installation; then review its new controls and real speech",
+    "When downloads become available, inspect real hierarchies before defining motor/engine motions",
+    "Review physical teaching and performance on iPhone; preserve deferred A4/AR acceptance"
+  ],
+  "constraints": ["Keep original downloads unchanged", "No purchases in this stage", "Camera and voice remain on device", "A teaching animation does not certify physical work", "Aviation maintenance content needs model-specific authoritative review"],
+  "assetCandidates": [
+    {"id": "electric_motor", "author": "Scarecrow_original", "source": "https://sketchfab.com/3d-models/electric-motor-66b2ea9eb6e5468d91d814395036a537", "license": "CC-BY-4.0", "licenseURL": "https://creativecommons.org/licenses/by/4.0/", "reportedTriangles": 36000, "downloaded": false, "qualified": false},
+    {"id": "cfm56_7b", "author": "Michael Zhang", "source": "https://sketchfab.com/3d-models/engine-cfm56-7b-2cf2255cba12432cb144abe5b87390e6", "license": "CC-BY-4.0", "licenseURL": "https://creativecommons.org/licenses/by/4.0/", "reportedTriangles": 159800, "downloaded": false, "qualified": false}
+  ]
+}
