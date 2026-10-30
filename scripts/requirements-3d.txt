@@ -1,0 +1,2 @@
+# Offline asset authoring only. The iOS app does not embed Python or OpenUSD.
+usd-core==26.11

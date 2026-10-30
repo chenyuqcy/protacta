@@ -36,7 +36,7 @@ final class AssemblySceneTests: XCTestCase {
         controller.shutdown()
     }
 
-    func testSelectingDescendantHighlightsOnlyItsPartAndRestoresMaterials() throws {
+    func testSelectingDescendantFramesOnlyItsPartWithoutChangingMaterials() throws {
         let asset = fixture()
         let cover = try XCTUnwrap(asset.findEntity(named: "Rear_Cover") as? ModelEntity)
         let filter = try XCTUnwrap(asset.findEntity(named: "Filter_Cartridge") as? ModelEntity)
@@ -48,9 +48,18 @@ final class AssemblySceneTests: XCTestCase {
         controller.select(entity: child)
         XCTAssertEqual(controller.selectedPartID, "filter")
         XCTAssertEqual((cover.model?.materials.first as? SimpleMaterial)?.color.tint, originalCover)
-        XCTAssertNotEqual((filter.model?.materials.first as? SimpleMaterial)?.color.tint, originalFilter)
+        XCTAssertEqual((filter.model?.materials.first as? SimpleMaterial)?.color.tint, originalFilter)
+        XCTAssertEqual(filter.findEntity(named: "__ProtactaPartHighlight")?.children.count, 12)
+        XCTAssertNil(cover.findEntity(named: "__ProtactaPartHighlight"))
+        let overviewRadius = controller.framing.radius
+        controller.focusSelectedPart()
+        XCTAssertTrue(controller.isPartFocused)
+        XCTAssertLessThan(controller.framing.radius, overviewRadius)
+        controller.resetCameraView()
+        XCTAssertEqual(controller.framing.radius, overviewRadius)
         controller.select(nil)
         XCTAssertNil(controller.selectedPartID)
+        XCTAssertNil(filter.findEntity(named: "__ProtactaPartHighlight"))
         XCTAssertEqual((filter.model?.materials.first as? SimpleMaterial)?.color.tint, originalFilter)
         controller.select("unknown")
         XCTAssertNil(controller.selectedPartID)

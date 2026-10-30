@@ -11,6 +11,7 @@ struct AssemblyTutorialPlayer: View {
     @State private var isPlaying = false
     @State private var speed: Double = 1
     @State private var showDetails = true
+    @State private var showCredits = false
 
     init(tutorial: AssemblyTutorial, sharedView: ARView? = nil, onExit: @escaping () -> Void) {
         _scene = StateObject(wrappedValue: AssemblySceneController(tutorial: tutorial, sharedView: sharedView))
@@ -53,6 +54,7 @@ struct AssemblyTutorialPlayer: View {
             }.padding(16).frame(maxWidth: 720).frame(maxWidth: .infinity)
         }
         .foregroundStyle(TutorialColors.ink).preferredColorScheme(.light)
+        .sheet(isPresented: $showCredits) { credits }
         .task {
             await scene.load()
             while !Task.isCancelled {
@@ -76,7 +78,8 @@ struct AssemblyTutorialPlayer: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Menu {
-                    Button("Original materials") { scene.select(nil) }
+                    Button("Focus selected part") { scene.focusSelectedPart() }.disabled(scene.selectedPart == nil)
+                    Button("Clear selection") { scene.select(nil) }
                     ForEach(scene.tutorial.parts) { part in
                         Button(part.title) { scene.select(part.id) }
                             .accessibilityIdentifier("assemblyPart_\(part.id)")
@@ -92,8 +95,9 @@ struct AssemblyTutorialPlayer: View {
                     .accessibilityLabel(scene.isExploded ? "Return to step pose" : "Explode all parts")
                     .accessibilityValue(scene.isExploded ? "Exploded" : "Step pose")
                     .accessibilityIdentifier("assemblyExplode")
-                Button { scene.renderer.resetView() } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Reset camera view").accessibilityIdentifier("assemblyResetView")
+                Button { scene.resetCameraView() } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Reset camera view").accessibilityValue(scene.isPartFocused ? "Focused part" : "Overview")
+                    .accessibilityIdentifier("assemblyResetView")
                 Button { showDetails.toggle() } label: { Image(systemName: showDetails ? "chevron.down" : "chevron.up").frame(width: 44, height: 44) }
                     .accessibilityLabel(showDetails ? "Hide instructions" : "Show instructions")
                     .accessibilityIdentifier("assemblyToggleDetails")
@@ -145,8 +149,14 @@ struct AssemblyTutorialPlayer: View {
                 }.background(TutorialColors.ink, in: Capsule()).foregroundStyle(.white).accessibilityIdentifier("assemblyNext")
             }
             if showDetails {
-                Text(voice.isEnabled || voice.isSpeaking ? voice.status : "Animation only · \(scene.tutorial.attribution)")
-                    .font(.system(size: 10)).foregroundStyle(TutorialColors.muted)
+                HStack {
+                    Text(voice.isEnabled || voice.isSpeaking ? voice.status : "Virtual structure walkthrough")
+                        .font(.system(size: 10)).foregroundStyle(TutorialColors.muted)
+                    Spacer(minLength: 4)
+                    Button("Model credits & scope") { isPlaying = false; voice.stop(); showCredits = true }
+                        .font(.system(size: 10, weight: .medium)).frame(minHeight: 44)
+                        .accessibilityIdentifier("assemblyCredits")
+                }
             }
         }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22))
     }
@@ -154,6 +164,27 @@ struct AssemblyTutorialPlayer: View {
     private func go(to index: Int) { isPlaying = false; voice.contextDidChange(); scene.setStep(index) }
     private func next() { go(to: scene.stepIndex + 1 < scene.tutorial.steps.count ? scene.stepIndex + 1 : 0) }
     private func close() { isPlaying = false; voice.stop(); screenAwake.release(); onExit() }
+
+    private var credits: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(scene.tutorial.scope).font(.body).accessibilityIdentifier("assemblyScope")
+                    Text(scene.tutorial.attribution).font(.subheadline.weight(.medium))
+                    if let source = scene.tutorial.sourceURL { Link("Model source", destination: source) }
+                    if let license = scene.tutorial.licenseURL { Link(scene.tutorial.licenseName, destination: license) }
+                    else { Text(scene.tutorial.licenseName).font(.subheadline) }
+                    if let name = scene.tutorial.noticeResource,
+                       let url = Bundle.main.url(forResource: name, withExtension: "txt"),
+                       let notice = try? String(contentsOf: url, encoding: .utf8) {
+                        Text(notice).font(.caption).textSelection(.enabled)
+                    }
+                }.padding(22)
+            }.background(TutorialColors.paper).navigationTitle("Model credits & scope")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showCredits = false }.accessibilityIdentifier("assemblyCreditsDone") } }
+        }
+    }
 
     private func configureVoice() {
         voice.onCommand = { command in

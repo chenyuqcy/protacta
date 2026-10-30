@@ -4,15 +4,15 @@ import simd
 /// Authored, model-specific structure walkthrough. Displacements use metres in
 /// the studio's Y-up frame; imported assets keep their exporter conversion root.
 /// A movement is not a repair instruction or a measurement of a real object.
-struct AssemblyTutorial {
-    struct Part: Identifiable {
+struct AssemblyTutorial: Decodable {
+    struct Part: Identifiable, Decodable {
         let id: String
         let entityName: String
         let title: String
         let detail: String
         let explodedOffset: SIMD3<Float>
     }
-    struct Step: Identifiable {
+    struct Step: Identifiable, Decodable {
         let id: String
         let title: String
         let instruction: String
@@ -27,6 +27,11 @@ struct AssemblyTutorial {
     let steps: [Step]
     var initialYaw: Float = 0.45
     var initialPitch: Float = 0.4
+    var scope = "An authored virtual structure walkthrough; animation progress does not verify physical work."
+    var sourceURL: URL?
+    var licenseName = "Original concept model"
+    var licenseURL: URL?
+    var noticeResource: String?
 
     func validate() throws {
         let ids = Set(parts.map(\.id))
@@ -54,6 +59,29 @@ struct AssemblyTutorial {
             .init(id: "filter_out", title: "See the cartridge", instruction: "Watch the cartridge move away from the housing. Select a part to see its name and position.", focusID: "filter", offsets: ["cover": [0, 0, -0.43], "filter": [0, 0, -0.24]]),
             .init(id: "reassemble", title: "Bring the model together", instruction: "Replay the return movement to see how the cartridge and cover line up with the housing.", focusID: nil, offsets: [:])
         ], initialYaw: 2.35)
+}
+
+extension AssemblyTutorial {
+    private enum CodingKeys: String, CodingKey {
+        case title, assetName, attribution, parts, steps, initialYaw, initialPitch
+        case scope, sourceURL, licenseName, licenseURL, noticeResource
+    }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        title = try values.decode(String.self, forKey: .title)
+        assetName = try values.decode(String.self, forKey: .assetName)
+        attribution = try values.decode(String.self, forKey: .attribution)
+        parts = try values.decode([Part].self, forKey: .parts)
+        steps = try values.decode([Step].self, forKey: .steps)
+        initialYaw = try values.decodeIfPresent(Float.self, forKey: .initialYaw) ?? 0.45
+        initialPitch = try values.decodeIfPresent(Float.self, forKey: .initialPitch) ?? 0.4
+        scope = try values.decodeIfPresent(String.self, forKey: .scope) ?? scope
+        sourceURL = try values.decodeIfPresent(URL.self, forKey: .sourceURL)
+        licenseName = try values.decodeIfPresent(String.self, forKey: .licenseName) ?? licenseName
+        licenseURL = try values.decodeIfPresent(URL.self, forKey: .licenseURL)
+        noticeResource = try values.decodeIfPresent(String.self, forKey: .noticeResource)
+        try validate()
+    }
 }
 
 enum AssemblyTutorialError: LocalizedError {

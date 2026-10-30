@@ -1,0 +1,9 @@
+{
+  "Terminal_Lid": ["Motor terminal box lid", "Motor lid screws"],
+  "Fan_Cover": ["Motor fan cover"],
+  "Cooling_Fan": ["Motor fan"],
+  "Rear_End_Shield": ["Motor non-drive end shield"],
+  "Output_Shaft_Group": ["Output key", "Output seal", "Output shaft"],
+  "Motor_Body": ["Motor stator frame", "Motor cooling fins", "Motor nameplate", "Motor terminal box", "Motor cable glands", "Motor drive end shield", "Motor shield bolts"],
+  "Gear_Unit": ["Breather and plugs", "Gear housing", "Gear housing feet", "Motor adapter", "Motor flange"]
+}

@@ -422,3 +422,50 @@ validation targets. A first-fold technical demo is not the complete MVP.
 - Physical towel follow-through, real speech, iPad visual review and the earlier
   real-paper/AR acceptance remain open. Simulator frames and a signed bundle
   establish local behavior only. Cloud AI remains deferred.
+
+## Native equipment courses — Build 12, 2026-10-30
+
+- Continued local work while preserving the user's deferred Sketchfab login and
+  phone installation. Qualified alternative first-party assets: Innerscene's
+  CC0 helical gearmotor and Dmitry Kulikov's MIT educational turbofan geometry.
+  Sources, exact revisions, original/derived hashes, limits and license evidence
+  are retained in `assets/model_sources.json`; the app includes model credits
+  and the full MIT notice. The earlier Sketchfab candidates remain deferred.
+- Added five motor actions over seven independent motion groups, preserving all
+  20 original meshes and seven embedded texture images. The exterior-component
+  course moves the terminal lid, fan cover, fan/rear shield and shaft group,
+  then reassembles them. The source does not provide internal rotor or reduction
+  gears; those are not represented as implemented content.
+- Added six turbofan structure actions over 11 independent modules, including
+  the fan, compressors, combustor, turbines and shafts. The mobile derivative
+  retains all source blade rows with reduced surface sampling (273,916 triangles,
+  36 meshes). It represents an educational structure, not manufacturer CAD or
+  a manufacturer-approved maintenance sequence. No physical repair is verified.
+- Both courses use validated JSON definitions and the shared native 3D player:
+  part selection, exploded inspection, continuous scrubbing/replay, close-up
+  focus and overview reset, compact full-screen controls and existing local
+  English voice services. The equipment entries are under Virtual Equipment
+  in the hub. Camera registration with real equipment is not implemented.
+- Simulator visual review exposed a material replacement defect: cancelling a
+  selection could leave rendered yellow/bronze residue even when CPU material
+  types had been restored. Selection now uses a separate 12-edge frame and never
+  modifies imported materials. Final assembled and exploded screenshots preserve
+  original colors/textures; the existing AERIS return path also passed.
+- Added offline, pinned authoring recipes for static GLB-to-USDZ conversion and
+  Three.js turbofan geometry export. A separate prepared workspace reproduced
+  the mobile GLB byte for byte. Both USDZ packages pass CRC, uncompressed-entry
+  and 64-byte alignment checks; motor textures match original image bytes.
+  OpenUSD reports no validation errors. The motor has one recorded advisory
+  because its source normal strength uses non-default XY decode values; this
+  is not described as warning-free USD compliance.
+- Final current-code verification: nine runtime/asset tests and three Simulator
+  UI tests passed in `output/3d-expansion-2026-10-30/EquipmentHighlightFix.xcresult`.
+  The UI flows cover all five/six actions, selection/focus, explode/reassembly,
+  credits/scope, compact controls and returning to the original AERIS module.
+  Visual attachments are retained in `equipment-highlight-ui` in that directory.
+- Release Build 12 compiled and passed strict code-signature verification;
+  bundled model hashes match the reviewed source derivatives. Retain the signed
+  development bundle alongside Build 11. No new phone installation or TestFlight
+  upload was attempted. The engine is still a local teaching candidate: measured
+  phone load/memory/frame rate, real speech, iPad visual review and learner
+  follow-through remain open. Earlier real-paper/AR acceptance remains open.

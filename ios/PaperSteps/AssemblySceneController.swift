@@ -14,15 +14,19 @@ final class AssemblySceneController: ObservableObject {
     @Published private(set) var progress: Double = 0
     @Published private(set) var selectedPartID: String?
     @Published private(set) var isExploded = false
+    @Published private(set) var isPartFocused = false
     private(set) var framing = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
+    private var overviewFraming = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
     private var parts: [String: Entity] = [:]
     private var origins: [String: Transform] = [:]
-    private var materialRecords: [(ModelEntity, [any RealityKit.Material])] = []
+    private let selectionFrame = Entity()
+    private let frameEdgeMesh = MeshResource.generateBox(size: 1)
     private var loadGeneration = 0
     private let sharedView: ARView?
 
     init(tutorial: AssemblyTutorial, sharedView: ARView? = nil) {
         self.tutorial = tutorial; self.sharedView = sharedView; root.synchronization = nil
+        selectionFrame.name = "__ProtactaPartHighlight"; selectionFrame.synchronization = nil
     }
     var step: AssemblyTutorial.Step { tutorial.steps[stepIndex] }
     var selectedPart: AssemblyTutorial.Part? { tutorial.parts.first { $0.id == selectedPartID } }
@@ -67,15 +71,11 @@ final class AssemblySceneController: ObservableObject {
         let extent = bounds.extents
         guard extent.x.isFinite, extent.y.isFinite, extent.z.isFinite, simd_length(extent) > 0.0001 else { throw AssemblyTutorialError.emptyModel }
 
-        restoreMaterials()
+        clearSelectionFrame()
         for child in Array(root.children) { child.removeFromParent() }
         root.addChild(entity)
         parts = resolved
         origins = resolved.mapValues(\.transform)
-        materialRecords = all.compactMap { entity in
-            guard let model = entity as? ModelEntity, let component = model.model else { return nil }
-            return (model, component.materials)
-        }
         for part in resolved.values { part.generateCollisionShapes(recursive: true) }
         // Fit the actual authored poses, instead of adding the same arbitrary
         // margin to every model. Linear motions remain inside this union.
@@ -89,6 +89,7 @@ final class AssemblySceneController: ObservableObject {
         applyOffsets([:])
         framing = .init(center: (minimum + maximum) * 0.5, radius: simd_length(maximum - minimum) * 0.5,
                         initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
+        overviewFraming = framing; isPartFocused = false
         stepIndex = 0; progress = 0; isExploded = false; failure = nil; isLoaded = true
         select(tutorial.steps[0].focusID)
         applyPose()
@@ -97,6 +98,7 @@ final class AssemblySceneController: ObservableObject {
     func setStep(_ index: Int) {
         guard tutorial.steps.indices.contains(index) else { return }
         stepIndex = index; progress = 0; isExploded = false
+        isPartFocused = false; framing = overviewFraming
         select(step.focusID); applyPose()
     }
 
@@ -105,18 +107,50 @@ final class AssemblySceneController: ObservableObject {
         applyPose()
     }
 
-    func setExploded(_ exploded: Bool) { isExploded = exploded; applyPose() }
+    func setExploded(_ exploded: Bool) {
+        if exploded { isPartFocused = false; framing = overviewFraming }
+        isExploded = exploded; applyPose()
+    }
 
     func select(_ id: String?) {
-        restoreMaterials()
+        clearSelectionFrame()
         selectedPartID = id.flatMap { parts[$0] == nil ? nil : $0 }
-        guard let id = selectedPartID, let part = parts[id] else { return }
-        let highlight = SimpleMaterial(color: UIColor(red: 0.94, green: 0.65, blue: 0.35, alpha: 1), roughness: 0.7, isMetallic: false)
-        for case let model as ModelEntity in descendants(part) {
-            guard var component = model.model else { continue }
-            component.materials = Array(repeating: highlight, count: max(1, component.materials.count))
-            model.model = component
+        guard let id = selectedPartID, let part = parts[id] else {
+            isPartFocused = false; framing = overviewFraming; return
         }
+        // Never replace imported materials. RealityKit's rendered USD material
+        // can retain an earlier replacement even after CPU values are restored.
+        // An independent frame preserves textures and disappears as one entity.
+        let bounds = part.visualBounds(relativeTo: part)
+        let longest = max(bounds.extents.x, max(bounds.extents.y, bounds.extents.z))
+        let thickness = min(0.025, max(0.001, longest * 0.012))
+        let extent = bounds.extents + SIMD3<Float>(repeating: thickness * 2)
+        let color = UnlitMaterial(color: UIColor(red: 0.95, green: 0.62, blue: 0.23, alpha: 1))
+        for axis in 0..<3 {
+            let others = (0..<3).filter { $0 != axis }
+            for a: Float in [-1, 1] { for b: Float in [-1, 1] {
+                let edge = ModelEntity(mesh: frameEdgeMesh, materials: [color])
+                edge.name = "__ProtactaHighlightEdge"; edge.synchronization = nil
+                var size = SIMD3<Float>(repeating: thickness); size[axis] = extent[axis]
+                var center = bounds.center
+                center[others[0]] += a * extent[others[0]] * 0.5
+                center[others[1]] += b * extent[others[1]] * 0.5
+                edge.scale = size; edge.position = center; selectionFrame.addChild(edge)
+            } }
+        }
+        part.addChild(selectionFrame)
+        updateFocusFraming()
+    }
+
+    func focusSelectedPart() {
+        guard selectedPart != nil else { return }
+        isPartFocused = true; updateFocusFraming()
+        renderer.setContent(root, framing: framing); renderer.resetView()
+    }
+
+    func resetCameraView() {
+        isPartFocused = false; framing = overviewFraming
+        renderer.setContent(root, framing: framing); renderer.resetView()
     }
 
     func select(entity: Entity?) {
@@ -137,9 +171,9 @@ final class AssemblySceneController: ObservableObject {
 
     func shutdown() {
         loadGeneration += 1
-        restoreMaterials(); renderer.shutdown()
+        clearSelectionFrame(); renderer.shutdown()
         for child in Array(root.children) { child.removeFromParent() }
-        parts.removeAll(); origins.removeAll(); materialRecords.removeAll()
+        parts.removeAll(); origins.removeAll()
         isLoaded = false
     }
 
@@ -155,6 +189,7 @@ final class AssemblySceneController: ObservableObject {
             offsets[part.id] = isExploded ? part.explodedOffset : from + (to - from) * blend
         }
         applyOffsets(offsets)
+        updateFocusFraming()
     }
 
     private func applyOffsets(_ offsets: [String: SIMD3<Float>]) {
@@ -167,11 +202,16 @@ final class AssemblySceneController: ObservableObject {
         }
     }
 
-    private func restoreMaterials() {
-        for (entity, materials) in materialRecords {
-            guard var component = entity.model else { continue }
-            component.materials = materials; entity.model = component
-        }
+    private func clearSelectionFrame() {
+        selectionFrame.removeFromParent()
+        for child in Array(selectionFrame.children) { child.removeFromParent() }
+    }
+
+    private func updateFocusFraming() {
+        guard isPartFocused, let id = selectedPartID, let part = parts[id] else { return }
+        let bounds = part.visualBounds(relativeTo: nil)
+        framing = .init(center: bounds.center, radius: max(0.02, simd_length(bounds.extents) * 0.5),
+                        initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
     }
 
     private func descendants(_ entity: Entity) -> [Entity] {

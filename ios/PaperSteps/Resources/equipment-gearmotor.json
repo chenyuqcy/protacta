@@ -1,0 +1,192 @@
+{
+  "title": "Gearmotor \u00b7 Exterior parts",
+  "assetName": "helical-gearmotor",
+  "attribution": "Helical gearmotor by Innerscene Corp \u00b7 CC0 1.0",
+  "initialYaw": -0.8,
+  "initialPitch": 0.55,
+  "scope": "A five-action virtual exterior walkthrough. The model includes covers, a cooling fan, end shields and an output shaft. An internal rotor and reduction gears are not modelled. These illustrative part separations are not instructions for servicing a real motor.",
+  "sourceURL": "https://www.innerscene.com/tools/library/3d-parts/helical-gearmotor-97d45939",
+  "licenseName": "CC0 1.0 Universal",
+  "licenseURL": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "noticeResource": "ThirdPartyModelNotices",
+  "parts": [
+    {
+      "id": "lid",
+      "entityName": "n021_Terminal_Lid",
+      "title": "Terminal lid",
+      "detail": "The top cover and its screws form one virtual movement group.",
+      "explodedOffset": [
+        0,
+        0.12,
+        0
+      ]
+    },
+    {
+      "id": "fan_cover",
+      "entityName": "n022_Fan_Cover",
+      "title": "Fan cover",
+      "detail": "The outer guard covers the cooling fan at the back of the motor.",
+      "explodedOffset": [
+        -0.27,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "fan",
+      "entityName": "n023_Cooling_Fan",
+      "title": "Cooling fan",
+      "detail": "A separate fan sits behind the rear end shield.",
+      "explodedOffset": [
+        -0.18,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "rear_shield",
+      "entityName": "n024_Rear_End_Shield",
+      "title": "Rear end shield",
+      "detail": "The rear end shield is separate from the finned motor body.",
+      "explodedOffset": [
+        -0.1,
+        0,
+        0.08
+      ]
+    },
+    {
+      "id": "shaft",
+      "entityName": "n025_Output_Shaft_Group",
+      "title": "Output shaft",
+      "detail": "The visible output shaft, key and seal are grouped for this model inspection.",
+      "explodedOffset": [
+        0.16,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "body",
+      "entityName": "n026_Motor_Body",
+      "title": "Motor body",
+      "detail": "The frame, cooling fins, terminal box and front shield form the main exterior group.",
+      "explodedOffset": [
+        0,
+        0.15,
+        0
+      ]
+    },
+    {
+      "id": "gear_unit",
+      "entityName": "n027_Gear_Unit",
+      "title": "Gear unit",
+      "detail": "The external gearbox housing and motor adapter stay together. Internal gears are not included.",
+      "explodedOffset": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "lid",
+      "title": "Look below the terminal lid",
+      "instruction": "Play the model movement to lift the terminal lid and its screws. Rotate the view to see the top of the terminal box.",
+      "focusID": "lid",
+      "offsets": {
+        "lid": [
+          0,
+          0.07,
+          0
+        ]
+      }
+    },
+    {
+      "id": "cover",
+      "title": "Reveal the cooling fan",
+      "instruction": "Slide the virtual fan cover away from the motor. The fan stays in place so you can see how the guard surrounds it.",
+      "focusID": "fan_cover",
+      "offsets": {
+        "lid": [
+          0,
+          0.07,
+          0
+        ],
+        "fan_cover": [
+          -0.16,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "rear",
+      "title": "Separate the rear groups",
+      "instruction": "Watch the fan and rear end shield separate from the body. This model shows the external groups; it does not contain the internal rotor.",
+      "focusID": "fan",
+      "offsets": {
+        "lid": [
+          0,
+          0.07,
+          0
+        ],
+        "fan_cover": [
+          -0.16,
+          0,
+          0
+        ],
+        "fan": [
+          -0.18,
+          0,
+          0
+        ],
+        "rear_shield": [
+          -0.1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "shaft",
+      "title": "Inspect the output side",
+      "instruction": "Watch the output shaft group separate from the gear housing. Rotate the model to find the shaft, key and seal.",
+      "focusID": "shaft",
+      "offsets": {
+        "lid": [
+          0,
+          0.07,
+          0
+        ],
+        "fan_cover": [
+          -0.16,
+          0,
+          0
+        ],
+        "fan": [
+          -0.18,
+          0,
+          0
+        ],
+        "rear_shield": [
+          -0.1,
+          0,
+          0
+        ],
+        "shaft": [
+          0.1,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "restore",
+      "title": "Bring the exterior together",
+      "instruction": "Replay the return movement to see all of the model groups line up with their original positions.",
+      "focusID": null,
+      "offsets": {}
+    }
+  ]
+}

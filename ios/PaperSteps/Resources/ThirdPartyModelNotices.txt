@@ -1,0 +1,38 @@
+MODEL SOURCES AND LIMITS
+
+Helical gearmotor
+Author: Innerscene Corp
+Source: https://www.innerscene.com/tools/library/3d-parts/helical-gearmotor-97d45939
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+Changes: converted GLB to USDZ, retained original mesh topology and textures, and added semantic movement groups. The source normal-map strength is preserved. This is an exterior model; an internal rotor and reduction gears are not included. Dimensions are nominal visualization geometry.
+
+Turbofan structure
+Geometry generator: jet-engine-3d by Dmitry Kulikov
+Source: https://github.com/jubbon/jet-engine-3d
+Source commit: 4acb4da958d34a367b11c0293235329e394baa21
+Changes: exported a static structure from the procedural source, baked its 0.5-metre scale, reduced blade surface sampling, merged meshes within module/material groups, omitted invisible picking proxies and the animated flame shader, and converted the result to USDZ. The source simulator's operation, physics, audio and airflow are not included.
+
+This geometry is an educational interpretation inspired by a CFM56-7B. It is not manufacturer CAD or an approved maintenance procedure. The authored movements illustrate relationships between virtual modules and do not prescribe real removal/installation operations.
+
+MIT License
+
+Copyright (c) 2026 Dmitry Kulikov
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

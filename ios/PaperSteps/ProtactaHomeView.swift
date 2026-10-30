@@ -1,12 +1,13 @@
 import SwiftUI
 
 private enum TutorialDestination: Identifiable {
-    case origami, everyday(EverydayTutorialID), product
+    case origami, everyday(EverydayTutorialID), product, equipment(EquipmentTutorialID)
     var id: String {
         switch self {
         case .origami: return "origami"
         case .everyday(let id): return id.rawValue
         case .product: return "aeris"
+        case .equipment(let id): return "equipment_\(id.rawValue)"
         }
     }
 }
@@ -45,6 +46,23 @@ struct ProtactaHomeView: View {
                         }
                     }
                     productCard
+                    VStack(alignment: .leading, spacing: 14) {
+                        sectionTitle("VIRTUAL EQUIPMENT", subtitle: "Explore real 3D assets with authored model movements.")
+                        ForEach(EquipmentTutorialID.allCases) { id in
+                            Button { destination = .equipment(id) } label: {
+                                HStack(spacing: 16) {
+                                    Image(systemName: id.symbol).font(.system(size: 34, weight: .light)).frame(width: 56)
+                                    VStack(alignment: .leading, spacing: 7) {
+                                        Text(id.title).font(.system(size: 21, weight: .semibold, design: .rounded))
+                                        Text(id.subtitle).font(.system(size: 12)).foregroundStyle(TutorialColors.muted)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "arrow.up.right")
+                                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18))
+                            }.buttonStyle(.plain).accessibilityIdentifier("hubEquipment_\(id.rawValue)")
+                        }
+                    }
                     Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use 3D or illustrated guidance.")
                         .font(.footnote).foregroundStyle(TutorialColors.muted)
                         .accessibilityIdentifier("hubCapabilityScope")
@@ -59,6 +77,7 @@ struct ProtactaHomeView: View {
             case .origami: PaperStepsView(onExit: { destination = nil })
             case .everyday(let id): EverydayTutorialPlayer(courseID: id, onExit: { destination = nil })
             case .product: AerisManualModuleView(onExit: { destination = nil })
+            case .equipment(let id): EquipmentTutorialEntry(id: id, onExit: { destination = nil })
             }
         }
         .sheet(isPresented: $showAbout) {
@@ -66,7 +85,7 @@ struct ProtactaHomeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         Text("Learn by looking and doing.").font(.title2.weight(.semibold))
-                        Text("Choose paper folding, everyday skills or a product walkthrough. Each tutorial shows the movement and keeps your own confirmation separate from the animation.")
+                        Text("Choose paper folding, everyday skills, a product walkthrough or virtual equipment. Equipment walkthroughs explain model structures; everyday tutorials keep your own confirmation separate from the animation.")
                         Text("Classic Dart has experimental paper alignment and visible-outline checks. Everyday skills show authored 3D or animated diagrams; they do not inspect your clothes or knots. AERIS places a virtual concept product in AR; it does not recognize a real appliance.")
                         Text("New everyday tutorials are prototype teaching content awaiting physical follow-through review. Optional read-aloud and supported English commands run on device. Cloud AI chat is not enabled in this version.")
                         Text("Camera photos are not saved or uploaded in normal use. Everyday progress is stored locally. AERIS is an original concept, so follow your actual appliance's approved manual for maintenance.")

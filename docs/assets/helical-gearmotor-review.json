@@ -1,0 +1,353 @@
+{
+  "source": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets/originals/helical-gearmotor.glb",
+  "sourceSHA256": "69ec1e51871c3292e1786dced152d12c8ea20111c41e1c1afa98288429cb8efd",
+  "usdVersion": [
+    0,
+    26,
+    11
+  ],
+  "sourceCopyright": "Authored by Innerscene Corp (innerscene.com). Public domain: dedicated under CC0 1.0 Universal, https://creativecommons.org/publicdomain/zero/1.0/. Free to use, modify and redistribute for any purpose, with no credit required.",
+  "groups": {
+    "Terminal_Lid": [
+      "Motor terminal box lid",
+      "Motor lid screws"
+    ],
+    "Fan_Cover": [
+      "Motor fan cover"
+    ],
+    "Cooling_Fan": [
+      "Motor fan"
+    ],
+    "Rear_End_Shield": [
+      "Motor non-drive end shield"
+    ],
+    "Output_Shaft_Group": [
+      "Output key",
+      "Output seal",
+      "Output shaft"
+    ],
+    "Motor_Body": [
+      "Motor stator frame",
+      "Motor cooling fins",
+      "Motor nameplate",
+      "Motor terminal box",
+      "Motor cable glands",
+      "Motor drive end shield",
+      "Motor shield bolts"
+    ],
+    "Gear_Unit": [
+      "Breather and plugs",
+      "Gear housing",
+      "Gear housing feet",
+      "Motor adapter",
+      "Motor flange"
+    ]
+  },
+  "nodes": [
+    {
+      "sourceIndex": 20,
+      "sourceName": "Helical gearmotor",
+      "entityName": "n020_Helical_gearmotor",
+      "usdPath": "/Model/n020_Helical_gearmotor"
+    },
+    {
+      "sourceIndex": 21,
+      "sourceName": "Terminal_Lid",
+      "entityName": "n021_Terminal_Lid",
+      "usdPath": "/Model/n020_Helical_gearmotor/n021_Terminal_Lid"
+    },
+    {
+      "sourceIndex": 16,
+      "sourceName": "Motor terminal box lid",
+      "entityName": "n016_Motor_terminal_box_lid",
+      "usdPath": "/Model/n020_Helical_gearmotor/n021_Terminal_Lid/n016_Motor_terminal_box_lid"
+    },
+    {
+      "sourceIndex": 10,
+      "sourceName": "Motor lid screws",
+      "entityName": "n010_Motor_lid_screws",
+      "usdPath": "/Model/n020_Helical_gearmotor/n021_Terminal_Lid/n010_Motor_lid_screws"
+    },
+    {
+      "sourceIndex": 22,
+      "sourceName": "Fan_Cover",
+      "entityName": "n022_Fan_Cover",
+      "usdPath": "/Model/n020_Helical_gearmotor/n022_Fan_Cover"
+    },
+    {
+      "sourceIndex": 8,
+      "sourceName": "Motor fan cover",
+      "entityName": "n008_Motor_fan_cover",
+      "usdPath": "/Model/n020_Helical_gearmotor/n022_Fan_Cover/n008_Motor_fan_cover"
+    },
+    {
+      "sourceIndex": 23,
+      "sourceName": "Cooling_Fan",
+      "entityName": "n023_Cooling_Fan",
+      "usdPath": "/Model/n020_Helical_gearmotor/n023_Cooling_Fan"
+    },
+    {
+      "sourceIndex": 7,
+      "sourceName": "Motor fan",
+      "entityName": "n007_Motor_fan",
+      "usdPath": "/Model/n020_Helical_gearmotor/n023_Cooling_Fan/n007_Motor_fan"
+    },
+    {
+      "sourceIndex": 24,
+      "sourceName": "Rear_End_Shield",
+      "entityName": "n024_Rear_End_Shield",
+      "usdPath": "/Model/n020_Helical_gearmotor/n024_Rear_End_Shield"
+    },
+    {
+      "sourceIndex": 12,
+      "sourceName": "Motor non-drive end shield",
+      "entityName": "n012_Motor_non_drive_end_shield",
+      "usdPath": "/Model/n020_Helical_gearmotor/n024_Rear_End_Shield/n012_Motor_non_drive_end_shield"
+    },
+    {
+      "sourceIndex": 25,
+      "sourceName": "Output_Shaft_Group",
+      "entityName": "n025_Output_Shaft_Group",
+      "usdPath": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group"
+    },
+    {
+      "sourceIndex": 17,
+      "sourceName": "Output key",
+      "entityName": "n017_Output_key",
+      "usdPath": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n017_Output_key"
+    },
+    {
+      "sourceIndex": 18,
+      "sourceName": "Output seal",
+      "entityName": "n018_Output_seal",
+      "usdPath": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n018_Output_seal"
+    },
+    {
+      "sourceIndex": 19,
+      "sourceName": "Output shaft",
+      "entityName": "n019_Output_shaft",
+      "usdPath": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n019_Output_shaft"
+    },
+    {
+      "sourceIndex": 26,
+      "sourceName": "Motor_Body",
+      "entityName": "n026_Motor_Body",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body"
+    },
+    {
+      "sourceIndex": 14,
+      "sourceName": "Motor stator frame",
+      "entityName": "n014_Motor_stator_frame",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n014_Motor_stator_frame"
+    },
+    {
+      "sourceIndex": 5,
+      "sourceName": "Motor cooling fins",
+      "entityName": "n005_Motor_cooling_fins",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n005_Motor_cooling_fins"
+    },
+    {
+      "sourceIndex": 11,
+      "sourceName": "Motor nameplate",
+      "entityName": "n011_Motor_nameplate",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n011_Motor_nameplate"
+    },
+    {
+      "sourceIndex": 15,
+      "sourceName": "Motor terminal box",
+      "entityName": "n015_Motor_terminal_box",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n015_Motor_terminal_box"
+    },
+    {
+      "sourceIndex": 4,
+      "sourceName": "Motor cable glands",
+      "entityName": "n004_Motor_cable_glands",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n004_Motor_cable_glands"
+    },
+    {
+      "sourceIndex": 6,
+      "sourceName": "Motor drive end shield",
+      "entityName": "n006_Motor_drive_end_shield",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n006_Motor_drive_end_shield"
+    },
+    {
+      "sourceIndex": 13,
+      "sourceName": "Motor shield bolts",
+      "entityName": "n013_Motor_shield_bolts",
+      "usdPath": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n013_Motor_shield_bolts"
+    },
+    {
+      "sourceIndex": 27,
+      "sourceName": "Gear_Unit",
+      "entityName": "n027_Gear_Unit",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit"
+    },
+    {
+      "sourceIndex": 0,
+      "sourceName": "Breather and plugs",
+      "entityName": "n000_Breather_and_plugs",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n000_Breather_and_plugs"
+    },
+    {
+      "sourceIndex": 1,
+      "sourceName": "Gear housing",
+      "entityName": "n001_Gear_housing",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n001_Gear_housing"
+    },
+    {
+      "sourceIndex": 2,
+      "sourceName": "Gear housing feet",
+      "entityName": "n002_Gear_housing_feet",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n002_Gear_housing_feet"
+    },
+    {
+      "sourceIndex": 3,
+      "sourceName": "Motor adapter",
+      "entityName": "n003_Motor_adapter",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n003_Motor_adapter"
+    },
+    {
+      "sourceIndex": 9,
+      "sourceName": "Motor flange",
+      "entityName": "n009_Motor_flange",
+      "usdPath": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n009_Motor_flange"
+    }
+  ],
+  "meshes": [
+    {
+      "path": "/Model/n020_Helical_gearmotor/n021_Terminal_Lid/n016_Motor_terminal_box_lid/mesh_000",
+      "vertices": 304,
+      "triangles": 284
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n021_Terminal_Lid/n010_Motor_lid_screws/mesh_000",
+      "vertices": 448,
+      "triangles": 400
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n022_Fan_Cover/n008_Motor_fan_cover/mesh_000",
+      "vertices": 6388,
+      "triangles": 6232
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n023_Cooling_Fan/n007_Motor_fan/mesh_000",
+      "vertices": 376,
+      "triangles": 268
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n024_Rear_End_Shield/n012_Motor_non_drive_end_shield/mesh_000",
+      "vertices": 872,
+      "triangles": 1080
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n017_Output_key/mesh_000",
+      "vertices": 24,
+      "triangles": 12
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n018_Output_seal/mesh_000",
+      "vertices": 524,
+      "triangles": 508
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n025_Output_Shaft_Group/n019_Output_shaft/mesh_000",
+      "vertices": 296,
+      "triangles": 276
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n014_Motor_stator_frame/mesh_000",
+      "vertices": 316,
+      "triangles": 300
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n005_Motor_cooling_fins/mesh_000",
+      "vertices": 648,
+      "triangles": 324
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n011_Motor_nameplate/mesh_000",
+      "vertices": 136,
+      "triangles": 124
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n015_Motor_terminal_box/mesh_000",
+      "vertices": 304,
+      "triangles": 284
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n004_Motor_cable_glands/mesh_000",
+      "vertices": 208,
+      "triangles": 180
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n006_Motor_drive_end_shield/mesh_000",
+      "vertices": 825,
+      "triangles": 1018
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n026_Motor_Body/n013_Motor_shield_bolts/mesh_000",
+      "vertices": 144,
+      "triangles": 80
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n000_Breather_and_plugs/mesh_000",
+      "vertices": 108,
+      "triangles": 60
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n001_Gear_housing/mesh_000",
+      "vertices": 540,
+      "triangles": 504
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n002_Gear_housing_feet/mesh_000",
+      "vertices": 864,
+      "triangles": 828
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n003_Motor_adapter/mesh_000",
+      "vertices": 520,
+      "triangles": 692
+    },
+    {
+      "path": "/Model/n020_Helical_gearmotor/n027_Gear_Unit/n009_Motor_flange/mesh_000",
+      "vertices": 1572,
+      "triangles": 1532
+    }
+  ],
+  "materialCount": 6,
+  "textureFiles": [
+    "textures/image_000.png",
+    "textures/image_001.jpg",
+    "textures/image_002.jpg",
+    "textures/image_003.png",
+    "textures/image_004.png",
+    "textures/image_005.png",
+    "textures/image_006.png"
+  ],
+  "units": "metres",
+  "upAxis": "Y",
+  "triangles": 14986,
+  "bounds": {
+    "min": [
+      -0.36399999260902405,
+      0.0,
+      -0.09998510032892227
+    ],
+    "max": [
+      0.1379999965429306,
+      0.2621999979019165,
+      0.09998510032892227
+    ]
+  },
+  "validation": [
+    {
+      "type": "UsdValidation.ValidationErrorType.Warn",
+      "message": "UsdUVTexture prim </Model/Materials/material_001/Normal> (connected through validating prim </Model/Materials/material_001/Surface>) reads an 8 bit Normal Map, but has non-standard inputs:scale value of (0.7, 0.7, 2, 1). inputs:scale must be set to (2, 2, 2, 1) so as fulfill the requirements of the normals to be in tangent space of [(-1,-1,-1), (1,1,1)] as documented in the UsdPreviewSurface and UsdUVTexture docs."
+    }
+  ],
+  "normalStrengthPolicy": "Preserve glTF XY normal strength in UsdUVTexture scale/bias; non-default strength may produce a validator advisory",
+  "resolvedTextureCount": 7,
+  "packageSHA256": "cec0d2ec83cbaea70f9aedd62428366d4ad2fd24840c2043d668b0ca9ed54891",
+  "packageBytes": 2023399
+}

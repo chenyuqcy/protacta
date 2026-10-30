@@ -1,0 +1,505 @@
+{
+  "source": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets/derived/turbofan-mobile-v1.glb",
+  "sourceSHA256": "5917ca663a6ae139715fc913b9533285f4f022db4c0365e71f9cfcdca9f4899c",
+  "usdVersion": [
+    0,
+    26,
+    11
+  ],
+  "sourceCopyright": null,
+  "groups": null,
+  "nodes": [
+    {
+      "sourceIndex": 0,
+      "sourceName": "Turbofan_Structure",
+      "entityName": "n000_Turbofan_Structure",
+      "usdPath": "/Model/n000_Turbofan_Structure"
+    },
+    {
+      "sourceIndex": 1,
+      "sourceName": "nacelle",
+      "entityName": "n001_nacelle",
+      "usdPath": "/Model/n000_Turbofan_Structure/n001_nacelle"
+    },
+    {
+      "sourceIndex": 2,
+      "sourceName": "nacelle_nacelle",
+      "entityName": "n002_nacelle_nacelle",
+      "usdPath": "/Model/n000_Turbofan_Structure/n001_nacelle/n002_nacelle_nacelle"
+    },
+    {
+      "sourceIndex": 3,
+      "sourceName": "nacelle_nacelleLip",
+      "entityName": "n003_nacelle_nacelleLip",
+      "usdPath": "/Model/n000_Turbofan_Structure/n001_nacelle/n003_nacelle_nacelleLip"
+    },
+    {
+      "sourceIndex": 4,
+      "sourceName": "nacelle_pylon",
+      "entityName": "n004_nacelle_pylon",
+      "usdPath": "/Model/n000_Turbofan_Structure/n001_nacelle/n004_nacelle_pylon"
+    },
+    {
+      "sourceIndex": 5,
+      "sourceName": "fan",
+      "entityName": "n005_fan",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan"
+    },
+    {
+      "sourceIndex": 6,
+      "sourceName": "fan_fanCase",
+      "entityName": "n006_fan_fanCase",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n006_fan_fanCase"
+    },
+    {
+      "sourceIndex": 7,
+      "sourceName": "fan_paint",
+      "entityName": "n007_fan_paint",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n007_fan_paint"
+    },
+    {
+      "sourceIndex": 8,
+      "sourceName": "fan_spiral",
+      "entityName": "n008_fan_spiral",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n008_fan_spiral"
+    },
+    {
+      "sourceIndex": 9,
+      "sourceName": "fan_disk",
+      "entityName": "n009_fan_disk",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n009_fan_disk"
+    },
+    {
+      "sourceIndex": 10,
+      "sourceName": "fan_composite",
+      "entityName": "n010_fan_composite",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n010_fan_composite"
+    },
+    {
+      "sourceIndex": 11,
+      "sourceName": "fan_titanium",
+      "entityName": "n011_fan_titanium",
+      "usdPath": "/Model/n000_Turbofan_Structure/n005_fan/n011_fan_titanium"
+    },
+    {
+      "sourceIndex": 12,
+      "sourceName": "booster",
+      "entityName": "n012_booster",
+      "usdPath": "/Model/n000_Turbofan_Structure/n012_booster"
+    },
+    {
+      "sourceIndex": 13,
+      "sourceName": "booster_casing",
+      "entityName": "n013_booster_casing",
+      "usdPath": "/Model/n000_Turbofan_Structure/n012_booster/n013_booster_casing"
+    },
+    {
+      "sourceIndex": 14,
+      "sourceName": "booster_disk",
+      "entityName": "n014_booster_disk",
+      "usdPath": "/Model/n000_Turbofan_Structure/n012_booster/n014_booster_disk"
+    },
+    {
+      "sourceIndex": 15,
+      "sourceName": "booster_titanium",
+      "entityName": "n015_booster_titanium",
+      "usdPath": "/Model/n000_Turbofan_Structure/n012_booster/n015_booster_titanium"
+    },
+    {
+      "sourceIndex": 16,
+      "sourceName": "booster_steel",
+      "entityName": "n016_booster_steel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n012_booster/n016_booster_steel"
+    },
+    {
+      "sourceIndex": 17,
+      "sourceName": "hpc",
+      "entityName": "n017_hpc",
+      "usdPath": "/Model/n000_Turbofan_Structure/n017_hpc"
+    },
+    {
+      "sourceIndex": 18,
+      "sourceName": "hpc_casing",
+      "entityName": "n018_hpc_casing",
+      "usdPath": "/Model/n000_Turbofan_Structure/n017_hpc/n018_hpc_casing"
+    },
+    {
+      "sourceIndex": 19,
+      "sourceName": "hpc_disk",
+      "entityName": "n019_hpc_disk",
+      "usdPath": "/Model/n000_Turbofan_Structure/n017_hpc/n019_hpc_disk"
+    },
+    {
+      "sourceIndex": 20,
+      "sourceName": "hpc_titanium",
+      "entityName": "n020_hpc_titanium",
+      "usdPath": "/Model/n000_Turbofan_Structure/n017_hpc/n020_hpc_titanium"
+    },
+    {
+      "sourceIndex": 21,
+      "sourceName": "hpc_steel",
+      "entityName": "n021_hpc_steel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n017_hpc/n021_hpc_steel"
+    },
+    {
+      "sourceIndex": 22,
+      "sourceName": "combustor",
+      "entityName": "n022_combustor",
+      "usdPath": "/Model/n000_Turbofan_Structure/n022_combustor"
+    },
+    {
+      "sourceIndex": 23,
+      "sourceName": "combustor_casingHot",
+      "entityName": "n023_combustor_casingHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n022_combustor/n023_combustor_casingHot"
+    },
+    {
+      "sourceIndex": 24,
+      "sourceName": "combustor_combLiner",
+      "entityName": "n024_combustor_combLiner",
+      "usdPath": "/Model/n000_Turbofan_Structure/n022_combustor/n024_combustor_combLiner"
+    },
+    {
+      "sourceIndex": 25,
+      "sourceName": "combustor_nickel",
+      "entityName": "n025_combustor_nickel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n022_combustor/n025_combustor_nickel"
+    },
+    {
+      "sourceIndex": 26,
+      "sourceName": "combustor_steel",
+      "entityName": "n026_combustor_steel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n022_combustor/n026_combustor_steel"
+    },
+    {
+      "sourceIndex": 27,
+      "sourceName": "hpt",
+      "entityName": "n027_hpt",
+      "usdPath": "/Model/n000_Turbofan_Structure/n027_hpt"
+    },
+    {
+      "sourceIndex": 28,
+      "sourceName": "hpt_casingHot",
+      "entityName": "n028_hpt_casingHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n027_hpt/n028_hpt_casingHot"
+    },
+    {
+      "sourceIndex": 29,
+      "sourceName": "hpt_turbineHot",
+      "entityName": "n029_hpt_turbineHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n027_hpt/n029_hpt_turbineHot"
+    },
+    {
+      "sourceIndex": 30,
+      "sourceName": "hpt_diskHot",
+      "entityName": "n030_hpt_diskHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n027_hpt/n030_hpt_diskHot"
+    },
+    {
+      "sourceIndex": 31,
+      "sourceName": "hpt_nickel",
+      "entityName": "n031_hpt_nickel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n027_hpt/n031_hpt_nickel"
+    },
+    {
+      "sourceIndex": 32,
+      "sourceName": "lpt",
+      "entityName": "n032_lpt",
+      "usdPath": "/Model/n000_Turbofan_Structure/n032_lpt"
+    },
+    {
+      "sourceIndex": 33,
+      "sourceName": "lpt_casingHot",
+      "entityName": "n033_lpt_casingHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n032_lpt/n033_lpt_casingHot"
+    },
+    {
+      "sourceIndex": 34,
+      "sourceName": "lpt_turbineHot",
+      "entityName": "n034_lpt_turbineHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n032_lpt/n034_lpt_turbineHot"
+    },
+    {
+      "sourceIndex": 35,
+      "sourceName": "lpt_diskHot",
+      "entityName": "n035_lpt_diskHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n032_lpt/n035_lpt_diskHot"
+    },
+    {
+      "sourceIndex": 36,
+      "sourceName": "lpt_nickel",
+      "entityName": "n036_lpt_nickel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n032_lpt/n036_lpt_nickel"
+    },
+    {
+      "sourceIndex": 37,
+      "sourceName": "exhaust",
+      "entityName": "n037_exhaust",
+      "usdPath": "/Model/n000_Turbofan_Structure/n037_exhaust"
+    },
+    {
+      "sourceIndex": 38,
+      "sourceName": "exhaust_nickel",
+      "entityName": "n038_exhaust_nickel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n037_exhaust/n038_exhaust_nickel"
+    },
+    {
+      "sourceIndex": 39,
+      "sourceName": "exhaust_casingHot",
+      "entityName": "n039_exhaust_casingHot",
+      "usdPath": "/Model/n000_Turbofan_Structure/n037_exhaust/n039_exhaust_casingHot"
+    },
+    {
+      "sourceIndex": 40,
+      "sourceName": "cowl",
+      "entityName": "n040_cowl",
+      "usdPath": "/Model/n000_Turbofan_Structure/n040_cowl"
+    },
+    {
+      "sourceIndex": 41,
+      "sourceName": "cowl_coreCowl",
+      "entityName": "n041_cowl_coreCowl",
+      "usdPath": "/Model/n000_Turbofan_Structure/n040_cowl/n041_cowl_coreCowl"
+    },
+    {
+      "sourceIndex": 42,
+      "sourceName": "shafts",
+      "entityName": "n042_shafts",
+      "usdPath": "/Model/n000_Turbofan_Structure/n042_shafts"
+    },
+    {
+      "sourceIndex": 43,
+      "sourceName": "shafts_shaft",
+      "entityName": "n043_shafts_shaft",
+      "usdPath": "/Model/n000_Turbofan_Structure/n042_shafts/n043_shafts_shaft"
+    },
+    {
+      "sourceIndex": 44,
+      "sourceName": "shafts_steel",
+      "entityName": "n044_shafts_steel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n042_shafts/n044_shafts_steel"
+    },
+    {
+      "sourceIndex": 45,
+      "sourceName": "accessory",
+      "entityName": "n045_accessory",
+      "usdPath": "/Model/n000_Turbofan_Structure/n045_accessory"
+    },
+    {
+      "sourceIndex": 46,
+      "sourceName": "accessory_accessory",
+      "entityName": "n046_accessory_accessory",
+      "usdPath": "/Model/n000_Turbofan_Structure/n045_accessory/n046_accessory_accessory"
+    },
+    {
+      "sourceIndex": 47,
+      "sourceName": "accessory_steel",
+      "entityName": "n047_accessory_steel",
+      "usdPath": "/Model/n000_Turbofan_Structure/n045_accessory/n047_accessory_steel"
+    }
+  ],
+  "meshes": [
+    {
+      "path": "/Model/n000_Turbofan_Structure/n001_nacelle/n002_nacelle_nacelle/mesh_000",
+      "vertices": 3025,
+      "triangles": 5520
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n001_nacelle/n003_nacelle_nacelleLip/mesh_000",
+      "vertices": 968,
+      "triangles": 1680
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n001_nacelle/n004_nacelle_pylon/mesh_000",
+      "vertices": 528,
+      "triangles": 176
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n006_fan_fanCase/mesh_000",
+      "vertices": 679,
+      "triangles": 1152
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n007_fan_paint/mesh_000",
+      "vertices": 1170,
+      "triangles": 2176
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n008_fan_spiral/mesh_000",
+      "vertices": 623,
+      "triangles": 1056
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n009_fan_disk/mesh_000",
+      "vertices": 260,
+      "triangles": 384
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n010_fan_composite/mesh_000",
+      "vertices": 1200,
+      "triangles": 2304
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n005_fan/n011_fan_titanium/mesh_000",
+      "vertices": 2200,
+      "triangles": 4224
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n012_booster/n013_booster_casing/mesh_000",
+      "vertices": 1067,
+      "triangles": 1920
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n012_booster/n014_booster_disk/mesh_000",
+      "vertices": 260,
+      "triangles": 384
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n012_booster/n015_booster_titanium/mesh_000",
+      "vertices": 6000,
+      "triangles": 11520
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n012_booster/n016_booster_steel/mesh_000",
+      "vertices": 7200,
+      "triangles": 13824
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n017_hpc/n018_hpc_casing/mesh_000",
+      "vertices": 2716,
+      "triangles": 4992
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n017_hpc/n019_hpc_disk/mesh_000",
+      "vertices": 1170,
+      "triangles": 2176
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n017_hpc/n020_hpc_titanium/mesh_000",
+      "vertices": 28800,
+      "triangles": 55296
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n017_hpc/n021_hpc_steel/mesh_000",
+      "vertices": 33300,
+      "triangles": 63936
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n022_combustor/n023_combustor_casingHot/mesh_000",
+      "vertices": 873,
+      "triangles": 1536
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n022_combustor/n024_combustor_combLiner/mesh_000",
+      "vertices": 2430,
+      "triangles": 4320
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n022_combustor/n025_combustor_nickel/mesh_000",
+      "vertices": 1520,
+      "triangles": 960
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n022_combustor/n026_combustor_steel/mesh_000",
+      "vertices": 1040,
+      "triangles": 640
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n027_hpt/n028_hpt_casingHot/mesh_000",
+      "vertices": 485,
+      "triangles": 768
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n027_hpt/n029_hpt_turbineHot/mesh_000",
+      "vertices": 3100,
+      "triangles": 5952
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n027_hpt/n030_hpt_diskHot/mesh_000",
+      "vertices": 520,
+      "triangles": 768
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n027_hpt/n031_hpt_nickel/mesh_000",
+      "vertices": 2200,
+      "triangles": 4224
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n032_lpt/n033_lpt_casingHot/mesh_000",
+      "vertices": 2328,
+      "triangles": 4224
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n032_lpt/n034_lpt_turbineHot/mesh_000",
+      "vertices": 18200,
+      "triangles": 34944
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n032_lpt/n035_lpt_diskHot/mesh_000",
+      "vertices": 1300,
+      "triangles": 1920
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n032_lpt/n036_lpt_nickel/mesh_000",
+      "vertices": 14800,
+      "triangles": 28416
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n037_exhaust/n038_exhaust_nickel/mesh_000",
+      "vertices": 1814,
+      "triangles": 3408
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n037_exhaust/n039_exhaust_casingHot/mesh_000",
+      "vertices": 485,
+      "triangles": 768
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n040_cowl/n041_cowl_coreCowl/mesh_000",
+      "vertices": 2231,
+      "triangles": 4224
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n042_shafts/n043_shafts_shaft/mesh_000",
+      "vertices": 609,
+      "triangles": 544
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n042_shafts/n044_shafts_steel/mesh_000",
+      "vertices": 1188,
+      "triangles": 2048
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n045_accessory/n046_accessory_accessory/mesh_000",
+      "vertices": 324,
+      "triangles": 204
+    },
+    {
+      "path": "/Model/n000_Turbofan_Structure/n045_accessory/n047_accessory_steel/mesh_000",
+      "vertices": 814,
+      "triangles": 1328
+    }
+  ],
+  "materialCount": 36,
+  "textureFiles": [],
+  "units": "metres",
+  "upAxis": "Y",
+  "triangles": 273916,
+  "bounds": {
+    "min": [
+      -2.5999999046325684,
+      -1.0600000619888306,
+      -1.2200000286102295
+    ],
+    "max": [
+      2.4000000953674316,
+      1.694683313369751,
+      1.2200000286102295
+    ]
+  },
+  "validation": [],
+  "normalStrengthPolicy": "Preserve glTF XY normal strength in UsdUVTexture scale/bias; non-default strength may produce a validator advisory",
+  "resolvedTextureCount": 0,
+  "packageSHA256": "30bf7afdad2ea8370fb011af59a7581d6d24a2c46621b001b31a5dd19385a6bf",
+  "packageBytes": 3559751
+}

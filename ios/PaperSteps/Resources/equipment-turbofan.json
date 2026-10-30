@@ -1,0 +1,349 @@
+{
+  "title": "Turbofan \u00b7 Structure preview",
+  "assetName": "turbofan-structure",
+  "attribution": "Geometry by Dmitry Kulikov \u00b7 jet-engine-3d \u00b7 MIT",
+  "initialYaw": -0.8,
+  "initialPitch": 0.35,
+  "scope": "An educational turbofan interpretation inspired by the CFM56-7B. This preview retains 11 structure modules with reduced blade surface sampling. It is not manufacturer CAD. The motions illustrate virtual module relationships; they are not an approved maintenance or removal sequence.",
+  "sourceURL": "https://github.com/jubbon/jet-engine-3d",
+  "licenseName": "MIT License",
+  "licenseURL": "https://github.com/jubbon/jet-engine-3d/blob/main/LICENSE",
+  "noticeResource": "ThirdPartyModelNotices",
+  "parts": [
+    {
+      "id": "nacelle",
+      "entityName": "n001_nacelle",
+      "title": "Nacelle",
+      "detail": "The outer intake and nacelle surround the front of this educational model.",
+      "explodedOffset": [
+        0,
+        2.2,
+        0
+      ]
+    },
+    {
+      "id": "fan",
+      "entityName": "n005_fan",
+      "title": "Fan module",
+      "detail": "The large front fan is shown with its surrounding case and guide vanes.",
+      "explodedOffset": [
+        -1.3,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "booster",
+      "entityName": "n012_booster",
+      "title": "Low-pressure compressor",
+      "detail": "The booster follows the fan on the path into the core.",
+      "explodedOffset": [
+        -0.85,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "hpc",
+      "entityName": "n017_hpc",
+      "title": "High-pressure compressor",
+      "detail": "Rows of compressor blades occupy the forward part of the core.",
+      "explodedOffset": [
+        -0.4,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "combustor",
+      "entityName": "n022_combustor",
+      "title": "Combustor",
+      "detail": "The annular combustion section is between the compressor and turbines. No flame simulation is included here.",
+      "explodedOffset": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "hpt",
+      "entityName": "n027_hpt",
+      "title": "High-pressure turbine",
+      "detail": "This turbine module is directly behind the combustion section.",
+      "explodedOffset": [
+        0.45,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "lpt",
+      "entityName": "n032_lpt",
+      "title": "Low-pressure turbine",
+      "detail": "The rear turbine module contains several blade rows in this simplified geometry.",
+      "explodedOffset": [
+        0.95,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "exhaust",
+      "entityName": "n037_exhaust",
+      "title": "Exhaust assembly",
+      "detail": "The rear frame and exhaust geometry sit behind the turbine modules.",
+      "explodedOffset": [
+        1.45,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "cowl",
+      "entityName": "n040_cowl",
+      "title": "Core cowl",
+      "detail": "The cowl surrounds the smaller central core in the assembled model.",
+      "explodedOffset": [
+        0,
+        -1.7,
+        0
+      ]
+    },
+    {
+      "id": "shafts",
+      "entityName": "n042_shafts",
+      "title": "Shafts and supports",
+      "detail": "The shaft group runs along the engine axis between the front and rear modules.",
+      "explodedOffset": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "accessory",
+      "entityName": "n045_accessory",
+      "title": "Accessory group",
+      "detail": "The accessory gearbox and associated shapes sit beside the core.",
+      "explodedOffset": [
+        0,
+        -1.03283743812896,
+        -1.9424847042896394
+      ]
+    }
+  ],
+  "steps": [
+    {
+      "id": "outside",
+      "title": "Reveal the engine structure",
+      "instruction": "Separate the virtual outer nacelle, core cowl and accessory group to reveal the modules inside.",
+      "focusID": "nacelle",
+      "offsets": {
+        "nacelle": [
+          0,
+          2.2,
+          0
+        ],
+        "cowl": [
+          0,
+          -1.7,
+          0
+        ],
+        "accessory": [
+          0,
+          -1.03283743812896,
+          -1.9424847042896394
+        ]
+      }
+    },
+    {
+      "id": "compressors",
+      "title": "Follow the front modules",
+      "instruction": "Watch the fan and compressor groups spread along the engine axis. Select each group to see its name.",
+      "focusID": "fan",
+      "offsets": {
+        "nacelle": [
+          0,
+          2.2,
+          0
+        ],
+        "cowl": [
+          0,
+          -1.7,
+          0
+        ],
+        "accessory": [
+          0,
+          -1.03283743812896,
+          -1.9424847042896394
+        ],
+        "fan": [
+          -1.3,
+          0,
+          0
+        ],
+        "booster": [
+          -0.85,
+          0,
+          0
+        ],
+        "hpc": [
+          -0.4,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "combustor",
+      "title": "Locate the combustion section",
+      "instruction": "Look between the compressor and turbine groups for the combustion section. Rotate the view to compare its position with the surrounding modules.",
+      "focusID": "combustor",
+      "offsets": {
+        "nacelle": [
+          0,
+          2.2,
+          0
+        ],
+        "cowl": [
+          0,
+          -1.7,
+          0
+        ],
+        "accessory": [
+          0,
+          -1.03283743812896,
+          -1.9424847042896394
+        ],
+        "fan": [
+          -1.3,
+          0,
+          0
+        ],
+        "booster": [
+          -0.85,
+          0,
+          0
+        ],
+        "hpc": [
+          -0.4,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "turbines",
+      "title": "Explore the rear modules",
+      "instruction": "Spread the turbine and exhaust groups to see their order along the axis. This is a virtual structure illustration.",
+      "focusID": "lpt",
+      "offsets": {
+        "nacelle": [
+          0,
+          2.2,
+          0
+        ],
+        "cowl": [
+          0,
+          -1.7,
+          0
+        ],
+        "accessory": [
+          0,
+          -1.03283743812896,
+          -1.9424847042896394
+        ],
+        "fan": [
+          -1.3,
+          0,
+          0
+        ],
+        "booster": [
+          -0.85,
+          0,
+          0
+        ],
+        "hpc": [
+          -0.4,
+          0,
+          0
+        ],
+        "hpt": [
+          0.45,
+          0,
+          0
+        ],
+        "lpt": [
+          0.95,
+          0,
+          0
+        ],
+        "exhaust": [
+          1.45,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "shafts",
+      "title": "Find the shafts and supports",
+      "instruction": "Select the shaft group and rotate the model. Compare the long central shaft shapes with the separated front and rear modules.",
+      "focusID": "shafts",
+      "offsets": {
+        "nacelle": [
+          0,
+          2.2,
+          0
+        ],
+        "cowl": [
+          0,
+          -1.7,
+          0
+        ],
+        "accessory": [
+          0,
+          -1.03283743812896,
+          -1.9424847042896394
+        ],
+        "fan": [
+          -1.3,
+          0,
+          0
+        ],
+        "booster": [
+          -0.85,
+          0,
+          0
+        ],
+        "hpc": [
+          -0.4,
+          0,
+          0
+        ],
+        "hpt": [
+          0.45,
+          0,
+          0
+        ],
+        "lpt": [
+          0.95,
+          0,
+          0
+        ],
+        "exhaust": [
+          1.45,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "restore",
+      "title": "Reassemble the virtual engine",
+      "instruction": "Replay the model groups returning to their assembled positions. Use the part menu or exploded view to explore again.",
+      "focusID": null,
+      "offsets": {}
+    }
+  ]
+}
