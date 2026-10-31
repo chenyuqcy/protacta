@@ -593,3 +593,8 @@ validation targets. A first-fold technical demo is not the complete MVP.
   actual tracking stability, hand overlap, gestures and voice remain unverified.
 - Primary API references: Apple's [raycast plane target](https://developer.apple.com/documentation/arkit/arraycastquery/target-swift.enum/existingplanegeometry)
   and [grounding-shadow render option](https://developer.apple.com/documentation/realitykit/arview/renderoptions-swift.struct/disablegroundingshadows).
+- The signed Build 15 candidate was subsequently installed on the iPhone and
+  verified in device inventory as 0.1.0 (15). Automatic launch was refused because
+  the screen was locked. The user has been asked to unlock; camera visibility
+  and tabletop placement remain pending. Device receipts are in the
+  build15-device subdirectory recorded by build15-current-deployment.json.
