@@ -97,7 +97,7 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 17 installed, inventory verified 0.1.0 (17), and process launched on iPhone 17 Pro Max on 2026-11-01",
+    "deviceInstallation": "Build 18 installed and inventory verified 0.1.0 (18); launch blocked by iOS Locked, unlock requested",
     "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
@@ -152,7 +152,7 @@
       "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
       "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
     },
-    "deviceAcceptanceEvidence": "/Users/adrian/Desktop/QCRI/protacta_app/output/occlusion-refinement-2026-11-01/build17-device-3ly1h48r/device-acceptance.json",
+    "deviceAcceptanceEvidence": "/Users/adrian/Desktop/QCRI/protacta_app/output/occlusion-build18-2026-11-01/build18-device-1710h4rr/device-acceptance.json",
     "equipmentAR": {
       "status": "implemented_local_checks_passed_partial_device_acceptance_edge_defect_open",
       "features": [
@@ -174,7 +174,7 @@
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
         "candidateBuild": "18",
-        "status": "local_checks_passed_physical_retest_pending",
+        "status": "installed_inventory_verified_launch_waiting_for_unlock",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
@@ -261,7 +261,7 @@
   ],
   "manualAcceptance": {
     "status": "in_progress",
-    "installationDecision": "Build 17 installed and launched. Review selected premium UI on phone, then retest stationary boundaries and withdrawal trails in both origami and equipment AR.",
+    "installationDecision": "Build 18 installed; iOS rejected launch because phone was locked. After unlock, launch immediately and repeat same-size gearmotor hand-edge/withdrawal check; inspect native sampling and timing diagnostics.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
