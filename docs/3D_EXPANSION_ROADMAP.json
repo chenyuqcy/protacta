@@ -97,8 +97,8 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 15 installed and verified in iPhone 17 Pro Max inventory as 0.1.0 (15); automatic launch blocked by locked screen",
-    "physicalAcceptance": "Build 14 motor initial loading and Build 15 real camera startup confirmed by user; tabletop placement, controls, performance, speech and learner review still pending",
+    "deviceInstallation": "Build 15 installed and version verified on iPhone 17 Pro Max; unlocked launch succeeded",
+    "physicalAcceptance": "User confirmed motor initial loading, real AR camera and initial tabletop placement; stability, manipulation, animations, speech, measured performance and learner review pending",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
     "evidenceDirectory": "output/3d-expansion-2026-10-30",
@@ -148,12 +148,12 @@
         "EquipmentARFinalUI.xcresult: final 3 AR layout/fallback UI checks passed"
       ],
       "fixtureScope": "DEBUG Simulator layout preview is visibly NO LIVE CAMERA and unavailable in device Release",
-      "physicalCameraAndPlacement": "Camera feed confirmed on iPhone by user; surface placement and tracking/gesture behavior still awaiting observation",
+      "physicalCameraAndPlacement": "Motor camera feed and first tabletop placement confirmed by user on iPhone; stability, gestures, animations, recovery and turbofan checks pending",
       "capability": "Virtual tabletop reference; no real equipment recognition or registration"
     }
   },
   "nextGates": [
-    "Unlock and launch installed Build 15, then verify the motor camera view and deliberate tabletop placement",
+    "On installed Build 15, check placed motor stability while walking around it, then pinch/twist and authored animation",
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",

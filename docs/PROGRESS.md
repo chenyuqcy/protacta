@@ -615,3 +615,14 @@ validation targets. A first-fold technical demo is not the complete MVP.
   No app runtime source or installed version changed in this concept pass.
   Physical object recognition, automatic registration and real-action checking
   remain later research, separate from the proposed visual update.
+
+## First motor tabletop placement observed — 2026-10-31
+
+- On the installed Build 15, the user reported: “已放置，能看到电机”.
+  Together with their earlier real-camera observation, this accepts initial
+  camera startup and first motor placement on the iPhone 17 Pro Max.
+- Position stability, pinch/twist, authored movement, tracking recovery,
+  turbofan placement, speech and measured performance remain pending. The
+  next guided check is moving the phone around the placed model, then scaling
+  and rotating it. This is user-reported device evidence, not a measured pose
+  accuracy or learning-effectiveness result.
