@@ -23,10 +23,17 @@ final class SceneDepthOcclusion {
         /// Frames accepted for display; this does not measure visible coverage.
         let displayedFrames: Int
         let expiredBuilds: Int
+        let expiredDisplays: Int
+        let emptyForegroundBuilds: Int
         let rejectedSamples: Int
         let rejectedDiscontinuities: Int
         let rejectedSupportTriangles: Int
         let depthSource: String
+        let sourceWidth: Int
+        let sourceHeight: Int
+        let pixelStep: Int
+        let cropX: Int
+        let cropY: Int
     }
 
     private let anchor = AnchorEntity(world: .zero)
@@ -41,12 +48,18 @@ final class SceneDepthOcclusion {
     private var displayedReceiptTime: TimeInterval = 0
     private var displayedFrames = 0
     private var expiredBuilds = 0
+    private var expiredDisplays = 0
+    private var emptyForegroundBuilds = 0
     private var rejectedSamples = 0
     private var rejectedDiscontinuities = 0
     private var rejectedSupportTriangles = 0
     private let profile: Profile
     private var stabilizer = EquipmentDepthStabilizer()
     private var depthSource = "None"
+    private var sampling = SceneDepthSampling()
+    private var sourceSize = SIMD2<Int>.zero
+    private var samplingStep = 2
+    private var cropOrigin = SIMD2<Int>.zero
     private(set) var lastAcceptedDepthTimestamp: TimeInterval?
 
     private(set) var triangleCount = 0
@@ -67,8 +80,11 @@ final class SceneDepthOcclusion {
                            isAnchored: anchor.isAnchored, isActive: surface.isActive,
                            hasScene: anchor.scene != nil && surface.scene != nil,
                            displayedFrames: displayedFrames, expiredBuilds: expiredBuilds,
+                           expiredDisplays: expiredDisplays, emptyForegroundBuilds: emptyForegroundBuilds,
                            rejectedSamples: rejectedSamples, rejectedDiscontinuities: rejectedDiscontinuities,
-                           rejectedSupportTriangles: rejectedSupportTriangles, depthSource: depthSource)
+                           rejectedSupportTriangles: rejectedSupportTriangles, depthSource: depthSource,
+                           sourceWidth: sourceSize.x, sourceHeight: sourceSize.y, pixelStep: samplingStep,
+                           cropX: cropOrigin.x, cropY: cropOrigin.y)
     }
 
     init(profile: Profile = .rawPaper) {
@@ -111,41 +127,50 @@ final class SceneDepthOcclusion {
 
     /// Call for every ARFrame before any UI/tracking-status throttling. Pass the
     /// actual supporting table's world Y, not a paper-model animation height.
-    func update(frame: ARFrame, supportPlaneY: Float? = nil) {
+    func update(frame: ARFrame, supportPlaneY: Float? = nil, target: Entity? = nil) {
         guard let view else { return }
         ensureSceneAttachment(in: view)
         latestFrameTimestamp = frame.timestamp
         guard case .normal = frame.camera.trackingState else {
             invalidateMesh(reason: "Tracking unavailable"); return
         }
-        // Paper retains raw depth; equipment explicitly consumes smoothed depth
-        // instead of assuming RealityKit's native person compositor uses it.
+        // Stabilized profiles explicitly consume smoothed depth and check
+        // current raw motion; the legacy raw-paper profile keeps its source.
         let useSmoothed = profile != .rawPaper && frame.smoothedSceneDepth?.confidenceMap != nil
         let selectedDepth = useSmoothed ? frame.smoothedSceneDepth : frame.sceneDepth
         guard let depth = selectedDepth else {
             invalidateMesh(reason: "Raw scene depth unavailable", retainingFreshDisplay: true); return
         }
-        depthSource = useSmoothed ? "Smoothed scene depth" : "Raw scene depth"
         expireIfNeeded()
         guard buildTask == nil, frame.timestamp - lastScheduledTimestamp >= 1.0 / 30.0 else { return }
         guard let snapshot = Self.snapshot(frame: frame, depth: depth) else {
             invalidateMesh(reason: "Depth confidence unavailable", retainingFreshDisplay: true); return
         }
         let currentRaw = useSmoothed ? frame.sceneDepth.flatMap { Self.snapshot(frame: frame, depth: $0) } : nil
+        depthSource = useSmoothed ? "Smoothed scene depth" : "Raw scene depth"
         if currentRaw != nil { depthSource += " + current raw motion check" }
+        let bounds = target?.visualBounds(relativeTo: nil)
+        let plan = profile == .rawPaper
+            ? SceneDepthSampling.Plan(region: .full(snapshot), pixelStep: 2)
+            : sampling.plan(for: snapshot, minimum: bounds?.min, maximum: bounds?.max)
         lastAcceptedDepthTimestamp = snapshot.timestamp
         let receiptTime = ProcessInfo.processInfo.systemUptime
         let token = generation
         let previousFilter = stabilizer
         let profile = self.profile
         lastScheduledTimestamp = snapshot.timestamp
-        depthSize = [snapshot.width, snapshot.height]
+        sourceSize = [snapshot.width, snapshot.height]
+        depthSize = [plan.region.width, plan.region.height]
+        cropOrigin = [plan.region.x, plan.region.y]; samplingStep = plan.pixelStep
         buildTask = Task { [weak self] in
             let start = ProcessInfo.processInfo.systemUptime
             let result = await Task.detached(priority: .userInitiated) {
                 var filter = previousFilter
-                let filtered = profile != .rawPaper ? filter.filter(snapshot, current: currentRaw, pixelStep: 2) : snapshot
+                let local = plan.region.crop(snapshot)
+                let raw = currentRaw.map { plan.region.crop($0) }
+                let filtered = profile != .rawPaper ? filter.filter(local, current: raw, pixelStep: plan.pixelStep) : local
                 let mesh = SceneDepthMesher.build(filtered, supportPlaneY: supportPlaneY,
+                                                 pixelStep: plan.pixelStep,
                                                  policy: profile == .stableEquipment ? .stableEquipment : .paper)
                 return (mesh, filter)
             }.value
@@ -164,6 +189,7 @@ final class SceneDepthOcclusion {
             }
             self.stabilizer = result.1
             guard !mesh.triangles.isEmpty else {
+                self.emptyForegroundBuilds += 1
                 if profile != .rawPaper {
                     // A current clear observation must not retain the previous
                     // hand until the stale-frame timer expires.
@@ -216,16 +242,18 @@ final class SceneDepthOcclusion {
         lastBuildMilliseconds = 0
         displayedFrames = 0
         expiredBuilds = 0
+        expiredDisplays = 0; emptyForegroundBuilds = 0
         rejectedSamples = 0
         rejectedDiscontinuities = 0
         rejectedSupportTriangles = 0
         stabilizer.reset(); depthSource = "None"; lastAcceptedDepthTimestamp = nil
+        sampling.reset(); sourceSize = .zero; samplingStep = 2; cropOrigin = .zero
     }
 
     private func invalidateMesh(reason: String, retainingFreshDisplay: Bool = false) {
         generation &+= 1
         buildTask?.cancel(); buildTask = nil
-        if !retainingFreshDisplay { stabilizer.reset() }
+        if !retainingFreshDisplay { stabilizer.reset(); sampling.reset() }
         if retainingFreshDisplay { rejectBuild(reason: reason) }
         else { hide(reason: reason) }
     }
@@ -253,6 +281,7 @@ final class SceneDepthOcclusion {
     private func expireIfNeeded() {
         guard let timestamp = displayedTimestamp else { return }
         if !isCurrent(timestamp: timestamp, receivedAt: displayedReceiptTime) {
+            expiredDisplays += 1
             hide(reason: "Depth frame expired")
         }
     }

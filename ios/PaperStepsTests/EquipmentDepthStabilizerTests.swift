@@ -45,6 +45,31 @@ final class EquipmentDepthStabilizerTests: XCTestCase {
         filter.reset()
         XCTAssertEqual(filter.filter(input, current: invalid).depths[12], 0.5)
     }
+    func testIsolatedRawOutlierDoesNotPunchAHoleInAStableHand() {
+        var filter = EquipmentDepthStabilizer()
+        _ = filter.filter(plane())
+        var raw = plane(time: 1.033); raw.depths[12] = 1.2
+        XCTAssertEqual(filter.filter(plane(time: 1.033), current: raw).depths[12], 0.5)
+        XCTAssertEqual(filter.filter(plane(time: 1.066), current: plane(1.2, time: 1.066)).depths[12], 1.2,
+                       "A coherent background must still clear the hand immediately")
+    }
+    func testSupportedConfidenceHoleHasABoundAndRawWithdrawalClearsItImmediately() {
+        var filter = EquipmentDepthStabilizer()
+        _ = filter.filter(plane())
+        var hole = plane(); hole.confidence = Array(repeating: 0, count: 25)
+        for i in [6, 7, 8, 11] { hole.confidence[i] = 2 }
+        for i in [13, 16] { hole.confidence[i] = 2; hole.depths[i] = 1.2 }
+        for frame in 1...2 {
+            hole.timestamp = 1 + Double(frame) / 30
+            XCTAssertEqual(filter.filter(hole).confidence[12], 1)
+        }
+        hole.timestamp = 1.1
+        XCTAssertEqual(filter.filter(hole).confidence[12], 0, "Support cannot retain an invalid pixel indefinitely")
+        filter.reset(); _ = filter.filter(plane())
+        hole.timestamp = 1.033; _ = filter.filter(hole)
+        hole.timestamp = 1.066
+        XCTAssertEqual(filter.filter(hole, current: plane(1.2, time: 1.066)).depths[12], 1.2)
+    }
     func testLargerStationaryNoiseIsHeldWithoutHoldingRealMotion() {
         var filter = EquipmentDepthStabilizer()
         _ = filter.filter(plane())

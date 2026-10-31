@@ -49,6 +49,8 @@ enum SceneDepthMesher {
         guard xs.count >= 2, ys.count >= 2 else { return result }
         result.positions.reserveCapacity(xs.count * ys.count)
         var valid = [Bool](), measuredDepth = [Float]()
+        valid.reserveCapacity(xs.count * ys.count); measuredDepth.reserveCapacity(xs.count * ys.count)
+        result.triangles.reserveCapacity((xs.count - 1) * (ys.count - 1) * 6)
         for y in ys {
             for x in xs {
                 let index = y * width + x, d = snapshot.depths[index]
@@ -97,7 +99,7 @@ enum SceneDepthMesher {
                     result.rejectedSupportTriangles += 1; return
                 }
             }
-            result.triangles += [UInt32(a), UInt32(b), UInt32(c)]
+            result.triangles.append(UInt32(a)); result.triangles.append(UInt32(b)); result.triangles.append(UInt32(c))
         }
         for y in 0..<(ys.count - 1) {
             for x in 0..<(xs.count - 1) {

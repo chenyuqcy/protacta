@@ -881,7 +881,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard isAR, !needsRescan else { return }
         if isPaperGuide { assessPaperGuide(frame); return }
         if occlusionMode == .automatic && occlusionCapabilities.sceneDepth {
-            depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil)
+            depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil,
+                                  target: placed ? paper.root : nil)
         }
         guard frame.timestamp - lastAssessment > 0.12 else { return }
         lastAssessment = frame.timestamp
@@ -992,6 +993,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "Raw depth received": flag(frame?.sceneDepth != nil),
             "Object depth status": depth.status,
             "Depth source": depth.depthSource,
+            "Depth pixel step": String(depth.pixelStep),
             "Depth anchor in scene": flag(depth.hasScene),
             "Depth anchor ready": flag(depth.isAnchored),
             "Depth surface active": flag(depth.isActive),
@@ -1033,9 +1035,16 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "liveOcclusionMeshAgeMilliseconds": depth.meshAgeMilliseconds ?? -1,
             "liveOcclusionDisplayedFrames": depth.displayedFrames,
             "liveOcclusionExpiredBuilds": depth.expiredBuilds,
+            "liveOcclusionExpiredDisplays": depth.expiredDisplays,
+            "liveOcclusionEmptyForegroundBuilds": depth.emptyForegroundBuilds,
             "liveOcclusionTriangles": depthOcclusion.triangleCount,
             "liveOcclusionBuildMilliseconds": depthOcclusion.lastBuildMilliseconds,
             "liveOcclusionDepthWidth": depthOcclusion.depthSize.x,
+            "liveOcclusionDepthHeight": depthOcclusion.depthSize.y,
+            "liveOcclusionSourceWidth": depth.sourceWidth,
+            "liveOcclusionSourceHeight": depth.sourceHeight,
+            "liveOcclusionPixelStep": depth.pixelStep,
+            "liveOcclusionCropX": depth.cropX, "liveOcclusionCropY": depth.cropY,
             "error": cameraError ?? ""
         ]
         if let data = try? JSONSerialization.data(withJSONObject: values, options: [.prettyPrinted, .sortedKeys]),

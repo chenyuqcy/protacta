@@ -16,6 +16,8 @@ final class SceneDepthOcclusionTests: XCTestCase {
         occlusion.reset()
         XCTAssertTrue(view.scene.anchors.isEmpty)
         XCTAssertEqual(occlusion.diagnostics.depthSource, "None")
+        XCTAssertEqual(occlusion.diagnostics.expiredDisplays, 0)
+        XCTAssertEqual(occlusion.diagnostics.emptyForegroundBuilds, 0)
     }
     func testConfigureRestoresRemovedDepthAnchorWithoutDuplicatingIt() throws {
         let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)

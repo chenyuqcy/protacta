@@ -337,7 +337,8 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         let normal: Bool
         if case .normal = frame.camera.trackingState { normal = true } else { normal = false }
         if occlusionMode == .stableEdges {
-            handDepth.update(frame: frame, supportPlaneY: movable?.position(relativeTo: nil).y)
+            handDepth.update(frame: frame, supportPlaneY: movable?.position(relativeTo: nil).y,
+                             target: placed ? content : nil)
             if !normal {
                 depthSessionStartedAt = CACurrentMediaTime(); lastDepthObservedAt = nil
             } else if let accepted = handDepth.lastAcceptedDepthTimestamp, frame.timestamp - accepted < 0.15 {
@@ -377,9 +378,15 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             "placed": placed, "trackingReady": trackingReady,
             "depthSource": depth.depthSource, "depthStatus": depth.status,
             "depthWidth": depth.depthWidth, "depthHeight": depth.depthHeight,
+            "sourceDepthWidth": depth.sourceWidth, "sourceDepthHeight": depth.sourceHeight,
+            "depthPixelStep": depth.pixelStep, "depthCropX": depth.cropX, "depthCropY": depth.cropY,
+            "rejectedDepthSamples": depth.rejectedSamples,
+            "rejectedDepthEdges": depth.rejectedDiscontinuities,
+            "rejectedTableTriangles": depth.rejectedSupportTriangles,
             "triangles": depth.triangleCount, "meshBuildMilliseconds": depth.buildMilliseconds,
             "meshAgeMilliseconds": depth.meshAgeMilliseconds ?? -1,
             "displayedDepthFrames": depth.displayedFrames, "expiredDepthBuilds": depth.expiredBuilds,
+            "expiredDisplayedMeshes": depth.expiredDisplays, "emptyForegroundBuilds": depth.emptyForegroundBuilds,
             "timestamp": ISO8601DateFormatter().string(from: Date())
         ]
         if let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,

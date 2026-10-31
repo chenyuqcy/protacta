@@ -1,7 +1,7 @@
 import Foundation
 import simd
 
-/// Applied only to the equipment occluder. Real motion and camera movement
+/// Used by stabilized equipment and virtual-paper occluders. Real camera movement
 /// reset history; invalid observations cannot grow or indefinitely retain a hand.
 struct EquipmentDepthStabilizer: Sendable {
     private var previous: SceneDepthSnapshot?
@@ -30,6 +30,22 @@ struct EquipmentDepthStabilizer: Sendable {
                 let latest = reference.depths[index], reliability = reference.confidence[index]
                 if latest.isFinite, (0.12...3).contains(latest), (1...2).contains(reliability),
                    !smooth.isFinite || confidence == 0 || abs(latest - smooth) > 0.020 {
+                    // An isolated raw edge outlier must not punch a fresh hole
+                    // through a stable silhouette. Coherent arrival/withdrawal
+                    // is accepted in the same exposure, without a time delay.
+                    let x = index % input.width, y = index / input.width
+                    var support = 0, available = 0
+                    for offset in 0..<5 {
+                        let dx = offset == 1 ? -1 : offset == 2 ? 1 : 0
+                        let dy = offset == 3 ? -1 : offset == 4 ? 1 : 0
+                        let px = x + dx, py = y + dy
+                        guard px >= 0, px < input.width, py >= 0, py < input.height else { continue }
+                        available += 1
+                        let i = py * input.width + px, d = reference.depths[i]
+                        if d.isFinite, (0.12...3).contains(d), (1...2).contains(reference.confidence[i]),
+                           abs(d - latest) <= 0.020 { support += 1 }
+                    }
+                    guard support >= min(3, available) else { return (smooth, confidence) }
                     // A hand arriving or withdrawing bypasses system smoothing
                     // as well as our own history in this exposure.
                     return (latest, reliability)
@@ -92,9 +108,9 @@ struct EquipmentDepthStabilizer: Sendable {
                     // that straddles the foreground and background.
                     measured = neighbors[neighborCount / 2]
                 } else if compatible, let old, old.confidence[index] >= 1,
-                          previousHolds[index] < 1,
+                          previousHolds[index] < 2,
                           oldSupport >= 3 {
-                    measured = old.depths[index]; nextHolds[index] = 1
+                    measured = old.depths[index]; nextHolds[index] = previousHolds[index] + 1
                 }
                 guard var depth = measured else {
                     output.depths[index] = 0; output.confidence[index] = 0; continue

@@ -63,7 +63,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "17",
+    "build": "18",
     "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
@@ -173,8 +173,8 @@
       "physicalCameraAndPlacement": "Motor initial placement, brief stability, manipulation, five actions and AR/studio pose preservation confirmed by user; recovery and turbofan pending",
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
-        "candidateBuild": "17",
-        "status": "build17_installed_and_launched_physical_retest_pending",
+        "candidateBuild": "18",
+        "status": "local_checks_passed_physical_retest_pending",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
@@ -186,16 +186,20 @@
           "Paper depth policy remains unchanged"
         ],
         "localEvidence": [
-          "EquipmentStableEdges.xcresult: 26 logic and 3 UI tests passed",
-          "EquipmentStableEdgesOptimized.xcresult: final 27 logic tests passed"
+          "DepthSampling.xcresult: 39 tests passed"
         ],
-        "plan": "output/3d-expansion-2026-10-30/build16-hand-edge-repair.json",
+        "plan": "output/occlusion-build18-2026-11-01/build18-plan.json",
         "newChanges": [
-          "Current same-exposure raw depth overrides delayed smoothed edges when a hand moves away",
-          "Wider 10 mm stationary deadband",
-          "Clear an empty current foreground instead of retaining the previous hand",
-          "Single depth owner also applied to origami tabletop AR; native comparison remains available"
-        ]
+          "Project current target world bounds into camera-depth coordinates and use native samples in a bounded padded region",
+          "Retain a quantized crop during small projection jitter so camera calibration/history remains stable",
+          "Crop principal point is adjusted exactly; camera pose remains tied to its own exposure",
+          "Native stride 1 when region <= 20000 pixels; bounded stride 2 for unusually large/near-camera targets",
+          "Require local current raw agreement before replacing smoothed depth with a motion discontinuity",
+          "Bridge supported confidence holes for at most two observations; current coherent withdrawal still bypasses history immediately",
+          "Remove per-triangle temporary arrays from mesh generation",
+          "Use the same sampling planner in equipment and origami tabletop modes"
+        ],
+        "baselineFeedback": "Build 17: still flickers, no obvious withdrawal trail; stableEdges mode confirmed in live diagnostic"
       }
     },
     "baselineDeviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json",
@@ -220,7 +224,7 @@
     }
   },
   "nextGates": [
-    "Retest Build 16 stationary/moving hand boundary, withdrawal trails and absence of black patches in Stable edges and Native hands; inspect actual depth diagnostics before accepting the repair",
+    "On Build 18, repeat stationary/moving hand-edge and withdrawal checks, then verify actual native sampling region, pixel step and mesh latency; keep remaining physical tasks separate.",
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
