@@ -563,3 +563,33 @@ validation targets. A first-fold technical demo is not the complete MVP.
   placement to the shared equipment player while retaining the authored model,
   step state, part selection and lesson controls. Physical equipment recognition
   and registration are separate capabilities from this virtual-model placement.
+
+## Motor and turbofan tabletop AR — Build 15, 2026-10-31
+
+- The user selected motor and turbofan first. Their shared player now has an AR
+  entry and a full-screen camera layout with compact step/voice controls. The
+  same ARView and imported model are handed between studio and camera modes;
+  step, progress, selected part, source materials and authored poses persist.
+- Added horizontal surface placement with a fresh raycast at the tap, initial
+  tabletop sizing, drag, pinch and twist. Fit the full authored movement envelope
+  above the table so separated modules have room. World tracking is a virtual
+  reference; this does not recognize or register a real piece of equipment.
+- Authored offsets now use the model-root coordinate frame. Unit tests check
+  that scale/rotation of an AR placement carries the step motion correctly,
+  instead of applying an unscaled world-space displacement.
+- Fresh normal tracking and the committed anchor gate visibility and movement.
+  Tracking loss hides the model and pauses playback. Background resume clears
+  placement and scans again while retaining the lesson pose. Camera denial has
+  an exit to 3D. No camera images are saved. The earlier grounding-shadow
+  correction is retained, with native people-depth support where available.
+- Local evidence: EquipmentARFirst.xcresult passed 14 runtime/asset checks and
+  four UI flows including the AERIS return gate. EquipmentARFinalUI.xcresult
+  passed three final full-screen layout, state-preservation and unavailable-AR
+  checks. The Simulator fixture is explicitly labeled NO LIVE CAMERA and cannot
+  activate in a device Release. Screenshots were inspected for viewport bounds,
+  model appearance and returning to studio. These are not physical AR evidence.
+- Release Build 15 compiled and passed strict signature verification. Install
+  and real-camera placement on the paired iPhone are the next acceptance gate;
+  actual tracking stability, hand overlap, gestures and voice remain unverified.
+- Primary API references: Apple's [raycast plane target](https://developer.apple.com/documentation/arkit/arraycastquery/target-swift.enum/existingplanegeometry)
+  and [grounding-shadow render option](https://developer.apple.com/documentation/realitykit/arview/renderoptions-swift.struct/disablegroundingshadows).

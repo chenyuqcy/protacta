@@ -63,7 +63,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "14",
+    "build": "15",
     "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
@@ -130,9 +130,30 @@
       "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
       "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
     },
-    "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build14-device-frweopx6/device-acceptance.json"
+    "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build14-device-frweopx6/device-acceptance.json",
+    "equipmentAR": {
+      "status": "implemented_local_checks_passed_device_pending",
+      "features": [
+        "Full-screen camera mode for shared motor/turbofan walkthroughs",
+        "Deliberate horizontal-surface placement",
+        "Whole animation envelope fitted to a tabletop span",
+        "Drag, pinch, twist and part selection",
+        "Same model, step and authored pose when returning to studio",
+        "Tracking loss hides content and pauses playback",
+        "Background resume rescans the table",
+        "Existing compact controls and local voice"
+      ],
+      "localEvidence": [
+        "EquipmentARFirst.xcresult: 14 native logic/asset tests and 4 UI flows passed",
+        "EquipmentARFinalUI.xcresult: final 3 AR layout/fallback UI checks passed"
+      ],
+      "fixtureScope": "DEBUG Simulator layout preview is visibly NO LIVE CAMERA and unavailable in device Release",
+      "physicalCameraAndPlacement": "pending",
+      "capability": "Virtual tabletop reference; no real equipment recognition or registration"
+    }
   },
   "nextGates": [
+    "Install signed Build 15 and verify real camera, deliberate tabletop placement and step animation on the paired iPhone",
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
@@ -188,6 +209,12 @@
         "procedure": "Use Read step and English next, back, replay, pause, resume and why commands. Confirm stopping voice and background return; with permission denied, touch navigation must remain usable.",
         "record": "What was spoken and what happened on the real device; do not replace microphone evidence with command injection",
         "result": null
+      },
+      {
+        "id": "equipment_tabletop_ar",
+        "procedure": "In each equipment course, enter AR, allow camera if requested, scan a textured table and place the model. Orbit physically, drag/pinch/twist, play each action, check a hand crossing the model, interrupt tracking, rescan after background and return to 3D. Verify pose and step preservation.",
+        "record": "Actual device, build, visible camera/model, placement stability, artifact or gesture failures; Simulator fixtures cannot fill this result",
+        "result": null
       }
     ],
     "learnerChecks": [
@@ -212,5 +239,5 @@
     ],
     "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
   },
-  "latestUserRequest": "Add camera-based tabletop AR for the equipment models, retaining authored lesson controls; motor and turbofan first"
+  "latestUserRequest": "User confirmed motor and turbofan first; towel AR is outside this increment"
 }

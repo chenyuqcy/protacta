@@ -22,6 +22,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
     }
 
     private(set) var view: ARView?
+    private(set) var isHandedToAR = false
     private let anchor = AnchorEntity(world: .zero)
     private let camera = PerspectiveCamera()
     private var framing = Framing(center: .zero, radius: 0.5)
@@ -88,14 +89,14 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
             content?.removeFromParent()
             content = entity
             entity.synchronization = nil
-            anchor.addChild(entity)
+            if !isHandedToAR { anchor.addChild(entity) }
         }
         self.framing = framing
         updateCamera()
     }
 
     func setActive(_ active: Bool) {
-        guard let view else { return }
+        guard let view, !isHandedToAR else { return }
         if active {
             if !view.scene.anchors.contains(where: { $0 === anchor }) { view.scene.addAnchor(anchor) }
             updateCamera()
@@ -106,13 +107,36 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
     }
 
     func updateLayout() {
-        guard view?.bounds.size != lastSize else { return }
+        guard !isHandedToAR, view?.bounds.size != lastSize else { return }
         updateCamera()
     }
 
     func resetView() {
         yaw = framing.initialYaw; pitch = framing.initialPitch; zoom = 1
         updateCamera()
+    }
+
+    func handToAR() -> ARView? {
+        guard let view else { return nil }
+        isHandedToAR = true
+        view.session.pause(); anchor.removeFromParent(); content?.removeFromParent()
+        for gesture in installedGestures { view.removeGestureRecognizer(gesture) }
+        return view
+    }
+
+    func restoreStudio() {
+        guard isHandedToAR, let view else { return }
+        isHandedToAR = false
+        view.session.pause(); view.session.delegate = nil
+        view.cameraMode = .nonAR; view.automaticallyConfigureSession = false
+        view.environment.background = .color(UIColor(red: 0.91, green: 0.94, blue: 0.92, alpha: 1))
+        view.environment.lighting.resource = nil
+        view.environment.lighting.intensityExponent = 0
+        view.environment.sceneUnderstanding.options = []
+        view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableGroundingShadows]
+        if let content { anchor.addChild(content) }
+        for gesture in installedGestures { view.addGestureRecognizer(gesture) }
+        setActive(true)
     }
 
     func shutdown() {
@@ -124,11 +148,12 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         onEntityTap = nil
         for gesture in installedGestures { view?.removeGestureRecognizer(gesture) }
         installedGestures.removeAll()
+        isHandedToAR = false
         view = nil
     }
 
     private func updateCamera() {
-        guard let size = view?.bounds.size, size.width > 1, size.height > 1 else { return }
+        guard !isHandedToAR, let size = view?.bounds.size, size.width > 1, size.height > 1 else { return }
         lastSize = size
         let verticalHalf = Float(43 * Double.pi / 360)
         let horizontalHalf = atan(tan(verticalHalf) * Float(size.width / size.height))

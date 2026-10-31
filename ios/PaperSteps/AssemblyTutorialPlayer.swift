@@ -21,6 +21,8 @@ struct AssemblyTutorialPlayer: View {
     var body: some View {
         ZStack {
             Color(red: 0.91, green: 0.94, blue: 0.92).ignoresSafeArea()
+            if scene.isAR { arStage }
+            else {
             GeometryReader { geometry in
                 let sidebar = showDetails && geometry.size.width >= 900 && geometry.size.height >= 650
                     && geometry.size.width > geometry.size.height
@@ -29,6 +31,14 @@ struct AssemblyTutorialPlayer: View {
                         Button { close() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
                             .background(.regularMaterial, in: Circle()).accessibilityLabel("Close full-screen 3D")
                             .accessibilityIdentifier("assemblyClose")
+                        Button {
+                            isPlaying = false; voice.contextDidChange()
+                            if scene.enterAR() { showDetails = false }
+                        } label: {
+                            Label("AR", systemImage: "arkit").font(.system(size: 13, weight: .semibold))
+                                .padding(.horizontal, 12).frame(minHeight: 44)
+                        }.background(.regularMaterial, in: Capsule()).disabled(!scene.isLoaded)
+                            .accessibilityLabel("View in AR").accessibilityIdentifier("assemblyEnterAR")
                         Spacer(minLength: 8)
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(scene.tutorial.title).font(.system(size: 16, weight: .semibold, design: .rounded))
@@ -44,20 +54,8 @@ struct AssemblyTutorialPlayer: View {
                     layout {
                         GeometryReader { geometry in
                             if scene.isLoaded {
-                                AssemblySceneView(controller: scene, isActive: phase == .active)
+                                modelViewport
                                     .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .accessibilityLabel("Interactive assembly model")
-                                    .accessibilityValue(scene.isLoaded ? "Model loaded" : "Loading")
-                                    .accessibilityIdentifier("assemblyViewportRegion")
-                                    .overlay(alignment: .bottom) {
-                                        if !showDetails, let feedback = voice.feedbackMessage {
-                                            Text(feedback).font(.system(size: 12, weight: .medium))
-                                                .fixedSize(horizontal: false, vertical: true)
-                                                .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-                                                .padding(8).accessibilityIdentifier("assemblyVoiceStatus")
-                                                .allowsHitTesting(false)
-                                        }
-                                    }
                             }
                         }.frame(minHeight: 160)
                         if let failure = scene.failure {
@@ -69,6 +67,7 @@ struct AssemblyTutorialPlayer: View {
                     }
                 }.padding(16)
             }
+            }
         }
         .foregroundStyle(TutorialColors.ink).preferredColorScheme(.light)
         .sheet(isPresented: $showCredits) { credits }
@@ -77,7 +76,7 @@ struct AssemblyTutorialPlayer: View {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(40))
                 guard !Task.isCancelled else { return }
-                if isPlaying, phase == .active, !scene.isExploded {
+                if isPlaying, phase == .active, !scene.isExploded, scene.canAnimate {
                     scene.setProgress(scene.progress + 0.008 * speed)
                     if scene.progress >= 1 { isPlaying = false }
                 }
@@ -86,16 +85,90 @@ struct AssemblyTutorialPlayer: View {
         .onAppear { screenAwake.acquire(); configureVoice() }
         .onDisappear { isPlaying = false; voice.stop(); voice.onCommand = nil; screenAwake.release(); scene.shutdown() }
         .onChange(of: phase) { _, value in
-            if value == .active { screenAwake.acquire(); voice.handleSceneActive() }
-            else { screenAwake.release(); isPlaying = false; voice.handleSceneInactive() }
+            if value == .active { screenAwake.acquire(); voice.handleSceneActive(); scene.tabletop.handleActive() }
+            else {
+                screenAwake.release(); isPlaying = false; voice.handleSceneInactive()
+                if !(value == .inactive && voice.isRequestingPermission) { scene.tabletop.handleInactive() }
+            }
+        }
+        .onChange(of: scene.tabletop.trackingReady) { _, ready in if !ready { isPlaying = false } }
+    }
+
+    private var modelViewport: some View {
+        AssemblySceneView(controller: scene, isActive: phase == .active)
+            .accessibilityLabel("Interactive assembly model")
+            .accessibilityValue(scene.isLoaded ? "Model loaded" : "Loading")
+            .accessibilityIdentifier("assemblyViewportRegion")
+            .overlay(alignment: .bottom) {
+                if !scene.isAR, !showDetails, let feedback = voice.feedbackMessage {
+                    Text(feedback).font(.system(size: 12, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .padding(8).accessibilityIdentifier("assemblyVoiceStatus")
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+
+    private var arStage: some View {
+        ZStack {
+            modelViewport.ignoresSafeArea()
+            if !scene.tabletop.placed, scene.tabletop.error == nil {
+                Image(systemName: "viewfinder").font(.system(size: 42, weight: .light))
+                    .foregroundStyle(.white).shadow(radius: 3).allowsHitTesting(false)
+            }
+            VStack(spacing: 12) {
+                HStack {
+                    Button {
+                        isPlaying = false; voice.contextDidChange(); scene.exitAR()
+                    } label: { Label("3D", systemImage: "arrow.uturn.backward").padding(.horizontal, 14).frame(minHeight: 44) }
+                        .background(.regularMaterial, in: Capsule())
+                        .accessibilityLabel("Return to 3D view").accessibilityIdentifier("assemblyExitAR")
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("TABLETOP AR · VIRTUAL MODEL").font(.system(size: 10, weight: .bold))
+                        Text("Step \(scene.stepIndex + 1) of \(scene.tutorial.steps.count)").font(.system(size: 14, weight: .semibold))
+                            .accessibilityIdentifier("assemblyARCounter")
+                    }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 15))
+                }
+                if scene.tabletop.isLayoutPreview {
+                    Text("AR LAYOUT PREVIEW · NO LIVE CAMERA").font(.system(size: 11, weight: .bold))
+                        .padding(10).background(.regularMaterial, in: Capsule())
+                        .accessibilityIdentifier("assemblyARFixtureLabel")
+                } else {
+                    VStack(spacing: 8) {
+                        Text(scene.tabletop.status).font(.system(size: 13, weight: .medium))
+                            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("assemblyARStatus")
+                        if !scene.tabletop.placed, scene.tabletop.error == nil {
+                            Button("Place here") { scene.tabletop.place() }
+                                .frame(minHeight: 44).disabled(!scene.tabletop.canPlace)
+                                .accessibilityIdentifier("assemblyARPlace")
+                        } else if scene.tabletop.placed {
+                            Button("Scan again") { isPlaying = false; scene.tabletop.resetPlacement() }
+                                .frame(minHeight: 44).accessibilityIdentifier("assemblyARRescan")
+                        }
+                    }.padding(12).frame(maxWidth: 620).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                }
+                Spacer(minLength: 8)
+                if !showDetails, let feedback = voice.feedbackMessage {
+                    Text(feedback).font(.system(size: 12, weight: .medium))
+                        .fixedSize(horizontal: false, vertical: true).padding(12)
+                        .frame(maxWidth: 620).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .accessibilityIdentifier("assemblyVoiceStatus")
+                }
+                controls.frame(maxWidth: 720)
+            }.padding(16)
         }
     }
 
     private var controls: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if let error = scene.arEntryError {
+                Text(error).font(.footnote).accessibilityIdentifier("assemblyARUnavailable")
+            }
             HStack(spacing: 8) {
                 Menu {
-                    Button("Focus selected part") { scene.focusSelectedPart() }.disabled(scene.selectedPart == nil)
+                    Button("Focus selected part") { scene.focusSelectedPart() }.disabled(scene.selectedPart == nil || scene.isAR)
                     Button("Clear selection") { scene.select(nil) }
                     ForEach(scene.tutorial.parts) { part in
                         Button(part.title) { scene.select(part.id) }
@@ -112,9 +185,11 @@ struct AssemblyTutorialPlayer: View {
                     .accessibilityLabel(scene.isExploded ? "Return to step pose" : "Explode all parts")
                     .accessibilityValue(scene.isExploded ? "Exploded" : "Step pose")
                     .accessibilityIdentifier("assemblyExplode")
+                    .disabled(!scene.canAnimate)
                 Button { scene.resetCameraView() } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Reset camera view").accessibilityValue(scene.isPartFocused ? "Focused part" : "Overview")
+                    .accessibilityLabel(scene.isAR ? "Reset model size and rotation" : "Reset camera view").accessibilityValue(scene.isPartFocused ? "Focused part" : "Overview")
                     .accessibilityIdentifier("assemblyResetView")
+                    .disabled(!scene.canAnimate)
                 Button { showDetails.toggle() } label: { Image(systemName: showDetails ? "chevron.down" : "chevron.up").frame(width: 44, height: 44) }
                     .accessibilityLabel(showDetails ? "Hide instructions" : "Show instructions")
                     .accessibilityIdentifier("assemblyToggleDetails")
@@ -129,16 +204,17 @@ struct AssemblyTutorialPlayer: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("assemblyPartDetail")
                 }
-                Text("Drag to rotate · Pinch to zoom · Tap a part")
+                Text(scene.isAR ? "Drag to move · Pinch to resize · Twist to rotate · Tap a part" : "Drag to rotate · Pinch to zoom · Tap a part")
                     .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
                 Slider(value: Binding(get: { scene.progress }, set: { isPlaying = false; scene.setProgress($0) }), in: 0...1)
-                    .disabled(scene.isExploded).accessibilityLabel("Assembly movement progress")
+                    .disabled(scene.isExploded || !scene.canAnimate).accessibilityLabel("Assembly movement progress")
                     .accessibilityIdentifier("assemblySlider")
                 HStack {
                     Button {
                         isPlaying = false; scene.setExploded(false); scene.setProgress(0); isPlaying = true
                     } label: { Label("Replay", systemImage: "arrow.counterclockwise") }
                         .accessibilityIdentifier("assemblyReplay")
+                        .disabled(!scene.canAnimate)
                     Spacer()
                     Button { speed = speed == 1 ? 0.4 : 1 } label: { Text(speed == 1 ? "1×" : "0.4×") }
                         .accessibilityLabel("Playback speed").accessibilityIdentifier("assemblySpeed")
@@ -148,13 +224,14 @@ struct AssemblyTutorialPlayer: View {
             }
             HStack(spacing: 8) {
                 Button { go(to: scene.stepIndex - 1) } label: { Image(systemName: "arrow.left").frame(width: 44, height: 44) }
-                    .disabled(scene.stepIndex == 0).accessibilityLabel("Previous animation step").accessibilityIdentifier("assemblyPrevious")
+                    .disabled(scene.stepIndex == 0 || !scene.canAnimate).accessibilityLabel("Previous animation step").accessibilityIdentifier("assemblyPrevious")
                 Button {
                     voice.contextDidChange(); scene.setExploded(false)
                     if scene.progress >= 1 { scene.setProgress(0) }
                     isPlaying.toggle()
                 } label: { Image(systemName: isPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44) }
                     .accessibilityLabel(isPlaying ? "Pause movement" : "Play movement").accessibilityIdentifier("assemblyPlay")
+                    .disabled(!scene.canAnimate)
                 Button {
                     if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
                     else { isPlaying = false; Task { await voice.startListening() } }
@@ -165,6 +242,7 @@ struct AssemblyTutorialPlayer: View {
                     Label(scene.stepIndex == scene.tutorial.steps.count - 1 ? "Restart" : "Next step", systemImage: "arrow.right")
                         .font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
                 }.background(TutorialColors.ink, in: Capsule()).foregroundStyle(.white).accessibilityIdentifier("assemblyNext")
+                    .disabled(!scene.canAnimate)
             }
             if showDetails {
                 HStack {
@@ -181,7 +259,10 @@ struct AssemblyTutorialPlayer: View {
         }.padding(16).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22))
     }
 
-    private func go(to index: Int) { isPlaying = false; voice.contextDidChange(); scene.setStep(index) }
+    private func go(to index: Int) {
+        guard scene.canAnimate else { return }
+        isPlaying = false; voice.contextDidChange(); scene.setStep(index)
+    }
     private var voiceIsActive: Bool { voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission }
     private func next() { go(to: scene.stepIndex + 1 < scene.tutorial.steps.count ? scene.stepIndex + 1 : 0) }
     private func close() { isPlaying = false; voice.stop(); screenAwake.release(); onExit() }
@@ -210,6 +291,9 @@ struct AssemblyTutorialPlayer: View {
     private func configureVoice() {
         voice.onCommand = { command in
             guard scene.isLoaded else { return }
+            if !scene.canAnimate, [.next, .back, .replay, .restart, .resume].contains(command) {
+                isPlaying = false; voice.speak(scene.tabletop.status); return
+            }
             switch command {
             case .next: next()
             case .back: go(to: scene.stepIndex - 1)

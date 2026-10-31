@@ -1,5 +1,6 @@
 import RealityKit
 import SwiftUI
+import Combine
 
 /// Runtime adapter: the same renderer and part/pose logic can host qualified
 /// equipment assets. It never changes the file or infers a disassembly order.
@@ -8,6 +9,7 @@ final class AssemblySceneController: ObservableObject {
     let tutorial: AssemblyTutorial
     let root = Entity()
     let renderer = Tutorial3DRenderer()
+    let tabletop = TutorialTabletopARController()
     @Published private(set) var isLoaded = false
     @Published private(set) var failure: String?
     @Published private(set) var stepIndex = 0
@@ -15,6 +17,9 @@ final class AssemblySceneController: ObservableObject {
     @Published private(set) var selectedPartID: String?
     @Published private(set) var isExploded = false
     @Published private(set) var isPartFocused = false
+    @Published private(set) var isAR = false
+    @Published private(set) var arEntryError: String?
+    var canAnimate: Bool { !isAR || tabletop.ready }
     private(set) var framing = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
     private var overviewFraming = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
     private var parts: [String: Entity] = [:]
@@ -23,10 +28,14 @@ final class AssemblySceneController: ObservableObject {
     private let frameEdgeMesh = MeshResource.generateBox(size: 1)
     private var loadGeneration = 0
     private let sharedView: ARView?
+    private var tabletopLayout: TutorialTabletopLayout?
+    private var tabletopObservation: AnyCancellable?
 
     init(tutorial: AssemblyTutorial, sharedView: ARView? = nil) {
         self.tutorial = tutorial; self.sharedView = sharedView; root.synchronization = nil
         selectionFrame.name = "__ProtactaPartHighlight"; selectionFrame.synchronization = nil
+        tabletopObservation = tabletop.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }
+        tabletop.onEntityTap = { [weak self] in self?.select(entity: $0) }
     }
     var step: AssemblyTutorial.Step { tutorial.steps[stepIndex] }
     var selectedPart: AssemblyTutorial.Part? { tutorial.parts.first { $0.id == selectedPartID } }
@@ -90,6 +99,7 @@ final class AssemblySceneController: ObservableObject {
         framing = .init(center: (minimum + maximum) * 0.5, radius: simd_length(maximum - minimum) * 0.5,
                         initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
         overviewFraming = framing; isPartFocused = false
+        tabletopLayout = TutorialTabletopLayout(minimum: minimum, maximum: maximum)
         stepIndex = 0; progress = 0; isExploded = false; failure = nil; isLoaded = true
         select(tutorial.steps[0].focusID)
         applyPose()
@@ -143,14 +153,41 @@ final class AssemblySceneController: ObservableObject {
     }
 
     func focusSelectedPart() {
-        guard selectedPart != nil else { return }
+        guard !isAR, selectedPart != nil else { return }
         isPartFocused = true; updateFocusFraming()
         renderer.setContent(root, framing: framing); renderer.resetView()
     }
 
     func resetCameraView() {
+        if isAR { tabletop.resetManipulation(); return }
         isPartFocused = false; framing = overviewFraming
         renderer.setContent(root, framing: framing); renderer.resetView()
+    }
+
+    @discardableResult
+    func enterAR() -> Bool {
+        guard isLoaded, !isAR else { return false }
+        arEntryError = nil
+        if TutorialTabletopARController.layoutPreviewRequested {
+            tabletop.startLayoutPreview(); isAR = true; return true
+        }
+        guard TutorialTabletopARController.supportsAR else {
+            arEntryError = "Tabletop AR needs a supported iPhone or iPad. The 3D view remains available."
+            return false
+        }
+        guard let tabletopLayout else { return false }
+        _ = makeView()
+        guard let view = renderer.handToAR() else { return false }
+        isPartFocused = false; framing = overviewFraming
+        tabletop.start(view: view, content: root, layout: tabletopLayout, initialYaw: tutorial.initialYaw)
+        isAR = true
+        return true
+    }
+
+    func exitAR() {
+        guard isAR else { return }
+        tabletop.stop(); renderer.restoreStudio(); isAR = false
+        renderer.setContent(root, framing: framing)
     }
 
     func select(entity: Entity?) {
@@ -171,6 +208,7 @@ final class AssemblySceneController: ObservableObject {
 
     func shutdown() {
         loadGeneration += 1
+        tabletop.stop()
         clearSelectionFrame(); renderer.shutdown()
         for child in Array(root.children) { child.removeFromParent() }
         parts.removeAll(); origins.removeAll()
@@ -196,7 +234,7 @@ final class AssemblySceneController: ObservableObject {
         for (id, entity) in parts {
             guard var transform = origins[id] else { continue }
             let offset = offsets[id] ?? .zero
-            if let parent = entity.parent { transform.translation += parent.convert(direction: offset, from: nil) }
+            if let parent = entity.parent { transform.translation += parent.convert(direction: offset, from: root) }
             else { transform.translation += offset }
             entity.transform = transform
         }
@@ -245,6 +283,7 @@ final class AssemblyViewportContainer: UIView {
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
     override func layoutSubviews() {
         super.layoutSubviews()
+        guard viewport.superview === self else { return }
         viewport.frame = bounds
         renderer?.updateLayout()
     }
