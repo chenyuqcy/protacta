@@ -97,7 +97,7 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 15 installed and launched; Build 16 stable-edge candidate compiled locally, installation pending",
+    "deviceInstallation": "Build 16 installed, 0.1.0 (16) verified in device inventory, and launched on iPhone 17 Pro Max",
     "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
@@ -152,7 +152,7 @@
       "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
       "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
     },
-    "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json",
+    "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build16-device-hl53f2oq/device-acceptance.json",
     "equipmentAR": {
       "status": "implemented_local_checks_passed_partial_device_acceptance_edge_defect_open",
       "features": [
@@ -174,7 +174,7 @@
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
         "candidateBuild": "16",
-        "status": "local_checks_passed_physical_retest_pending",
+        "status": "installed_and_launched_physical_comparison_pending",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
@@ -191,7 +191,8 @@
         ],
         "plan": "output/3d-expansion-2026-10-30/build16-hand-edge-repair.json"
       }
-    }
+    },
+    "baselineDeviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json"
   },
   "nextGates": [
     "Retest Build 16 stationary/moving hand boundary, withdrawal trails and absence of black patches in Stable edges and Native hands; inspect actual depth diagnostics before accepting the repair",
@@ -231,7 +232,7 @@
   ],
   "manualAcceptance": {
     "status": "in_progress",
-    "installationDecision": "Build 15 installed and launched on 2026-10-31; Build 16 hand-edge repair candidate awaiting installation and directed comparison.",
+    "installationDecision": "Build 16 installed and launched on 2026-10-31; begin directed Stable edges / Native hands comparison. Prior Build 15 motor checks remain historical.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
