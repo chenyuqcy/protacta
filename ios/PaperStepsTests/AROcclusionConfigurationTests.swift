@@ -18,15 +18,30 @@ final class AROcclusionConfigurationTests: XCTestCase {
                     let options = AROcclusionConfiguration.sceneOptions(mode: .automatic, capabilities: capabilities)
                     let context = "personDepth=\(personDepth), sceneDepth=\(sceneDepth), sceneMesh=\(sceneMesh)"
 
-                    XCTAssertEqual(configuration.frameSemantics.contains(.personSegmentationWithDepth), personDepth, context)
+                    XCTAssertEqual(configuration.frameSemantics.contains(.personSegmentationWithDepth), personDepth && !sceneDepth, context)
                     XCTAssertEqual(configuration.frameSemantics.contains(.sceneDepth), sceneDepth, context)
                     XCTAssertFalse(configuration.frameSemantics.contains(.smoothedSceneDepth), context)
-                    XCTAssertEqual(configuration.sceneReconstruction, sceneMesh ? .meshWithClassification : [], context)
-                    XCTAssertEqual(options.contains(.occlusion), sceneMesh, context)
+                    XCTAssertEqual(configuration.sceneReconstruction, [], context)
+                    XCTAssertFalse(options.contains(.occlusion), context)
                     XCTAssertFalse(options.contains(.receivesLighting), "Real objects must not receive dark virtual contact patches: \(context)")
                 }
             }
         }
+    }
+
+    @MainActor
+    func testStablePaperUsesOneSmoothedDepthOwnerWithConservativePaperGeometry() {
+        let supported = AROcclusionCapabilities(personDepth: true, sceneDepth: true, sceneMesh: true, smoothedDepth: true)
+        let config = AROcclusionConfiguration.make(mode: .automatic, capabilities: supported)
+        XCTAssertTrue(config.frameSemantics.contains(.sceneDepth))
+        XCTAssertTrue(config.frameSemantics.contains(.smoothedSceneDepth))
+        XCTAssertFalse(config.frameSemantics.contains(.personSegmentationWithDepth))
+        XCTAssertEqual(config.sceneReconstruction, [])
+        let stable = AROcclusionConfiguration.renderOptions(isAR: true, mode: .automatic, capabilities: supported)
+        XCTAssertTrue(stable.contains(.disablePersonOcclusion))
+        XCTAssertTrue(stable.contains(.disableGroundingShadows))
+        let native = AROcclusionConfiguration.renderOptions(isAR: true, mode: .peopleOnly, capabilities: supported)
+        XCTAssertFalse(native.contains(.disablePersonOcclusion))
     }
 
     @MainActor

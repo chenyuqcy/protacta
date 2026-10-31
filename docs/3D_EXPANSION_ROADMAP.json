@@ -63,7 +63,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "16",
+    "build": "17",
     "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
@@ -97,7 +97,7 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 16 installed, 0.1.0 (16) verified in device inventory, and launched on iPhone 17 Pro Max",
+    "deviceInstallation": "Build 16 remains installed; Build 17 release candidate compiled and awaiting signed artifact verification/installation",
     "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
@@ -173,8 +173,8 @@
       "physicalCameraAndPlacement": "Motor initial placement, brief stability, manipulation, five actions and AR/studio pose preservation confirmed by user; recovery and turbofan pending",
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
-        "candidateBuild": "16",
-        "status": "installed_and_launched_physical_comparison_pending",
+        "candidateBuild": "17",
+        "status": "refined_after_user_report_both_paper_and_equipment_still_flicker",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
@@ -189,10 +189,35 @@
           "EquipmentStableEdges.xcresult: 26 logic and 3 UI tests passed",
           "EquipmentStableEdgesOptimized.xcresult: final 27 logic tests passed"
         ],
-        "plan": "output/3d-expansion-2026-10-30/build16-hand-edge-repair.json"
+        "plan": "output/3d-expansion-2026-10-30/build16-hand-edge-repair.json",
+        "newChanges": [
+          "Current same-exposure raw depth overrides delayed smoothed edges when a hand moves away",
+          "Wider 10 mm stationary deadband",
+          "Clear an empty current foreground instead of retaining the previous hand",
+          "Single depth owner also applied to origami tabletop AR; native comparison remains available"
+        ]
       }
     },
-    "baselineDeviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json"
+    "baselineDeviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json",
+    "interfaceRefinement": {
+      "design": "docs/design/protacta-premium-ui-v2.json",
+      "status": "implemented_phone_and_tablet_checks_passed",
+      "features": [
+        "Engine-led hierarchy and smaller secondary courses",
+        "Locally rendered original Dart and licensed equipment thumbnails",
+        "Softbox image-based studio lighting with camera handoff guards",
+        "Per-step studio framing for larger readable models; global AR envelope preserved",
+        "Glass control tray, icon controls and optional instructions",
+        "AR scanning prompts disappear after placement"
+      ],
+      "physicalReview": "pending",
+      "userDirection": "沿这个方向继续细化",
+      "evidence": [
+        "PremiumPhoneUI.xcresult: 7 assembly logic and 4 phone UI passed",
+        "FinalTabletUI.xcresult: 2 rotation flows passed; rapid toggle test failed before layout-state wait fix",
+        "TabletDetailsFinal.xcresult: details test passed with explicit layout-state waits"
+      ]
+    }
   },
   "nextGates": [
     "Retest Build 16 stationary/moving hand boundary, withdrawal trails and absence of black patches in Stable edges and Native hands; inspect actual depth diagnostics before accepting the repair",
@@ -300,9 +325,9 @@
     ],
     "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
   },
-  "latestUserRequest": "User confirmed motor and turbofan first; towel AR is outside this increment",
+  "latestUserRequest": "User selected premium Apple-inspired visual concept v2; implement material lighting, hierarchy and refined controls while retaining concise copy",
   "designConcept": {
-    "status": "proposal",
+    "status": "historical_proposal",
     "direction": "Spatial teaching workbench",
     "brief": "docs/design/protacta-spatial-workbench-v1.json",
     "image": "docs/design/protacta-spatial-workbench-v1.png",
@@ -311,6 +336,7 @@
       "Selected-part callout",
       "Authored target ghost and arrow"
     ],
-    "runtimeVersionUnchanged": "Build 15"
+    "runtimeVersionUnchanged": "Build 15",
+    "supersededBy": "docs/design/protacta-simple-ui-v1.json"
   }
 }

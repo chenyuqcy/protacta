@@ -1,9 +1,9 @@
 import SwiftUI
 import QuickLook
 
-private let forest = Color(red: 0.15, green: 0.31, blue: 0.23)
-private let muted = Color(red: 0.49, green: 0.56, blue: 0.45)
-private let paper = Color(red: 0.965, green: 0.972, blue: 0.938)
+private let forest = TutorialColors.ink
+private let muted = TutorialColors.muted
+private let paper = TutorialColors.paper
 
 /// Embedded native module, presented by Protacta's hub. The root must suspend
 /// its other renderer before presentation; this module owns its own lifecycle.
@@ -22,16 +22,14 @@ struct AerisManualModuleView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
-                        Text("PROTACTA").font(.system(size: 16, weight: .semibold, design: .rounded))
-                        Text("/ PRODUCT MANUAL").font(.system(size: 8, weight: .medium)).tracking(1.4).foregroundStyle(muted)
+                        Text("AERIS One").font(.system(size: 21, weight: .medium))
                         Spacer()
-                        Button { showHelp = true } label: { Image(systemName: "questionmark.circle").font(.system(size: 18, weight: .light)) }.accessibilityLabel("About this guide")
-                        Button("Close") { closeModule() }.font(.system(size: 12, weight: .semibold))
-                    .accessibilityIdentifier("aerisClose")
+                        Button { showHelp = true } label: { Image(systemName: "info.circle").frame(width: 44, height: 44) }.accessibilityLabel("About this guide")
+                        Button { closeModule() } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                            .accessibilityLabel("Close").accessibilityIdentifier("aerisClose")
                     }.padding(.top, 8)
                     HStack(alignment: .bottom) {
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("AERIS ONE / AIR PURIFIER").font(.system(size: 8, weight: .medium)).tracking(1.6).foregroundStyle(muted)
                             Menu {
                                 ForEach(ManualTask.allCases) { task in Button(task.rawValue) { progress.select(task); applyCurrent() } }
                             } label: {
@@ -41,23 +39,22 @@ struct AerisManualModuleView: View {
                         Spacer(minLength: 0)
                     }
                     modelCard
-                    Text("Virtual concept product. This guide does not recognise or align to a real appliance.")
-                        .font(.system(size: 11)).foregroundStyle(muted)
-                    .accessibilityIdentifier("aerisScope")
                     Button {
                         scene.shutdown(); showAssembly = true
-                    } label: { Label("Full-screen 3D · Explore the parts", systemImage: "arrow.up.left.and.arrow.down.right") }
+                    } label: { Label("Explore in 3D", systemImage: "arrow.up.left.and.arrow.down.right") }
                         .font(.system(size: 13, weight: .medium)).frame(minHeight: 44)
                         .accessibilityIdentifier("aerisAssemblyPlayer")
-                    HStack(spacing: 6) {
-                        ForEach(progress.task.steps) { s in
-                            Button { progress.go(to: s.id); applyCurrent() } label: {
-                                ZStack { Capsule().fill(s.id == progress.index ? forest : forest.opacity(s.id < progress.index || progress.completed ? 0.20 : 0.07)); Text(progress.completed || s.id < progress.index ? "✓" : "\(s.id + 1)").font(.system(size: 10, weight: .medium)).foregroundStyle(s.id == progress.index ? paper : muted) }.frame(height: 26)
-                            }.disabled(s.id > progress.highestUnlocked).accessibilityLabel("Step \(s.id + 1): \(s.title)").accessibilityIdentifier("step_\(s.id)")
-                        }
+                    HStack(spacing: 14) {
+                        ProgressView(value: Double(progress.index + 1), total: Double(progress.task.steps.count)).tint(forest)
+                        Menu {
+                            ForEach(progress.task.steps) { s in
+                                Button(s.title) { progress.go(to: s.id); applyCurrent() }
+                                    .disabled(s.id > progress.highestUnlocked).accessibilityIdentifier("step_\(s.id)")
+                            }
+                        } label: { Image(systemName: "list.number").frame(width: 44, height: 44) }
+                            .accessibilityLabel("Steps").accessibilityIdentifier("aerisSteps")
                     }
                     guideCard
-                    HStack { Text("CONCEPT PRODUCT").font(.system(size: 7, weight: .medium)).tracking(1); Spacer(); Text("Original model · Demonstration instructions").font(.system(size: 8)) }.foregroundStyle(muted).padding(.bottom, 14)
                 }.padding(.horizontal, 21)
             }.background(paper).foregroundStyle(forest).toolbar(.hidden, for: .navigationBar)
         }
@@ -90,10 +87,13 @@ struct AerisManualModuleView: View {
                 if showAR || showAppleAR || showAssembly { paper.frame(height: 325) }
                 else { ProductSceneView(controller: scene).frame(height: 325) }
                 HStack {
-                    HStack(spacing: 5) { Circle().fill(scene.isAnimating ? Color.orange : forest).frame(width: 4, height: 4); Text(scene.isAnimating ? "PLAYING" : "INTERACTIVE 3D").font(.system(size: 8)).tracking(1) }
                     Spacer()
-                    Button { scene.prepareForAR(); showAppleAR = true } label: { Text("Apple AR").font(.system(size: 10)).padding(.horizontal, 10).padding(.vertical, 8).background(paper.opacity(0.9), in: Capsule()) }.accessibilityIdentifier("openAppleAR").accessibilityLabel("Apple AR Viewer")
-                    Button { scene.prepareForAR(); showAR = true } label: { Label("View in AR", systemImage: "arkit").font(.system(size: 10)).padding(.horizontal, 10).padding(.vertical, 8).background(paper.opacity(0.9), in: Capsule()) }.accessibilityIdentifier("openAR")
+                    Menu {
+                        Button("Apple AR Viewer") { scene.prepareForAR(); showAppleAR = true }.accessibilityIdentifier("openAppleAR")
+                    } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44).background(.regularMaterial, in: Circle()) }
+                        .accessibilityLabel("More options")
+                    Button { scene.prepareForAR(); showAR = true } label: { Image(systemName: "arkit").frame(width: 44, height: 44).background(.regularMaterial, in: Circle()) }
+                        .accessibilityLabel("View in AR").accessibilityIdentifier("openAR")
                 }.padding(13)
                 if !scene.isLoaded {
                     VStack { Spacer(); if let failure = scene.failure { Text(failure).font(.caption).padding() } else { ProgressView("Loading product…").font(.caption) }; Spacer() }
@@ -101,16 +101,15 @@ struct AerisManualModuleView: View {
                 if !exploring, progress.current.requiresPress, let point = scene.hotspot {
                     GeometryReader { geometry in
                         Button { scene.pressRelease() } label: {
-                            HStack(spacing: 4) { Image(systemName: scene.releasePressed ? "checkmark" : "hand.tap.fill"); Text(scene.releasePressed ? "RELEASED" : "PRESS") }.font(.system(size: 9, weight: .bold)).tracking(0.4).padding(.horizontal, 10).padding(.vertical, 8).background(scene.releasePressed ? forest : Color.red, in: Capsule()).foregroundStyle(.white).shadow(color: .black.opacity(0.10), radius: 5, y: 2)
-                        }.disabled(scene.isAnimating || scene.releasePressed).position(x: min(max(point.x + 52, 55), geometry.size.width - 55), y: max(point.y - 18, 65)).accessibilityIdentifier("pressReleaseHotspot")
+                            Image(systemName: scene.releasePressed ? "checkmark" : "hand.tap.fill").font(.system(size: 16)).frame(width: 44, height: 44).background(scene.releasePressed ? forest : Color.red, in: Circle()).foregroundStyle(.white)
+                        }.disabled(scene.isAnimating || scene.releasePressed).position(x: min(max(point.x + 52, 55), geometry.size.width - 55), y: max(point.y - 18, 65)).accessibilityLabel("Press release tab").accessibilityIdentifier("pressReleaseHotspot")
                     }
                 }
                 VStack {
                     Spacer()
                     HStack(spacing: 5) {
-                        if !exploring && !scene.callout.isEmpty { Image(systemName: scene.releasePressed ? "checkmark.circle.fill" : "arrow.up.right").foregroundStyle(scene.releasePressed ? forest : .red); Text(scene.callout).font(.system(size: 8, weight: .semibold)).tracking(0.5) }
                         Spacer()
-                        Button { exploring.toggle(); if exploring { scene.setPose(.exploded) } else { applyCurrent() } } label: { Text(exploring ? "Back to guide" : "Explore parts").font(.system(size: 9)).underline() }.accessibilityIdentifier("exploreParts")
+                        Button { exploring.toggle(); if exploring { scene.setPose(.exploded) } else { applyCurrent() } } label: { Image(systemName: exploring ? "arrow.uturn.backward" : "cube.transparent").frame(width: 44, height: 44) }.accessibilityLabel(exploring ? "Back to guide" : "Explore parts").accessibilityIdentifier("exploreParts")
                     }.padding(.horizontal, 13).padding(.bottom, 12)
                 }
             }
@@ -122,9 +121,10 @@ struct AerisManualModuleView: View {
     }
     private var guideCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack { Text(progress.completed ? "WALKTHROUGH COMPLETE" : "STEP \(String(format: "%02d", progress.index + 1)) OF \(String(format: "%02d", progress.task.steps.count))").font(.system(size: 8, weight: .medium)).tracking(1.3).foregroundStyle(muted); Spacer(); if !progress.completed { Text(progress.current.requiresPress ? "TRY IT" : "FOLLOW ALONG").font(.system(size: 7, weight: .semibold)).tracking(1).foregroundStyle(progress.current.requiresPress ? .red : muted) } }
+            Text(progress.completed ? "Complete" : "\(progress.index + 1)/\(progress.task.steps.count)")
+                .font(.system(size: 13)).monospacedDigit().foregroundStyle(muted)
             Text(progress.completed ? "Demonstration complete." : progress.current.title).font(.system(size: 20, weight: .medium, design: .rounded)).tracking(-0.4).accessibilityIdentifier("stepTitle")
-            Text(progress.completed ? "You have finished this model walkthrough. This does not verify work on a real appliance. Restart to practise again, or choose another task." : progress.current.detail).font(.system(size: 11.5)).foregroundStyle(muted).lineSpacing(5).fixedSize(horizontal: false, vertical: true)
+            if !progress.completed { Text(progress.current.detail).font(.system(size: 15)).foregroundStyle(muted).lineSpacing(4).fixedSize(horizontal: false, vertical: true) }
             if progress.current.requiresPress && !progress.actionConfirmed && !progress.completed {
                 Button { scene.pressRelease() } label: { Label("Press the highlighted tab", systemImage: "hand.tap").font(.system(size: 11, weight: .medium)).frame(maxWidth: .infinity).padding(10).background(Color.red.opacity(0.07), in: RoundedRectangle(cornerRadius: 9)).foregroundStyle(.red) }.disabled(scene.isAnimating).accessibilityIdentifier("pressRelease")
             }
@@ -163,7 +163,7 @@ struct AerisManualModuleView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack { Text("Learn by doing.").font(.title3.weight(.medium)); Spacer(); Button("Done") { showHelp = false } }
             Text("Follow the red arrows. Press the highlighted release tab, then move through the steps to watch each part move.").font(.body)
-            Text("View in AR places a virtual purifier on a detected table. It does not align instructions to a real appliance.").font(.subheadline).foregroundStyle(muted)
+            Text("View in AR places a virtual concept product on a detected table. It does not recognise or align to a real appliance.").font(.subheadline).foregroundStyle(muted).accessibilityIdentifier("aerisScope")
             Text("Apple AR opens Apple's own AR Quick Look viewer for free placement. Choose its AR tab to see the model in your room. Use View in AR for the complete step-by-step lesson.").font(.subheadline).foregroundStyle(muted)
             Text("AERIS One is an original concept. The guide uses authored demonstration content, not an AI service or manufacturer-approved instructions. Use the actual device’s manual for real maintenance.").font(.caption).foregroundStyle(muted)
             Spacer()

@@ -22,6 +22,7 @@ final class AssemblySceneController: ObservableObject {
     var canAnimate: Bool { !isAR || tabletop.ready }
     private(set) var framing = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
     private var overviewFraming = Tutorial3DRenderer.Framing(center: .zero, radius: 0.5)
+    private var stepFramings: [Tutorial3DRenderer.Framing] = []
     private var parts: [String: Entity] = [:]
     private var origins: [String: Transform] = [:]
     private let selectionFrame = Entity()
@@ -96,9 +97,22 @@ final class AssemblySceneController: ObservableObject {
             minimum = simd_min(minimum, moved.min); maximum = simd_max(maximum, moved.max)
         }
         applyOffsets([:])
-        framing = .init(center: (minimum + maximum) * 0.5, radius: simd_length(maximum - minimum) * 0.5,
+        overviewFraming = .init(center: (minimum + maximum) * 0.5, radius: simd_length(maximum - minimum) * 0.5,
                         initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
-        overviewFraming = framing; isPartFocused = false
+        // The studio frames just this action's start/end envelope. Reserving
+        // every exploded pose made the assembled teaching object too small.
+        // AR still fits the full envelope so placement scale stays consistent.
+        stepFramings = tutorial.steps.indices.map { index in
+            applyOffsets(index == 0 ? [:] : tutorial.steps[index - 1].offsets)
+            let start = entity.visualBounds(relativeTo: nil)
+            applyOffsets(tutorial.steps[index].offsets)
+            let end = entity.visualBounds(relativeTo: nil)
+            let low = simd_min(start.min, end.min), high = simd_max(start.max, end.max)
+            return .init(center: (low + high) * 0.5, radius: simd_length(high - low) * 0.5,
+                         initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
+        }
+        applyOffsets([:])
+        framing = stepFramings[0]; isPartFocused = false
         tabletopLayout = TutorialTabletopLayout(minimum: minimum, maximum: maximum)
         stepIndex = 0; progress = 0; isExploded = false; failure = nil; isLoaded = true
         select(tutorial.steps[0].focusID)
@@ -108,7 +122,7 @@ final class AssemblySceneController: ObservableObject {
     func setStep(_ index: Int) {
         guard tutorial.steps.indices.contains(index) else { return }
         stepIndex = index; progress = 0; isExploded = false
-        isPartFocused = false; framing = overviewFraming
+        isPartFocused = false; framing = currentOverview
         select(step.focusID); applyPose()
     }
 
@@ -118,15 +132,15 @@ final class AssemblySceneController: ObservableObject {
     }
 
     func setExploded(_ exploded: Bool) {
-        if exploded { isPartFocused = false; framing = overviewFraming }
-        isExploded = exploded; applyPose()
+        isExploded = exploded; isPartFocused = false; framing = currentOverview
+        applyPose()
     }
 
     func select(_ id: String?) {
         clearSelectionFrame()
         selectedPartID = id.flatMap { parts[$0] == nil ? nil : $0 }
         guard let id = selectedPartID, let part = parts[id] else {
-            isPartFocused = false; framing = overviewFraming; return
+            isPartFocused = false; framing = currentOverview; return
         }
         // Never replace imported materials. RealityKit's rendered USD material
         // can retain an earlier replacement even after CPU values are restored.
@@ -160,7 +174,7 @@ final class AssemblySceneController: ObservableObject {
 
     func resetCameraView() {
         if isAR { tabletop.resetManipulation(); return }
-        isPartFocused = false; framing = overviewFraming
+        isPartFocused = false; framing = currentOverview
         renderer.setContent(root, framing: framing); renderer.resetView()
     }
 
@@ -187,6 +201,7 @@ final class AssemblySceneController: ObservableObject {
     func exitAR() {
         guard isAR else { return }
         tabletop.stop(); renderer.restoreStudio(); isAR = false
+        framing = currentOverview
         renderer.setContent(root, framing: framing)
     }
 
@@ -250,6 +265,10 @@ final class AssemblySceneController: ObservableObject {
         let bounds = part.visualBounds(relativeTo: nil)
         framing = .init(center: bounds.center, radius: max(0.02, simd_length(bounds.extents) * 0.5),
                         initialYaw: tutorial.initialYaw, initialPitch: tutorial.initialPitch)
+    }
+
+    private var currentOverview: Tutorial3DRenderer.Framing {
+        !isExploded && stepFramings.indices.contains(stepIndex) ? stepFramings[stepIndex] : overviewFraming
     }
 
     private func descendants(_ entity: Entity) -> [Entity] {

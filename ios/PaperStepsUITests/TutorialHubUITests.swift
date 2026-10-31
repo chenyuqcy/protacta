@@ -39,7 +39,7 @@ final class TutorialHubUITests: XCTestCase {
             if id == "towel" {
                 tapHome("hubCourse_towel")
                 XCTAssertTrue(app.staticTexts["everydayCompletion"].waitForExistence(timeout: 5))
-                XCTAssertTrue(app.staticTexts["TARGET POSITION"].exists, "A restored completion must show the final visual")
+                XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, "100%", "A restored completion must show the final visual")
                 app.buttons["everydayClose"].tap()
             }
         }
@@ -101,10 +101,10 @@ final class TutorialHubUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION 3 OF 7")
         tapPlayer("everydayShowStart")
         capture("Tie_front_band_before")
-        XCTAssertTrue(app.staticTexts["START POSITION"].exists)
+        XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, "0%")
         tapPlayer("everydayShowTarget")
         capture("Tie_front_band_target")
-        XCTAssertTrue(app.staticTexts["TARGET POSITION"].exists)
+        XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, "100%")
         tapPlayer("everydayConfirm")
         XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION 4 OF 7")
         tapPlayer("everydayShowTarget")
@@ -147,7 +147,12 @@ final class TutorialHubUITests: XCTestCase {
         for _ in 0..<6 where !button.isHittable { app.scrollViews.firstMatch.swipeDown() }
         XCTAssertTrue(button.isHittable, id); button.tap()
     }
-    private func tapPlayer(_ id: String) { let b = app.buttons[id]; reveal(b); b.tap() }
+    private func tapPlayer(_ id: String) {
+        if ["everydayShowStart", "everydayShowTarget", "everydayReplay", "everydaySpeed"].contains(id) {
+            let more = app.buttons["everydayMore"]; reveal(more); more.tap()
+        }
+        let b = app.buttons[id]; reveal(b); b.tap()
+    }
     private func reveal(_ element: XCUIElement) {
         for _ in 0..<10 {
             if element.isHittable { return }

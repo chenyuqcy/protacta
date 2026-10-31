@@ -39,8 +39,6 @@ struct EverydayTutorialPlayer: View {
                     if session.completed { completionCard }
                     else { actionCard }
                     setupCard
-                    Text(course.reviewNotice).font(.footnote).foregroundStyle(TutorialColors.muted)
-                        .accessibilityIdentifier("everydayReviewNotice")
                 }.padding(22).frame(maxWidth: 820).frame(maxWidth: .infinity)
             }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
                 .onChange(of: session.currentAction) { _, _ in proxy.scrollTo("everydayTop", anchor: .top) }
@@ -87,18 +85,22 @@ struct EverydayTutorialPlayer: View {
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(session.completed ? "PRACTICE COMPLETE" : "ACTION \(session.currentAction) OF \(course.actions.count)")
-                    .font(.system(size: 11, weight: .bold)).tracking(1.5)
+                Text(session.completed ? "Complete" : "\(session.currentAction)/\(course.actions.count)")
+                    .font(.system(size: 13)).monospacedDigit().foregroundStyle(TutorialColors.muted)
+                    .accessibilityLabel(session.completed ? "PRACTICE COMPLETE" : "ACTION \(session.currentAction) OF \(course.actions.count)")
                     .accessibilityIdentifier("everydayCounter")
                 Spacer()
-                Text(courseID == .towel ? "3D + DIAGRAM GUIDE" : "ILLUSTRATED GUIDE").font(.system(size: 9, weight: .medium)).foregroundStyle(TutorialColors.muted)
             }
             Text(session.completed ? "You have practised every action." : action.title)
                 .font(.system(size: 27, weight: .semibold, design: .rounded)).tracking(-0.5)
                 .accessibilityIdentifier("everydayActionTitle")
-            Text(session.completed ? "Your confirmations are saved on this device." : action.instruction)
+            if !session.completed {
+            DisclosureGroup("Details") {
+            Text(action.instruction)
                 .font(.system(size: 16)).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("everydayInstruction")
+            }.font(.system(size: 14, weight: .medium))
+            }
         }
     }
 
@@ -114,30 +116,21 @@ struct EverydayTutorialPlayer: View {
                 Towel3DViewport(actionIndex: session.currentAction - 1, progress: progress,
                                 isActive: scenePhase == .active, resetToken: reset3DView)
                     .frame(height: 320).clipped()
+                    .overlay(alignment: .topTrailing) { visualMenu }
                     .accessibilityLabel("Towel 3D teaching model")
                     .accessibilityValue("Action \(session.currentAction), movement \(Int(progress * 100)) percent")
-                HStack {
-                    Text("Two-finger rotate · Pinch to zoom")
-                        .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
-                    Spacer(minLength: 4)
-                    Button("Reset view") { reset3DView &+= 1 }
-                        .font(.system(size: 11, weight: .semibold)).frame(minHeight: 44)
-                        .accessibilityIdentifier("resetTowel3DView")
-                }
+                    .overlay(alignment: .bottomTrailing) {
+                        Button { reset3DView &+= 1 } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
+                            .accessibilityLabel("Reset view").accessibilityIdentifier("resetTowel3DView")
+                    }
             } else {
-            EverydayTutorialVisual(courseID: courseID.rawValue, stepIndex: session.currentAction - 1, progress: progress)
+            EverydayTutorialVisual(courseID: courseID.rawValue, stepIndex: session.currentAction - 1, progress: progress, showsCaption: false, showsAnnotations: false)
                 .frame(height: 360).clipped()
+                .overlay(alignment: .topTrailing) { visualMenu }
+                .accessibilityLabel("Teaching diagram")
+                .accessibilityValue("Action \(session.currentAction), movement \(Int(progress * 100)) percent")
                 .accessibilityIdentifier("everydayVisual")
             }
-            HStack {
-                Text(progress < 0.01 ? "START POSITION" : progress >= 1 ? "TARGET POSITION" : "FOLLOW THE MOVEMENT")
-                    .font(.system(size: 9, weight: .bold)).tracking(1)
-                Spacer()
-                Button("Start") { isPlaying = false; progress = 0 }
-                    .accessibilityIdentifier("everydayShowStart")
-                Button("Target") { isPlaying = false; progress = 1 }
-                    .accessibilityIdentifier("everydayShowTarget")
-            }.font(.system(size: 11, weight: .medium)).buttonStyle(.bordered).tint(TutorialColors.ink)
             Slider(value: $progress, in: 0...1, onEditingChanged: { editing in
                 if editing { isPlaying = false }
                 else if progress > 0.98 { progress = 1 }
@@ -150,27 +143,45 @@ struct EverydayTutorialPlayer: View {
                     voice.contextDidChange()
                     if progress >= 1 { progress = 0 }
                     isPlaying.toggle()
-                } label: { Label(isPlaying ? "Pause" : "Play move", systemImage: isPlaying ? "pause.fill" : "play.fill") }
+                } label: { Image(systemName: isPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44) }
+                    .accessibilityLabel(isPlaying ? "Pause" : "Play move")
                     .accessibilityIdentifier("everydayPlay")
                 Spacer()
-                Button { progress = 0; isPlaying = true } label: { Image(systemName: "arrow.counterclockwise") }
+                voiceControls
+            }.font(.system(size: 16, weight: .medium))
+        }.padding(14).background(.white, in: RoundedRectangle(cornerRadius: 20))
+    }
+
+    private var visualMenu: some View {
+        Menu {
+                Button { isPlaying = false; progress = 0 } label: {
+                    Label("Start position", systemImage: "backward.end")
+                }.accessibilityLabel("Show start position")
+                    .accessibilityIdentifier("everydayShowStart")
+                Button { isPlaying = false; progress = 1 } label: {
+                    Label("Target position", systemImage: "forward.end")
+                }.accessibilityLabel("Show target position")
+                    .accessibilityIdentifier("everydayShowTarget")
+                Button { progress = 0; isPlaying = true } label: { Label("Replay", systemImage: "arrow.counterclockwise") }
                     .accessibilityLabel("Replay movement").accessibilityIdentifier("everydayReplay")
-                Button { speed = speed == 1 ? 0.4 : 1 } label: { Text(speed == 1 ? "1×" : "0.4×") }
+                Button { speed = speed == 1 ? 0.4 : 1 } label: { Text(speed == 1 ? "Slow down" : "Normal speed") }
                     .accessibilityLabel("Playback speed").accessibilityValue(speed == 1 ? "Normal" : "Slow")
                     .accessibilityIdentifier("everydaySpeed")
-            }.font(.system(size: 14, weight: .semibold)).buttonStyle(.bordered)
-        }.padding(14).background(.white, in: RoundedRectangle(cornerRadius: 20))
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 44, height: 44)
+            }.accessibilityLabel("More options").accessibilityIdentifier("everydayMore")
     }
 
     private var actionCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Compare your result", systemImage: "eye").font(.headline)
+            DisclosureGroup("Check your result") {
             Text(action.manualCheckpoint).font(.subheadline).lineSpacing(3)
                 .accessibilityIdentifier("everydayCheckpoint")
             Text("You confirm the action. This guide does not inspect your object with the camera.")
                 .font(.footnote).foregroundStyle(TutorialColors.muted).accessibilityIdentifier("everydayCameraScope")
+            }.font(.system(size: 14, weight: .medium))
             Button { confirm() } label: {
-                Label(session.currentAction == course.actions.count ? "I have finished · Save progress" : "I have done this · Next action", systemImage: "checkmark")
+                Label(session.currentAction == course.actions.count ? "Finish" : "I've done it", systemImage: "checkmark")
                     .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
             }.buttonStyle(.borderedProminent).tint(TutorialColors.ink).foregroundStyle(.white)
                 .accessibilityIdentifier("everydayConfirm")
@@ -181,7 +192,6 @@ struct EverydayTutorialPlayer: View {
                 Button("I'm stuck") { isPlaying = false; voice.stop(); showHelp = true }
                     .accessibilityIdentifier("everydayHelp")
             }.font(.system(size: 13, weight: .medium)).frame(minHeight: 40)
-            voiceControls
             if !feedback.isEmpty {
                 Text(feedback).font(.footnote).foregroundStyle(TutorialColors.muted)
                     .accessibilityIdentifier("everydayVoiceFeedback")
@@ -193,8 +203,6 @@ struct EverydayTutorialPlayer: View {
         VStack(alignment: .leading, spacing: 14) {
             Label("All \(course.actions.count) actions confirmed by you", systemImage: "checkmark.circle")
                 .font(.headline).accessibilityIdentifier("everydayCompletion")
-            Text("Compare the finished result and practise again at your own pace. The animation and your confirmations do not certify physical correctness.")
-                .font(.subheadline).foregroundStyle(TutorialColors.muted)
             Button("Start again") { restart() }.buttonStyle(.borderedProminent).tint(TutorialColors.ink)
                 .accessibilityIdentifier("everydayRestart")
             Button("All tutorials") { close() }.buttonStyle(.bordered).accessibilityIdentifier("everydayFinishClose")
@@ -203,17 +211,19 @@ struct EverydayTutorialPlayer: View {
     }
 
     private var setupCard: some View {
+        DisclosureGroup("Materials & guide notes") {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Before you start").font(.headline)
             Text(course.materials.joined(separator: " · ")).font(.subheadline.weight(.medium))
             Text(course.setup).font(.subheadline).foregroundStyle(TutorialColors.muted)
+            Text(course.reviewNotice).font(.footnote).foregroundStyle(TutorialColors.muted)
+                .accessibilityIdentifier("everydayReviewNotice")
             if !course.references.isEmpty {
                 ForEach(course.references, id: \.url) { reference in
                     Link(reference.title, destination: reference.url).font(.footnote)
                 }
             }
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .overlay { RoundedRectangle(cornerRadius: 18).stroke(TutorialColors.line, lineWidth: 1) }
+        }.padding(.top, 12)
+        }.font(.system(size: 14, weight: .medium)).padding(18).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var voiceControls: some View {
@@ -222,14 +232,18 @@ struct EverydayTutorialPlayer: View {
                 Button {
                     if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
                     else { isPlaying = false; Task { await voice.startListening() } }
-                } label: { Label(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Hands-free", systemImage: "mic") }
+                } label: { Image(systemName: voice.isEnabled ? "mic.fill" : "mic").frame(width: 44, height: 44) }
+                    .accessibilityLabel(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Hands-free")
                     .accessibilityIdentifier("everydayVoice")
                 Spacer()
-                Button { isPlaying = false; voice.speak(action.instruction) } label: { Label("Read step", systemImage: "speaker.wave.2") }
+                Button { isPlaying = false; voice.speak(action.instruction) } label: { Image(systemName: "speaker.wave.2").frame(width: 44, height: 44) }
+                    .accessibilityLabel("Read step")
                     .accessibilityIdentifier("everydayReadStep")
-            }.font(.system(size: 12, weight: .medium)).buttonStyle(.bordered)
-            Text(voice.isEnabled || voice.isSpeaking || !voice.lastHeard.isEmpty ? voice.status : "English commands: Show me again · Slower · Read this step")
+            }.font(.system(size: 16, weight: .medium))
+            if voice.isEnabled || voice.isSpeaking || !voice.lastHeard.isEmpty || voice.recoveryMessage != nil {
+            Text(voice.feedbackMessage ?? voice.status)
                 .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
+            }
         }
     }
 

@@ -7,7 +7,7 @@ import UIKit
 /// augment native occlusion; equipment uses one depth owner. No color is drawn.
 @MainActor
 final class SceneDepthOcclusion {
-    enum Profile: Sendable { case rawPaper, stableEquipment }
+    enum Profile: Sendable { case rawPaper, stablePaper, stableEquipment }
     /// Runtime state of the depth surface, not a claim that its pixels have
     /// visibly occluded the paper. That still needs a real-camera check.
     struct Diagnostics {
@@ -120,7 +120,7 @@ final class SceneDepthOcclusion {
         }
         // Paper retains raw depth; equipment explicitly consumes smoothed depth
         // instead of assuming RealityKit's native person compositor uses it.
-        let useSmoothed = profile == .stableEquipment && frame.smoothedSceneDepth?.confidenceMap != nil
+        let useSmoothed = profile != .rawPaper && frame.smoothedSceneDepth?.confidenceMap != nil
         let selectedDepth = useSmoothed ? frame.smoothedSceneDepth : frame.sceneDepth
         guard let depth = selectedDepth else {
             invalidateMesh(reason: "Raw scene depth unavailable", retainingFreshDisplay: true); return
@@ -131,6 +131,8 @@ final class SceneDepthOcclusion {
         guard let snapshot = Self.snapshot(frame: frame, depth: depth) else {
             invalidateMesh(reason: "Depth confidence unavailable", retainingFreshDisplay: true); return
         }
+        let currentRaw = useSmoothed ? frame.sceneDepth.flatMap { Self.snapshot(frame: frame, depth: $0) } : nil
+        if currentRaw != nil { depthSource += " + current raw motion check" }
         lastAcceptedDepthTimestamp = snapshot.timestamp
         let receiptTime = ProcessInfo.processInfo.systemUptime
         let token = generation
@@ -142,7 +144,7 @@ final class SceneDepthOcclusion {
             let start = ProcessInfo.processInfo.systemUptime
             let result = await Task.detached(priority: .userInitiated) {
                 var filter = previousFilter
-                let filtered = profile == .stableEquipment ? filter.filter(snapshot, pixelStep: 2) : snapshot
+                let filtered = profile != .rawPaper ? filter.filter(snapshot, current: currentRaw, pixelStep: 2) : snapshot
                 let mesh = SceneDepthMesher.build(filtered, supportPlaneY: supportPlaneY,
                                                  policy: profile == .stableEquipment ? .stableEquipment : .paper)
                 return (mesh, filter)
@@ -162,7 +164,12 @@ final class SceneDepthOcclusion {
             }
             self.stabilizer = result.1
             guard !mesh.triangles.isEmpty else {
-                self.rejectBuild(reason: "No reliable foreground surface"); return
+                if profile != .rawPaper {
+                    // A current clear observation must not retain the previous
+                    // hand until the stale-frame timer expires.
+                    self.hide(reason: "No reliable foreground surface")
+                } else { self.rejectBuild(reason: "No reliable foreground surface") }
+                return
             }
             var descriptor = MeshDescriptor(name: "Camera-calibrated live scene depth")
             descriptor.positions = MeshBuffers.Positions(mesh.positions)

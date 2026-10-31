@@ -1,0 +1,48 @@
+{
+  "date": "2026-11-01",
+  "brief": "Reduce visible copy and competing controls across the native app",
+  "subject": "Hands-on visual tutorials; choose a task, then watch the object move",
+  "palette": {
+    "canvas": "#F7F8F8",
+    "surface": "#FFFFFF",
+    "ink": "#222A28",
+    "secondary": "#737C78",
+    "accent": "#244B40",
+    "divider": "#E5E9E7"
+  },
+  "type": {
+    "titles": "Native Dynamic Type large title, medium/semibold",
+    "body": "Native system body for catalog names, system type for controls",
+    "utility": "System monospaced digits for step count"
+  },
+  "layout": {
+    "home": "Object-first catalog, one-line names, native category control; no section paragraphs or hero marketing",
+    "player": "Model-first studio, icon transport, one action title; instructions and secondary tools on demand",
+    "details": "Instructions, selected-part detail and secondary tools appear on request",
+    "AR": "Back, step count, one placement prompt while needed; secondary options in a menu",
+    "everyday": "Visual movement, slider and icon controls; materials/checkpoint/long instruction in disclosures; confirmation remains explicit"
+  },
+  "signature": "The teaching object occupies the screen; controls form one quiet tray below it",
+  "critique": [
+    "Removed marketing-style headline, decorative uppercase labels and duplicate capability descriptions",
+    "Kept native typefaces and one green accent instead of adding sci-fi HUD decoration",
+    "Preserve accessibility names, user confirmation boundaries and model credits in context",
+    "Replaced the intermediate section-card layout with a single visual catalog after the user explicitly asked for a major Apple-inspired redesign"
+  ],
+  "preserve": [
+    "Course actions and saved progress",
+    "Camera permissions and real tracking errors",
+    "Voice recovery feedback",
+    "License attribution and capability scope in About/details",
+    "Visible NO LIVE CAMERA label on simulator fixtures"
+  ],
+  "validation": [
+    "Real simulator screenshots of home, studio and AR fixture",
+    "Reachability and state preservation through details/menu/AR transitions",
+    "Phone and tablet layouts",
+    "Physical flicker/trail comparison remains separate"
+  ],
+  "thumbnailSource": "Original bundled teaching USDZ models, rendered locally with scripts/render_catalog_thumbnails.swift; source licenses preserved in model credits",
+  "status": "intermediate_direction_superseded",
+  "supersededBy": "docs/design/protacta-premium-ui-v2.json"
+}

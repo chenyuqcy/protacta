@@ -21,6 +21,7 @@ final class EquipmentARUITests: XCTestCase {
 
     private func runPreview(_ id: String, count: Int) {
         launch(fixture: true); open(id)
+        app.buttons["assemblyToggleDetails"].tap()
         let slider = app.sliders["assemblySlider"]
         slider.adjust(toNormalizedSliderPosition: 0.45)
         let partial = slider.value as? String

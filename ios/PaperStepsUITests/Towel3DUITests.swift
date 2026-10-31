@@ -26,23 +26,23 @@ final class Towel3DUITests: XCTestCase {
         capture("Towel_3D_start")
 
         for action in 1...3 {
-            reveal(app.buttons["everydayShowStart"])
+            reveal(app.buttons["everydayMore"]); app.buttons["everydayMore"].tap()
             app.buttons["everydayShowStart"].tap()
             let slider = app.sliders["everydayProgressSlider"]
             slider.adjust(toNormalizedSliderPosition: 0.5)
             waitForLabel(app.staticTexts["everydayCounter"], containing: "ACTION \(action) OF 3")
             capture("Towel_3D_action_\(action)_half")
-            app.buttons["everydayShowTarget"].tap()
+            app.buttons["everydayMore"].tap(); app.buttons["everydayShowTarget"].tap()
             XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION \(action) OF 3", "Playing/showing a target must not confirm the real action")
             capture("Towel_3D_action_\(action)_target")
 
             // Switching presentation preserves this action and progress.
             reveal(mode); mode.buttons["Diagram"].tap()
-            XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Animated diagram")).firstMatch.waitForExistence(timeout: 5))
-            XCTAssertTrue(app.staticTexts["TARGET POSITION"].exists)
+            XCTAssertTrue(mode.buttons["Diagram"].isSelected)
+            XCTAssertEqual(slider.value as? String, "100%")
             mode.buttons["3D"].tap()
             XCTAssertTrue(viewport.waitForExistence(timeout: 5))
-            XCTAssertTrue(app.staticTexts["TARGET POSITION"].exists)
+            XCTAssertEqual(slider.value as? String, "100%")
             reveal(app.buttons["resetTowel3DView"]); app.buttons["resetTowel3DView"].tap()
             let confirm = app.buttons["everydayConfirm"]
             reveal(confirm); confirm.tap()

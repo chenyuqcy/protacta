@@ -28,16 +28,18 @@ struct EverydayTutorialVisual: View {
     let stepIndex: Int
     let progress: Double
     var showsCaption = true
+    var showsAnnotations = true
+    var showsPartLabels = true
 
     var body: some View {
         VStack(spacing: 8) {
             Canvas { context, size in
                 context.concatenate(CGAffineTransform(scaleX: size.width / 400, y: size.height / 430))
                 EverydayDiagram.draw(courseID: courseID, stepIndex: stepIndex,
-                                     progress: progress, context: &context)
+                                     progress: progress, annotations: showsAnnotations, partLabels: showsPartLabels, context: &context)
             }
             .aspectRatio(400.0 / 430.0, contentMode: .fit)
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 16))
+            .background(showsPartLabels ? Color.white : Color.clear, in: RoundedRectangle(cornerRadius: 16))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("Animated teaching diagram")
@@ -92,14 +94,14 @@ private enum EverydayDiagram {
     }
 
     static func draw(courseID: String, stepIndex: Int, progress: Double,
-                     context: inout GraphicsContext) {
+                     annotations: Bool, partLabels: Bool, context: inout GraphicsContext) {
         let p = finiteProgress(progress)
         if let scene = clothScene(courseID: courseID, step: stepIndex) {
-            drawFold(scene, progress: p, context: &context)
+            drawFold(scene, progress: p, annotations: annotations, partLabels: partLabels, context: &context)
         } else if courseID == "square_knot", (0..<5).contains(stepIndex) {
-            drawSquareKnot(step: stepIndex, progress: p, context: &context)
+            drawSquareKnot(step: stepIndex, progress: p, annotations: annotations, partLabels: partLabels, context: &context)
         } else if courseID == "four_in_hand", (0..<7).contains(stepIndex) {
-            drawTie(step: stepIndex, progress: p, context: &context)
+            drawTie(step: stepIndex, progress: p, annotations: annotations, partLabels: partLabels, context: &context)
         } else {
             text("Choose an action to see its diagram", at: CGPoint(x: 200, y: 210), context: &context)
         }
@@ -249,7 +251,7 @@ private enum EverydayDiagram {
         }
     }
 
-    private static func drawFold(_ scene: FoldScene, progress: Double, context: inout GraphicsContext) {
+    private static func drawFold(_ scene: FoldScene, progress: Double, annotations: Bool, partLabels: Bool, context: inout GraphicsContext) {
         let points = (scene.stationary + scene.moving).flatMap { $0 }
         let minX = points.map(\.x).min() ?? 0, maxX = points.map(\.x).max() ?? 400
         let minY = points.map(\.y).min() ?? 0, maxY = points.map(\.y).max() ?? 400
@@ -258,8 +260,8 @@ private enum EverydayDiagram {
             CGPoint(x: 200 + (p.x - (minX + maxX) / 2) * scale,
                     y: 222 + (p.y - (minY + maxY) / 2) * scale)
         }
-        text(scene.caption, at: CGPoint(x: 200, y: 25), size: 12, weight: .semibold, context: &context)
-        text("Top / far edge ↑ · View from above", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context)
+        if annotations { text(scene.caption, at: CGPoint(x: 200, y: 25), size: 12, weight: .semibold, context: &context) }
+        if annotations { text("Top / far edge ↑ · View from above", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context) }
         for shape in scene.stationary { patch(shape.map(display), context: &context) }
         let target = folded(scene.moving, scene.hinge)
         for shape in target {
@@ -277,10 +279,10 @@ private enum EverydayDiagram {
             let point = mark.moves ? EverydayFoldProjection.points([mark.point], hingeStart: scene.hinge[0], hingeEnd: scene.hinge[1], progress: progress)[0] : mark.point
             var shown = display(point)
             if !mark.moves { shown.x += 22 }
-            badge(mark.title, at: shown, color: mark.moves ? orange : ink, context: &context)
+            if partLabels { badge(mark.title, at: shown, color: mark.moves ? orange : ink, context: &context) }
         }
-        text("Orange dashes: fold line + target edge", at: CGPoint(x: 200, y: 389), size: 11, color: muted, context: &context)
-        text("\(progress == 0 ? "Before" : progress == 1 ? "Target" : "Moving") · diagram scale adjusts between actions", at: CGPoint(x: 200, y: 409), size: 10, color: muted, context: &context)
+        if annotations { text("Orange dashes: fold line + target edge", at: CGPoint(x: 200, y: 389), size: 11, color: muted, context: &context) }
+        if annotations { text("\(progress == 0 ? "Before" : progress == 1 ? "Target" : "Moving") · diagram scale adjusts between actions", at: CGPoint(x: 200, y: 409), size: 10, color: muted, context: &context) }
     }
 
     private static func smoothPath(_ points: [CGPoint]) -> Path {
@@ -362,12 +364,12 @@ private enum EverydayDiagram {
         }
     }
 
-    private static func drawSquareKnot(step: Int, progress: Double, context: inout GraphicsContext) {
+    private static func drawSquareKnot(step: Int, progress: Double, annotations: Bool, partLabels: Bool, context: inout GraphicsContext) {
         let before = squareRoutes(state: step), target = squareRoutes(state: step + 1)
         let a = movingRoute(before.a, target.a, progress: progress)
         let b = movingRoute(before.b, target.b, progress: progress)
-        text(squareCaptions[step], at: CGPoint(x: 200, y: 24), size: 12, weight: .semibold, context: &context)
-        text("A = blue · B = orange · loose practice cord", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context)
+        if annotations { text(squareCaptions[step], at: CGPoint(x: 200, y: 24), size: 12, weight: .semibold, context: &context) }
+        if annotations { text("A = blue · B = orange · loose practice cord", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context) }
         strand(a, color: blue, context: &context)
         strand(b, color: orange, context: &context)
         // The highlighted crossing, rather than a same-color X, explicitly
@@ -388,8 +390,8 @@ private enum EverydayDiagram {
             strand(Array(b[30...39]), color: orange, front: true, context: &context)
         }
         if let endA = a.last, let endB = b.last {
-            badge("A", at: CGPoint(x: endA.x, y: endA.y - 19), color: blue, context: &context)
-            badge("B", at: CGPoint(x: endB.x, y: endB.y - 19), color: orange, context: &context)
+            if partLabels { badge("A", at: CGPoint(x: endA.x, y: endA.y - 19), color: blue, context: &context) }
+            if partLabels { badge("B", at: CGPoint(x: endB.x, y: endB.y - 19), color: orange, context: &context) }
         }
         let note: String
         switch step {
@@ -398,14 +400,14 @@ private enum EverydayDiagram {
             note = "A passes OVER the orange strand"
         case 1:
             arrow(from: CGPoint(x: 264, y: 194), to: CGPoint(x: 205, y: 226), bend: 23, context: &context)
-            text("UNDER", at: CGPoint(x: 299, y: 220), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("UNDER", at: CGPoint(x: 299, y: 220), size: 10, color: blue, weight: .bold, context: &context) }
             note = "Feed A under B and out through the first gap"
         case 2:
             arrow(from: CGPoint(x: 280, y: 77), to: CGPoint(x: 115, y: 77), bend: 9, context: &context)
             note = "Reverse the direction: A moves right → left"
         case 3:
             arrow(from: CGPoint(x: 163, y: 126), to: CGPoint(x: 225, y: 158), bend: 19, context: &context)
-            text("UNDER", at: CGPoint(x: 105, y: 160), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("UNDER", at: CGPoint(x: 105, y: 160), size: 10, color: blue, weight: .bold, context: &context) }
             note = "Feed A under B through the new upper gap"
         default:
             for (from, to) in [(CGPoint(x: 108, y: 163), CGPoint(x: 58, y: 143)),
@@ -416,8 +418,8 @@ private enum EverydayDiagram {
             }
             note = "Matching colors leave together; compare both bights"
         }
-        text(note, at: CGPoint(x: 200, y: 383), size: 11, color: muted, context: &context)
-        text("Practice only · Not for supporting weight", at: CGPoint(x: 200, y: 407), size: 11, color: muted, context: &context)
+        if annotations { text(note, at: CGPoint(x: 200, y: 383), size: 11, color: muted, context: &context) }
+        if annotations { text("Practice only · Not for supporting weight", at: CGPoint(x: 200, y: 407), size: 11, color: muted, context: &context) }
     }
 
     private static func tieRoute(state: Int) -> [CGPoint] {
@@ -442,10 +444,10 @@ private enum EverydayDiagram {
         }
     }
 
-    private static func drawTie(step: Int, progress: Double, context: inout GraphicsContext) {
-        text(tieCaptions[step], at: CGPoint(x: 200, y: 24), size: 12, weight: .semibold, context: &context)
-        if step == 6 { drawTieKeeper(progress: progress, context: &context); return }
-        text("Front view · your right is diagram left", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context)
+    private static func drawTie(step: Int, progress: Double, annotations: Bool, partLabels: Bool, context: inout GraphicsContext) {
+        if annotations { text(tieCaptions[step], at: CGPoint(x: 200, y: 24), size: 12, weight: .semibold, context: &context) }
+        if step == 6 { drawTieKeeper(progress: progress, annotations: annotations, partLabels: partLabels, context: &context); return }
+        if annotations { text("Front view · your right is diagram left", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context) }
         // Neck/collar context, not an extra rope strand.
         var neck = Path(); neck.move(to: CGPoint(x: 155, y: 115))
         neck.addCurve(to: CGPoint(x: 245, y: 115), control1: CGPoint(x: 110, y: 55), control2: CGPoint(x: 290, y: 55))
@@ -489,36 +491,36 @@ private enum EverydayDiagram {
             let left = CGPoint(x: tip.x - 14 * sin(angle) - 18 * cos(angle), y: tip.y + 14 * cos(angle) - 18 * sin(angle))
             let right = CGPoint(x: tip.x + 14 * sin(angle) - 18 * cos(angle), y: tip.y - 14 * cos(angle) - 18 * sin(angle))
             patch([left, tip, right], fill: blue, context: &context)
-            badge("W", at: CGPoint(x: tip.x + (tip.x < 200 ? -28 : 28), y: tip.y), color: blue, context: &context)
+            if partLabels { badge("W", at: CGPoint(x: tip.x + (tip.x < 200 ? -28 : 28), y: tip.y), color: blue, context: &context) }
         }
-        badge("N", at: CGPoint(x: 243, y: 327), color: orange, context: &context)
+        if partLabels { badge("N", at: CGPoint(x: 243, y: 327), color: orange, context: &context) }
         switch step {
         case 0:
             arrow(from: CGPoint(x: 115, y: 288), to: CGPoint(x: 285, y: 290), bend: 18, context: &context)
-            text("FRONT", at: CGPoint(x: 291, y: 206), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("FRONT", at: CGPoint(x: 291, y: 206), size: 10, color: blue, weight: .bold, context: &context) }
         case 1:
             arrow(from: CGPoint(x: 284, y: 294), to: CGPoint(x: 122, y: 282), bend: 14, context: &context)
-            text("BEHIND N", at: CGPoint(x: 298, y: 248), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("BEHIND N", at: CGPoint(x: 298, y: 248), size: 10, color: blue, weight: .bold, context: &context) }
         case 2:
             arrow(from: CGPoint(x: 120, y: 302), to: CGPoint(x: 282, y: 302), bend: 20, context: &context)
-            text("OPEN BAND", at: CGPoint(x: 299, y: 271), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("OPEN BAND", at: CGPoint(x: 299, y: 271), size: 10, color: blue, weight: .bold, context: &context) }
         case 3:
             arrow(from: CGPoint(x: 278, y: 294), to: CGPoint(x: 208, y: 98), bend: 27, context: &context)
-            text("UP / UNDER", at: CGPoint(x: 294, y: 151), size: 10, color: blue, weight: .bold, context: &context)
+            if partLabels { text("UP / UNDER", at: CGPoint(x: 294, y: 151), size: 10, color: blue, weight: .bold, context: &context) }
         case 4:
             arrow(from: CGPoint(x: 274, y: 139), to: CGPoint(x: 263, y: 326), bend: 22, context: &context)
-            text("THROUGH BAND", at: CGPoint(x: 300, y: 248), size: 9, color: blue, weight: .bold, context: &context)
+            if partLabels { text("THROUGH BAND", at: CGPoint(x: 300, y: 248), size: 9, color: blue, weight: .bold, context: &context) }
         default:
             arrow(from: CGPoint(x: 160, y: 280), to: CGPoint(x: 160, y: 202), bend: -13, context: &context)
             arrow(from: CGPoint(x: 202, y: 304), to: CGPoint(x: 202, y: 361), context: &context)
-            text("HOLD N", at: CGPoint(x: 285, y: 323), size: 10, color: orange, weight: .bold, context: &context)
+            if partLabels { text("HOLD N", at: CGPoint(x: 285, y: 323), size: 10, color: orange, weight: .bold, context: &context) }
         }
-        text("W = wide / active end · N = narrow / held end", at: CGPoint(x: 200, y: 391), size: 11, color: muted, context: &context)
-        text("White gaps at crossings show which layer is behind", at: CGPoint(x: 200, y: 411), size: 10, color: muted, context: &context)
+        if annotations { text("W = wide / active end · N = narrow / held end", at: CGPoint(x: 200, y: 391), size: 11, color: muted, context: &context) }
+        if annotations { text("White gaps at crossings show which layer is behind", at: CGPoint(x: 200, y: 411), size: 10, color: muted, context: &context) }
     }
 
-    private static func drawTieKeeper(progress: Double, context: inout GraphicsContext) {
-        text("Back of the wide end · N slides into the keeper", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context)
+    private static func drawTieKeeper(progress: Double, annotations: Bool, partLabels: Bool, context: inout GraphicsContext) {
+        if annotations { text("Back of the wide end · N slides into the keeper", at: CGPoint(x: 200, y: 47), size: 11, color: muted, context: &context) }
         patch([CGPoint(x: 165, y: 100), CGPoint(x: 235, y: 100), CGPoint(x: 235, y: 325),
                CGPoint(x: 200, y: 355), CGPoint(x: 165, y: 325)], fill: blue.opacity(0.22), context: &context)
         let end = mix(CGPoint(x: 286, y: 178), CGPoint(x: 200, y: 311), progress)
@@ -528,16 +530,16 @@ private enum EverydayDiagram {
         patch(rectangle(156, 229, 88, 22), fill: flap, context: &context)
         line([CGPoint(x: 165, y: 229), CGPoint(x: 165, y: 251)], color: ink, context: &context)
         line([CGPoint(x: 235, y: 229), CGPoint(x: 235, y: 251)], color: ink, context: &context)
-        badge("N", at: CGPoint(x: end.x + 24, y: end.y), color: orange, context: &context)
-        text("KEEPER", at: CGPoint(x: 292, y: 240), size: 10, color: muted, weight: .bold, context: &context)
+        if partLabels { badge("N", at: CGPoint(x: end.x + 24, y: end.y), color: orange, context: &context) }
+        if partLabels { text("KEEPER", at: CGPoint(x: 292, y: 240), size: 10, color: muted, weight: .bold, context: &context) }
         arrow(from: CGPoint(x: 279, y: 193), to: CGPoint(x: 205, y: 275), bend: -16, context: &context)
         let collarDrop = max(0, (progress - 0.65) / 0.35)
         let leftCollar = [CGPoint(x: 153, y: 81), CGPoint(x: 195, y: 87),
                           CGPoint(x: 175, y: 67 + 55 * collarDrop)]
         let rightCollar = leftCollar.map { CGPoint(x: 400 - $0.x, y: $0.y) }
         patch(leftCollar, fill: cloth, context: &context); patch(rightCollar, fill: cloth, context: &context)
-        text("Then lower the collar and adjust gently", at: CGPoint(x: 200, y: 391), size: 11, color: muted, context: &context)
-        text("Back view for the keeper · Collar motion is schematic", at: CGPoint(x: 200, y: 411), size: 10, color: muted, context: &context)
+        if annotations { text("Then lower the collar and adjust gently", at: CGPoint(x: 200, y: 391), size: 11, color: muted, context: &context) }
+        if annotations { text("Back view for the keeper · Collar motion is schematic", at: CGPoint(x: 200, y: 411), size: 10, color: muted, context: &context) }
     }
 
     static func finiteProgress(_ progress: Double) -> Double {

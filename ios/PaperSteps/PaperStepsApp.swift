@@ -58,11 +58,11 @@ struct ProtactaApp: App {
 }
 
 private enum Palette {
-    static let ink = Color(red: 0.16, green: 0.22, blue: 0.20)
-    static let accent = Color(red: 0.68, green: 0.28, blue: 0.18)
-    static let muted = Color(red: 0.39, green: 0.46, blue: 0.42)
-    static let background = Color(red: 0.96, green: 0.96, blue: 0.93)
-    static let line = Color(red: 0.86, green: 0.88, blue: 0.84)
+    static let ink = TutorialColors.ink
+    static let accent = TutorialColors.orange
+    static let muted = TutorialColors.muted
+    static let background = TutorialColors.paper
+    static let line = TutorialColors.line
 }
 
 struct PaperStepsView: View {
@@ -278,9 +278,7 @@ struct PaperStepsView: View {
                     .font(.system(size: 20, weight: .medium)).foregroundStyle(Palette.accent)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text("PROTACTA").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.4)
-                Text(controller.isPaperGuide ? "On your paper" : controller.isAR ? "On your table" : controller.lesson.title)
-                    .font(.system(size: 11)).foregroundStyle(Palette.muted)
+                Text(controller.lesson.title).font(.system(size: 17, weight: .medium))
             }
             Spacer(minLength: 4)
             Button { controller.pauseAndSave(); showLibrary = true } label: {
@@ -288,13 +286,13 @@ struct PaperStepsView: View {
             }.accessibilityLabel("Choose a lesson").accessibilityIdentifier("chooseLesson")
             if controller.isAR {
                 Button { controller.leaveAR() } label: {
-                    Label("3D guide", systemImage: "xmark").font(.system(size: 12, weight: .semibold))
+                    Label("3D", systemImage: "xmark").font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 12).padding(.vertical, 11)
                         .background(.white.opacity(0.7), in: Capsule())
                 }.accessibilityIdentifier("closeAR")
             } else {
                 Button { withLessonAccess { controller.enterAR() } } label: {
-                    Label("Tabletop AR", systemImage: "arkit").font(.system(size: 12, weight: .semibold))
+                    Label("AR", systemImage: "arkit").font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 12).padding(.vertical, 11)
                         .background(Palette.ink, in: Capsule()).foregroundStyle(.white)
                 }.accessibilityIdentifier("openAR")
@@ -364,8 +362,6 @@ struct PaperStepsView: View {
         VStack {
             HStack {
                 if !controller.isAR {
-                    Text(controller.started ? "DRAG TO EXPLORE" : controller.lesson.title.uppercased())
-                        .font(.system(size: 9, weight: .semibold)).tracking(1.8).foregroundStyle(Palette.muted)
                     Spacer()
                     HStack(spacing: 0) {
                         Button("Top") { controller.setTopView() }.accessibilityIdentifier("topView")
@@ -374,7 +370,7 @@ struct PaperStepsView: View {
                     }.font(.system(size: 11, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 9)
                         .background(.regularMaterial, in: Capsule())
                 } else if controller.placed && !controller.isPaperGuide {
-                    Label(controller.trackingReady ? "ANCHORED TO YOUR TABLE" : "RECOVERING TRACKING", systemImage: "circle.fill")
+                    Label(controller.trackingReady ? "Placed" : "Recovering tracking", systemImage: "circle.fill")
                         .font(.system(size: 9, weight: .semibold)).tracking(1)
                         .padding(10).background(.regularMaterial, in: Capsule())
                     Spacer()
@@ -564,15 +560,8 @@ struct PaperStepsView: View {
                 Spacer()
                 Button { showAbout = true } label: { Image(systemName: "info.circle").font(.system(size: 17)) }.accessibilityIdentifier("aboutLesson")
             }
-            Text(controller.lesson.introductionTitle)
-                .font(.system(size: 28, weight: .regular, design: .serif)).lineSpacing(-1)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(controller.lesson.introduction)
-                .font(.system(size: 13)).lineSpacing(3).foregroundStyle(Palette.muted)
-                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 18) {
                 Label(controller.lesson.paperLabel, systemImage: "rectangle.portrait")
-                Label(controller.lesson.time, systemImage: "clock")
                 Label("\(controller.lastStep) steps", systemImage: "square.stack.3d.up")
             }.font(.system(size: 11, weight: .medium)).padding(.vertical, 2)
             primaryButton(controller.startTitle, symbol: controller.hasLessonAccess ? "arrow.right" : "lock.open", id: "startLesson") {
@@ -582,10 +571,6 @@ struct PaperStepsView: View {
                 Button("Start over with a new sheet") { controller.begin() }
                     .font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, minHeight: 44)
                     .accessibilityIdentifier("startOverLesson")
-            }
-            if controller.lesson.isFree && !purchases.isUnlocked {
-                Text("Free lesson · No purchase needed").font(.system(size: 10)).foregroundStyle(Palette.muted)
-                    .frame(maxWidth: .infinity)
             }
         }.padding(24).frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
     }
@@ -605,7 +590,7 @@ struct PaperStepsView: View {
                     .accessibilityIdentifier("aboutLesson")
             }
             Text(controller.completed ? "Made by you." : controller.currentStep.title)
-                .font(.system(size: 23, weight: .regular, design: .serif)).accessibilityIdentifier("stepTitle")
+                .font(.system(size: 23, weight: .medium)).accessibilityIdentifier("stepTitle")
             Text(controller.completed ? controller.lesson.completion : controller.currentStep.instruction)
                 .font(.system(size: 13)).lineSpacing(3).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("stepInstruction")

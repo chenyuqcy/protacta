@@ -18,10 +18,51 @@ final class EquipmentTutorialUITests: XCTestCase {
     func testMotorFiveActionExteriorWalkthroughAndCredits() { run("gearmotor", count: 5, scope: "internal rotor") }
     func testTurbofanSixActionStructurePreviewAndCredits() { run("turbofan", count: 6, scope: "not manufacturer CAD") }
 
+    func testModelFirstHomeAndPlayerKeepDetailsOptional() {
+        capture("Simple_home")
+        XCTAssertFalse(app.staticTexts["See the move.\nMake it yours."].exists)
+        let filter = app.segmentedControls["hubFilter"]
+        filter.buttons["Everyday"].tap()
+        XCTAssertTrue(app.buttons["hubCourse_towel"].exists)
+        XCTAssertFalse(app.buttons["hubEquipment_gearmotor"].exists)
+        filter.buttons["3D & AR"].tap()
+        XCTAssertTrue(app.buttons["hubOrigami"].exists)
+        XCTAssertFalse(app.buttons["hubCourse_towel"].exists)
+        capture("Simple_model_catalog")
+        filter.buttons["All"].tap()
+        let card = app.buttons["hubEquipment_gearmotor"]; reveal(card); card.tap()
+        XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
+        XCTAssertFalse(app.sliders["assemblySlider"].exists, "The model starts with a compact control tray")
+        let viewport = app.descendants(matching: .any).matching(identifier: "assemblyViewportRegion").firstMatch
+        XCTAssertGreaterThan(viewport.frame.height, app.frame.height * 0.55)
+        for id in ["assemblyNext", "assemblyPlay", "assemblyVoice", "assemblyReadStep", "assemblyToggleDetails"] {
+            XCTAssertTrue(app.buttons[id].isHittable)
+            XCTAssertGreaterThanOrEqual(app.buttons[id].frame.height, 44)
+        }
+        capture("Simple_motor_compact")
+        app.buttons["assemblyToggleDetails"].tap()
+        let slider = app.sliders["assemblySlider"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 5))
+        slider.adjust(toNormalizedSliderPosition: 0.45)
+        let partial = slider.value as? String
+        app.buttons["assemblyToggleDetails"].tap()
+        let hidden = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: slider)
+        XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 5), .completed)
+        app.buttons["assemblyToggleDetails"].tap()
+        XCTAssertTrue(slider.waitForExistence(timeout: 5))
+        XCTAssertEqual(slider.value as? String, partial, "Opening details must preserve the partially played movement")
+        app.buttons["assemblyToggleDetails"].tap()
+        app.buttons["assemblyNext"].tap()
+        XCTAssertTrue(app.staticTexts["assemblyCounter"].label.contains("2/5"))
+        app.buttons["assemblyPrevious"].tap()
+        app.buttons["assemblyToggleDetails"].tap()
+        XCTAssertTrue(slider.exists)
+        capture("Simple_motor_details")
+    }
+
     func testCompactVoiceFailureExplainsTouchFallbackAndCanBeRetried() {
         let card = app.buttons["hubEquipment_gearmotor"]; reveal(card); card.tap()
         XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
-        app.buttons["assemblyToggleDetails"].tap()
         app.buttons["assemblyVoice"].tap()
         let status = app.staticTexts["assemblyVoiceStatus"]
         XCTAssertTrue(status.waitForExistence(timeout: 3), "Voice failure must stay visible with the instructions hidden")
@@ -69,6 +110,7 @@ final class EquipmentTutorialUITests: XCTestCase {
         guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("iPad viewport and rotation review") }
         let card = app.buttons["hubEquipment_\(id)"]; reveal(card); card.tap()
         XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
+        app.buttons["assemblyToggleDetails"].tap()
         app.sliders["assemblySlider"].adjust(toNormalizedSliderPosition: 1)
         app.buttons["assemblyNext"].tap()
         let slider = app.sliders["assemblySlider"]
@@ -121,12 +163,13 @@ final class EquipmentTutorialUITests: XCTestCase {
         let card = app.buttons["hubEquipment_\(id)"]; reveal(card); card.tap()
         XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
         capture("\(id)_initial_model")
+        app.buttons["assemblyToggleDetails"].tap()
         app.buttons["assemblyPartMenu"].tap()
         app.buttons["Focus selected part"].tap()
         XCTAssertEqual(app.buttons["assemblyResetView"].value as? String, "Focused part")
         capture("\(id)_focused_first_part")
         app.buttons["assemblyResetView"].tap()
-        app.buttons["assemblyCredits"].tap()
+        app.buttons["assemblyMore"].tap(); app.buttons["assemblyCredits"].tap()
         XCTAssertTrue(app.staticTexts["assemblyScope"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["assemblyScope"].label.contains(scope))
         app.buttons["assemblyCreditsDone"].tap()

@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-01",
+  "status": "implemented_local_checks_and_release_signature_passed",
+  "generatedWith": "Built-in image_gen",
+  "image": "docs/design/protacta-premium-ui-v2.png",
+  "scope": "Design direction, not runtime or physical camera evidence",
+  "intent": "Premium Apple-inspired product hierarchy, material lighting and precise controls; do not equate minimalism with empty or generic UI",
+  "implementation": [
+    "Large engine editorial hero",
+    "Smaller secondary object cards with one-line titles",
+    "Native 3D lighting using an original softbox environment",
+    "Original Classic Dart geometry replaces SF-symbol preview",
+    "Quiet integrated playback tray and deliberate control proportions",
+    "Existing AR camera controls without simulated room imagery"
+  ],
+  "pendingPreference": "Awaiting optional user response on visual direction",
+  "userPreference": "沿这个方向继续细化",
+  "preferenceStatus": "Direction selected by user; runtime visual/physical acceptance separate",
+  "prompt": "docs/design/protacta-premium-ui-v2-prompt.txt",
+  "runtimeEvidence": [
+    "PremiumPhoneUI.xcresult: 7 assembly logic and 4 phone UI checks passed",
+    "Source assets are existing real models and exact Dart lesson geometry; generated concept is not runtime imagery",
+    "FinalTabletUI.xcresult: motor and turbofan portrait/landscape checks passed; a rapid details-toggle automation check failed before adding a layout-state wait",
+    "TabletDetailsFinal.xcresult: revised details state-wait check passed; no remaining observed layout test failure"
+  ],
+  "thumbnailSources": "docs/design/catalog-thumbnail-sources.json"
+}

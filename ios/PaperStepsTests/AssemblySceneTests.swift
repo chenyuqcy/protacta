@@ -4,6 +4,31 @@ import RealityKit
 
 @MainActor
 final class AssemblySceneTests: XCTestCase {
+    func testStepFramingIsCloserThanExplodedAndContainsTheWholeAction() throws {
+        let controller = AssemblySceneController(tutorial: .aeris)
+        try controller.bind(fixture())
+        for index in controller.tutorial.steps.indices {
+            controller.setStep(index)
+            let framing = controller.framing
+            for progress in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                controller.setProgress(progress)
+                let bounds = controller.root.visualBounds(relativeTo: nil)
+                for x in [bounds.min.x, bounds.max.x] {
+                    for y in [bounds.min.y, bounds.max.y] {
+                        for z in [bounds.min.z, bounds.max.z] {
+                            XCTAssertLessThanOrEqual(simd_length(SIMD3(x, y, z) - framing.center), framing.radius * 1.03)
+                        }
+                    }
+                }
+                XCTAssertEqual(controller.framing.radius, framing.radius, "Camera framing stays still during the movement")
+            }
+            controller.setExploded(true)
+            XCTAssertGreaterThanOrEqual(controller.framing.radius, framing.radius)
+            controller.setExploded(false)
+            XCTAssertEqual(controller.framing.radius, framing.radius)
+        }
+        controller.shutdown()
+    }
     func testExporterRotationUsesStudioOffsetsAndReplayDoesNotAccumulate() throws {
         let asset = fixture()
         let cover = try XCTUnwrap(asset.findEntity(named: "Rear_Cover"))

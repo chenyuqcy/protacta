@@ -103,7 +103,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     let occlusionCapabilities = AROcclusionCapabilities.current
     private(set) var arView: ARView?
     private let paper = PaperModel()
-    private let depthOcclusion = SceneDepthOcclusion()
+    private let depthOcclusion = SceneDepthOcclusion(profile: .stablePaper)
     private let progressStore: LearningProgressStore
     private var lastProgressSave: TimeInterval = 0
     private var hasFullLibrary = false
@@ -698,7 +698,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         view.environment.background = .cameraFeed()
         view.environment.lighting.resource = nil
         view.environment.lighting.intensityExponent = 0
-        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true, mode: isPaperGuide ? nil : occlusionMode, capabilities: occlusionCapabilities)
         paper.setGroundingShadowsEnabled(false)
         view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.session.delegate = self
@@ -737,7 +737,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard let view = arView, isAR, !needsRescan,
               AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { return }
         let config = isPaperGuide ? ARWorldTrackingConfiguration() : AROcclusionConfiguration.make(mode: occlusionMode, capabilities: occlusionCapabilities)
-        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true, mode: isPaperGuide ? nil : occlusionMode, capabilities: occlusionCapabilities)
         paper.setGroundingShadowsEnabled(false)
         view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         depthOcclusion.reset()
@@ -991,6 +991,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "Raw depth requested": flag(rawRequested),
             "Raw depth received": flag(frame?.sceneDepth != nil),
             "Object depth status": depth.status,
+            "Depth source": depth.depthSource,
             "Depth anchor in scene": flag(depth.hasScene),
             "Depth anchor ready": flag(depth.isAnchored),
             "Depth surface active": flag(depth.isActive),
@@ -1028,6 +1029,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "occlusionSummary": occlusionSummary,
             "occlusionDetails": occlusionDetails,
             "liveOcclusionStatus": depthOcclusion.status,
+            "liveOcclusionDepthSource": depth.depthSource,
+            "liveOcclusionMeshAgeMilliseconds": depth.meshAgeMilliseconds ?? -1,
+            "liveOcclusionDisplayedFrames": depth.displayedFrames,
+            "liveOcclusionExpiredBuilds": depth.expiredBuilds,
             "liveOcclusionTriangles": depthOcclusion.triangleCount,
             "liveOcclusionBuildMilliseconds": depthOcclusion.lastBuildMilliseconds,
             "liveOcclusionDepthWidth": depthOcclusion.depthSize.x,

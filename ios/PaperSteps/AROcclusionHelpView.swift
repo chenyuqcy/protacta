@@ -8,10 +8,6 @@ struct AROcclusionHelpView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    Text("Let your hand come first.")
-                        .font(.system(size: 27, weight: .regular, design: .serif))
-                    Text("Hold your hand in front of the virtual paper. It should hide the paper. Move behind it, and the paper should hide your hand.")
-                        .font(.subheadline)
                     Text(controller.occlusionSummary)
                         .font(.subheadline).foregroundStyle(.secondary)
                         .accessibilityIdentifier("occlusionAvailability")
@@ -31,7 +27,7 @@ struct AROcclusionHelpView: View {
                             .accessibilityIdentifier(mode == .automatic ? "modeAutomatic" : "modePeopleOnly")
                             .accessibilityAddTraits(controller.occlusionMode == mode ? [.isSelected] : [])
                     }
-                    Text("Changing this option keeps your fold and table position. If your hand is still covered, try Hands only, then compare with the animation paused and playing.")
+                    Text("Compare both modes with your hand still, then move it away. Your fold and placement stay in place.")
                         .font(.footnote).foregroundStyle(.secondary)
                     DisclosureGroup("Device details") {
                         VStack(spacing: 10) {
@@ -48,7 +44,7 @@ struct AROcclusionHelpView: View {
                     Text("Use a well-lit room. Keep your hand away from the camera lens. Thin, reflective or transparent objects may not provide reliable depth. These readings stay on your device.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)
-            }.background(Color(red: 0.96, green: 0.96, blue: 0.93))
+            }.background(TutorialColors.paper)
                 .navigationTitle("AR help").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {

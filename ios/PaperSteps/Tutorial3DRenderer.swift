@@ -2,6 +2,21 @@ import RealityKit
 import UIKit
 
 @MainActor
+private enum TutorialStudioLighting {
+    private static var loading: Task<EnvironmentResource?, Never>?
+    static func environment() async -> EnvironmentResource? {
+        if let loading { return await loading.value }
+        let task = Task<EnvironmentResource?, Never> {
+            guard let image = UIImage(named: "studio-lighting")?.cgImage else { return nil }
+            if #available(iOS 18.0, *) { return try? await EnvironmentResource(equirectangular: image, withName: "Protacta studio softboxes") }
+            return nil
+        }
+        loading = task
+        return await task.value
+    }
+}
+
+@MainActor
 private final class TutorialStudioARView: ARView {
     var onViewportLayout: (() -> Void)?
     override func layoutSubviews() {
@@ -35,6 +50,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
     private var content: Entity?
     private let orbitTouchCount: Int
     private var installedGestures: [UIGestureRecognizer] = []
+    private var lightingTask: Task<Void, Never>?
     var onEntityTap: ((Entity?) -> Void)?
 
     init(orbitTouchCount: Int = 1) {
@@ -66,11 +82,12 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         for gesture in view.gestureRecognizers ?? [] { view.removeGestureRecognizer(gesture) }
         view.accessibilityIdentifier = "tutorial3DViewport"
         (view as? TutorialStudioARView)?.onViewportLayout = { [weak self] in self?.updateLayout() }
-        view.environment.background = .color(UIColor(red: 0.91, green: 0.94, blue: 0.92, alpha: 1))
+        view.environment.background = .color(UIColor(red: 0.97, green: 0.975, blue: 0.975, alpha: 1))
         view.environment.sceneUnderstanding.options = []
         view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableGroundingShadows]
         view.isMultipleTouchEnabled = true
         self.view = view
+        configureStudioLighting(in: view)
         setContent(content, framing: framing)
         resetView()
         let pan = UIPanGestureRecognizer(target: self, action: #selector(orbit(_:)))
@@ -118,6 +135,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
 
     func handToAR() -> ARView? {
         guard let view else { return nil }
+        lightingTask?.cancel(); lightingTask = nil
         isHandedToAR = true
         view.session.pause(); anchor.removeFromParent(); content?.removeFromParent()
         for gesture in installedGestures { view.removeGestureRecognizer(gesture) }
@@ -129,9 +147,10 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         isHandedToAR = false
         view.session.pause(); view.session.delegate = nil
         view.cameraMode = .nonAR; view.automaticallyConfigureSession = false
-        view.environment.background = .color(UIColor(red: 0.91, green: 0.94, blue: 0.92, alpha: 1))
+        view.environment.background = .color(UIColor(red: 0.97, green: 0.975, blue: 0.975, alpha: 1))
         view.environment.lighting.resource = nil
         view.environment.lighting.intensityExponent = 0
+        configureStudioLighting(in: view)
         view.environment.sceneUnderstanding.options = []
         view.renderOptions = [.disableMotionBlur, .disableDepthOfField, .disableGroundingShadows]
         if let content { anchor.addChild(content) }
@@ -140,6 +159,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
     }
 
     func shutdown() {
+        lightingTask?.cancel(); lightingTask = nil
         // A borrowed view may already have returned to its previous module.
         // Late cleanup must only touch this renderer's own scene and gestures.
         if view?.scene.anchors.contains(where: { $0 === anchor }) == true { view?.session.pause() }
@@ -150,6 +170,17 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         installedGestures.removeAll()
         isHandedToAR = false
         view = nil
+    }
+
+    private func configureStudioLighting(in view: ARView) {
+        lightingTask?.cancel()
+        lightingTask = Task { @MainActor [weak self, weak view] in
+            let resource = await TutorialStudioLighting.environment()
+            guard !Task.isCancelled, let self, let view, self.view === view,
+                  !self.isHandedToAR, view.cameraMode == .nonAR else { return }
+            view.environment.lighting.resource = resource
+            view.environment.lighting.intensityExponent = -0.2
+        }
     }
 
     private func updateCamera() {

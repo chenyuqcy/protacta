@@ -8,14 +8,37 @@ struct EquipmentDepthStabilizer: Sendable {
     private var heldFrames: [UInt8] = []
     mutating func reset() { previous = nil; heldFrames.removeAll() }
 
-    mutating func filter(_ input: SceneDepthSnapshot, pixelStep: Int = 1) -> SceneDepthSnapshot {
+    mutating func filter(_ input: SceneDepthSnapshot, current raw: SceneDepthSnapshot? = nil,
+                         pixelStep: Int = 1) -> SceneDepthSnapshot {
         guard input.width > 1, input.height > 1, input.width <= 4096, input.height <= 4096 else { reset(); return input }
         let count = input.width * input.height
         guard count == input.depths.count,
               count == input.confidence.count else { reset(); return input }
-        func valid(_ index: Int) -> Bool {
-            let depth = input.depths[index]
-            return depth.isFinite && (0.12...3).contains(depth) && (1...2).contains(input.confidence[index])
+        // Only the same camera exposure can disprove smoothed history. Never
+        // compare depth in different pixel coordinates after camera movement.
+        let reference = raw.flatMap { value -> SceneDepthSnapshot? in
+            guard value.width == input.width, value.height == input.height,
+                  value.depths.count == count, value.confidence.count == count,
+                  abs(value.timestamp - input.timestamp) < 0.001,
+                  value.calibration == input.calibration,
+                  (0..<4).allSatisfy({ value.cameraTransform[$0] == input.cameraTransform[$0] }) else { return nil }
+            return value
+        }
+        func reading(_ index: Int) -> (depth: Float, confidence: UInt8) {
+            let smooth = input.depths[index], confidence = input.confidence[index]
+            if let reference {
+                let latest = reference.depths[index], reliability = reference.confidence[index]
+                if latest.isFinite, (0.12...3).contains(latest), (1...2).contains(reliability),
+                   !smooth.isFinite || confidence == 0 || abs(latest - smooth) > 0.020 {
+                    // A hand arriving or withdrawing bypasses system smoothing
+                    // as well as our own history in this exposure.
+                    return (latest, reliability)
+                }
+            }
+            return (smooth, confidence)
+        }
+        func valid(_ value: (depth: Float, confidence: UInt8)) -> Bool {
+            value.depth.isFinite && (0.12...3).contains(value.depth) && (1...2).contains(value.confidence)
         }
         var output = input
         let old = previous
@@ -38,14 +61,16 @@ struct EquipmentDepthStabilizer: Sendable {
         for y in stride(from: 0, to: input.height, by: step) {
             for x in stride(from: 0, to: input.width, by: step) {
                 let index = y * input.width + x
-                let currentValid = valid(index)
+                let current = reading(index)
+                let currentValid = valid(current)
                 var neighborCount = 0, oldSupport = 0
                 for dy in -1...1 { for dx in -1...1 {
                     let px = x + dx, py = y + dy
                     guard px >= 0, py >= 0, px < input.width, py < input.height else { continue }
                     let neighbor = py * input.width + px
-                    if valid(neighbor) {
-                        let depth = input.depths[neighbor]
+                    let sample = reading(neighbor)
+                    if valid(sample) {
+                        let depth = sample.depth
                         var insertion = neighborCount
                         while insertion > 0, neighbors[insertion - 1] > depth {
                             neighbors[insertion] = neighbors[insertion - 1]
@@ -57,7 +82,7 @@ struct EquipmentDepthStabilizer: Sendable {
                 } }
                 var measured: Float?
                 if currentValid {
-                    let current = input.depths[index]
+                    let current = current.depth
                     var first = 0, end = neighborCount
                     while first < end, neighbors[first] < current - 0.015 { first += 1 }
                     while end > first, neighbors[end - 1] > current + 0.015 { end -= 1 }
@@ -76,12 +101,12 @@ struct EquipmentDepthStabilizer: Sendable {
                 }
                 if compatible, let old, old.confidence[index] >= 1 {
                     let difference = abs(depth - old.depths[index])
-                    if difference <= 0.006 { depth = old.depths[index] }
+                    if difference <= 0.010 { depth = old.depths[index] }
                     else if difference <= 0.020 { depth = (depth + old.depths[index]) * 0.5 }
                     // A new foreground/background edge bypasses history now.
                 }
                 output.depths[index] = depth
-                output.confidence[index] = currentValid ? input.confidence[index] : 1
+                output.confidence[index] = currentValid ? current.confidence : 1
             }
         }
         previous = output; heldFrames = nextHolds

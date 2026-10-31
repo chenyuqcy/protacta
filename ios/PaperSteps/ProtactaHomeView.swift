@@ -10,66 +10,90 @@ private enum TutorialDestination: Identifiable {
         case .equipment(let id): return "equipment_\(id.rawValue)"
         }
     }
+    var title: String {
+        switch self {
+        case .origami: return "Origami"
+        case .everyday(let id):
+            switch id {
+            case .tShirt: return "T-shirt"
+            case .towel: return "Towel"
+            case .flatBedsheet: return "Bedsheet"
+            case .squareKnot: return "Square knot"
+            case .fourInHand: return "Necktie"
+            }
+        case .product: return "AERIS One"
+        case .equipment(let id): return id == .gearmotor ? "Gearmotor" : "Jet engine"
+        }
+    }
+    var accessibilityID: String {
+        switch self {
+        case .origami: return "hubOrigami"
+        case .everyday(let id): return "hubCourse_\(id.rawValue)"
+        case .product: return "hubProductManual"
+        case .equipment(let id): return "hubEquipment_\(id.rawValue)"
+        }
+    }
+}
+
+private enum CatalogFilter: String, CaseIterable, Identifiable {
+    case all = "All", everyday = "Everyday", spatial = "3D & AR"
+    var id: Self { self }
 }
 
 enum TutorialColors {
-    static let ink = Color(red: 0.12, green: 0.23, blue: 0.20)
-    static let muted = Color(red: 0.37, green: 0.45, blue: 0.41)
-    static let paper = Color(red: 0.96, green: 0.96, blue: 0.93)
-    static let line = Color(red: 0.84, green: 0.88, blue: 0.83)
-    static let orange = Color(red: 0.68, green: 0.28, blue: 0.18)
+    static let ink = Color(red: 0.13, green: 0.16, blue: 0.15)
+    static let muted = Color(red: 0.45, green: 0.49, blue: 0.47)
+    static let paper = Color(red: 0.97, green: 0.975, blue: 0.975)
+    static let line = Color(red: 0.90, green: 0.915, blue: 0.905)
+    static let orange = Color(red: 0.14, green: 0.29, blue: 0.25)
 }
 
+/// A visual library. The object is the entry point; explanations live in context.
 struct ProtactaHomeView: View {
     @State private var destination: TutorialDestination?
+    @State private var filter: CatalogFilter = .all
     @State private var progressRevision = 0
     @State private var showAbout = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let progressStore = EverydayTutorialProgressStore.appDefault()
+    private let choices: [TutorialDestination] = [
+        .origami, .equipment(.gearmotor), .everyday(.towel), .equipment(.turbofan),
+        .everyday(.tShirt), .product, .everyday(.squareKnot), .everyday(.fourInHand), .everyday(.flatBedsheet)
+    ]
+    private var visibleChoices: [TutorialDestination] {
+        choices.filter { choice in
+            switch (filter, choice) {
+            case (.all, _), (.everyday, .everyday): return true
+            case (.spatial, .origami), (.spatial, .product), (.spatial, .equipment): return true
+            default: return false
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 28) {
-                    brand
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("See the move.\nMake it yours.")
-                            .font(.system(size: 39, weight: .semibold, design: .rounded)).tracking(-1.5)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Text("Visual guidance for the things you do with your hands.")
-                            .font(.system(size: 16)).foregroundStyle(TutorialColors.muted)
+                VStack(alignment: .leading, spacing: 24) {
+                    HStack {
+                        Text("Protacta").font(.system(size: 27, weight: .semibold)).tracking(-0.7)
+                        Spacer()
+                        Button { showAbout = true } label: {
+                            Image(systemName: "info.circle").font(.system(size: 21)).frame(width: 44, height: 44)
+                        }.accessibilityLabel("About Protacta").accessibilityIdentifier("hubAbout")
                     }
-                    featuredOrigami
-                    VStack(alignment: .leading, spacing: 14) {
-                        sectionTitle("EVERYDAY SKILLS", subtitle: "Watch a move, try it, then confirm your progress.")
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 14) {
-                            ForEach(EverydayTutorialID.allCases) { id in everydayCard(id) }
-                        }
+                    Picker("Tutorial category", selection: $filter) {
+                        ForEach(CatalogFilter.allCases) { item in Text(item.rawValue).tag(item) }
+                    }.pickerStyle(.segmented).accessibilityIdentifier("hubFilter")
+                    if filter != .everyday {
+                        featuredEngine
                     }
-                    productCard
-                    VStack(alignment: .leading, spacing: 14) {
-                        sectionTitle("VIRTUAL EQUIPMENT", subtitle: "Explore real 3D assets with authored model movements.")
-                        ForEach(EquipmentTutorialID.allCases) { id in
-                            Button { destination = .equipment(id) } label: {
-                                HStack(spacing: 16) {
-                                    Image(systemName: id.symbol).font(.system(size: 34, weight: .light)).frame(width: 56)
-                                    VStack(alignment: .leading, spacing: 7) {
-                                        Text(id.title).font(.system(size: 21, weight: .semibold, design: .rounded))
-                                        Text(id.subtitle).font(.system(size: 12)).foregroundStyle(TutorialColors.muted)
-                                    }
-                                    Spacer(minLength: 0)
-                                    Image(systemName: "arrow.up.right")
-                                }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18))
-                            }.buttonStyle(.plain).accessibilityIdentifier("hubEquipment_\(id.rawValue)")
-                        }
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .regular ? 210 : 150, maximum: 300), spacing: 16)],
+                              alignment: .leading, spacing: 26) {
+                        ForEach(visibleChoices.filter { $0.id != "equipment_turbofan" }) { choice in tile(choice) }
                     }
-                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use 3D or illustrated guidance.")
-                        .font(.footnote).foregroundStyle(TutorialColors.muted)
-                        .accessibilityIdentifier("hubCapabilityScope")
                 }.padding(22).frame(maxWidth: 900).frame(maxWidth: .infinity)
-            }
-            .background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
-            .toolbar(.hidden, for: .navigationBar)
+            }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
+                .toolbar(.hidden, for: .navigationBar)
         }
         .accessibilityIdentifier("tutorialHub")
         .fullScreenCover(item: $destination, onDismiss: { progressRevision += 1 }) { selected in
@@ -80,105 +104,100 @@ struct ProtactaHomeView: View {
             case .equipment(let id): EquipmentTutorialEntry(id: id, onExit: { destination = nil })
             }
         }
-        .sheet(isPresented: $showAbout) {
-            NavigationStack {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        Text("Learn by looking and doing.").font(.title2.weight(.semibold))
-                        Text("Choose paper folding, everyday skills, a product walkthrough or virtual equipment. Equipment walkthroughs explain model structures; everyday tutorials keep your own confirmation separate from the animation.")
-                        Text("Classic Dart has experimental paper alignment and visible-outline checks. Everyday skills show authored 3D or animated diagrams; they do not inspect your clothes or knots. AERIS places a virtual concept product in AR; it does not recognize a real appliance.")
-                        Text("New everyday tutorials are prototype teaching content awaiting physical follow-through review. Optional read-aloud and supported English commands run on device. Cloud AI chat is not enabled in this version.")
-                        Text("Camera photos are not saved or uploaded in normal use. Everyday progress is stored locally. AERIS is an original concept, so follow your actual appliance's approved manual for maintenance.")
-                    }.padding(22)
-                }.background(TutorialColors.paper)
-                    .navigationTitle("About Protacta").navigationBarTitleDisplayMode(.inline)
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showAbout = false } } }
-            }
-        }
+        .sheet(isPresented: $showAbout) { about }
     }
 
-    private var brand: some View {
-        HStack {
-            HStack(spacing: 9) {
-                Image(systemName: "hand.draw.fill").font(.system(size: 20)).foregroundStyle(TutorialColors.orange)
-                Text("PROTACTA").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.8)
-            }
-            Spacer()
-            Button { showAbout = true } label: { Image(systemName: "info.circle").frame(width: 44, height: 44) }
-                .accessibilityLabel("About Protacta").accessibilityIdentifier("hubAbout")
-        }
+    private var featuredEngine: some View {
+        Button { destination = .equipment(.turbofan) } label: {
+            GeometryReader { geometry in
+                ZStack(alignment: .bottomLeading) {
+                    RoundedRectangle(cornerRadius: 28).fill(
+                        RadialGradient(colors: [Color(red: 0.53, green: 0.55, blue: 0.55),
+                                                Color(red: 0.19, green: 0.22, blue: 0.23),
+                                                Color(red: 0.11, green: 0.13, blue: 0.14)],
+                                       center: .topTrailing, startRadius: 0, endRadius: geometry.size.width * 1.1))
+                    Ellipse().fill(.black.opacity(0.24)).frame(width: geometry.size.width * 0.64, height: 22)
+                        .blur(radius: 13).position(x: geometry.size.width * 0.51, y: geometry.size.height * 0.72)
+                    modelThumbnail("turbofan-preview", symbol: "engine.combustion")
+                        .padding(.horizontal, 4).padding(.top, 6).padding(.bottom, 46)
+                        .shadow(color: .black.opacity(0.18), radius: 20, y: 12)
+                    HStack(alignment: .center) {
+                        Text("Jet engine").font(.system(size: 27, weight: .medium)).tracking(-0.6)
+                        Spacer()
+                        Image(systemName: "arrow.right").font(.system(size: 19))
+                            .frame(width: 44, height: 44).background(.white.opacity(0.18), in: Circle())
+                    }.foregroundStyle(.white).padding(22)
+                }.overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(.white.opacity(0.16), lineWidth: 0.7) }
+            }.aspectRatio(horizontalSizeClass == .regular ? 1.8 : 1.02, contentMode: .fit)
+                .frame(maxHeight: 440)
+        }.buttonStyle(.plain).accessibilityLabel("Jet engine").accessibilityIdentifier("hubEquipment_turbofan")
     }
 
-    private var featuredOrigami: some View {
-        Button { destination = .origami } label: {
-            HStack(alignment: .center, spacing: 18) {
-                VStack(alignment: .leading, spacing: 9) {
-                    Text("PAPER & CRAFT").font(.system(size: 10, weight: .bold)).tracking(1.7)
-                        .foregroundStyle(TutorialColors.orange)
-                    Text("Start with a sheet.").font(.system(size: 24, weight: .semibold, design: .rounded))
-                    Text("Classic Dart, Little Fox and the origami library.").font(.subheadline)
-                        .foregroundStyle(TutorialColors.muted)
-                    Label("3D lessons · Dart camera practice", systemImage: "viewfinder")
-                        .font(.system(size: 11, weight: .medium))
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "paperplane").font(.system(size: 48, weight: .ultraLight))
-                    .rotationEffect(.degrees(-15)).foregroundStyle(TutorialColors.ink)
-            }.padding(21).frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(red: 0.89, green: 0.92, blue: 0.85), in: RoundedRectangle(cornerRadius: 22))
-        }.buttonStyle(.plain).accessibilityIdentifier("hubOrigami")
-    }
-
-    private func everydayCard(_ id: EverydayTutorialID) -> some View {
-        let course = EverydayTutorialCourse.course(id)
+    private func tile(_ choice: TutorialDestination) -> some View {
         let _ = progressRevision
-        let saved = progressStore.load(courseID: id)
-        return Button { destination = .everyday(id) } label: {
-            VStack(alignment: .leading, spacing: 10) {
-                EverydayTutorialVisual(courseID: id.rawValue, stepIndex: 0, progress: 0, showsCaption: false)
-                    .frame(height: 128).clipped().allowsHitTesting(false).accessibilityHidden(true)
-                    .background(TutorialColors.paper, in: RoundedRectangle(cornerRadius: 12))
-                Text(course.title).font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(minHeight: 44, alignment: .topLeading)
-                Text("\(course.actions.count) actions · \(id == .towel ? "3D + diagram" : "Illustrated guide")")
-                    .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
-                HStack(spacing: 5) {
-                    Text(saved?.completed == true ? "Practise again" : saved == nil ? "Start learning" : "Continue action \(saved!.currentAction)")
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                }.font(.system(size: 11, weight: .semibold)).foregroundStyle(TutorialColors.orange)
-            }.padding(13).frame(maxWidth: .infinity, alignment: .leading)
-                .background(.white.opacity(0.85), in: RoundedRectangle(cornerRadius: 18))
-                .overlay { RoundedRectangle(cornerRadius: 18).stroke(TutorialColors.line.opacity(0.7), lineWidth: 1) }
-        }.buttonStyle(.plain).accessibilityIdentifier("hubCourse_\(id.rawValue)")
+        let saved: EverydayTutorialSession? = {
+            if case .everyday(let id) = choice { return progressStore.load(courseID: id) }
+            return nil
+        }()
+        return Button { destination = choice } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                Color.clear.aspectRatio(0.95, contentMode: .fit)
+                    .overlay { thumbnail(choice).padding(12) }
+                    .background(LinearGradient(colors: [.white, Color(red: 0.90, green: 0.915, blue: 0.92)], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 23))
+                    .overlay { RoundedRectangle(cornerRadius: 23).strokeBorder(.white.opacity(0.8), lineWidth: 0.7) }
+                    .overlay(alignment: .topTrailing) {
+                        if saved?.completed == true {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(TutorialColors.orange)
+                                .padding(12).accessibilityHidden(true)
+                        }
+                    }.clipped().allowsHitTesting(false).accessibilityHidden(true)
+                Text(choice.title).font(.body.weight(.medium)).lineLimit(2)
+                    .padding(.horizontal, 2)
+            }.contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityLabel(choice.title)
+            .accessibilityValue(saved?.completed == true ? "Completed by your confirmation" : "")
+            .accessibilityIdentifier(choice.accessibilityID)
     }
 
-    private var productCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            sectionTitle("PRODUCT MANUALS", subtitle: "Find the part. Follow the movement.")
-            Button { destination = .product } label: {
-                HStack(spacing: 18) {
-                    Image(systemName: "air.purifier").font(.system(size: 45, weight: .light))
-                        .frame(width: 66, height: 88)
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("AERIS One").font(.system(size: 23, weight: .semibold, design: .rounded))
-                        Text("Replace a filter, explore the parts, set up and clean.")
-                            .font(.subheadline).foregroundStyle(TutorialColors.muted)
-                        Text("Interactive 3D · Tabletop AR · Concept product")
-                            .font(.system(size: 10, weight: .medium))
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
-                }.padding(20).background(.white, in: RoundedRectangle(cornerRadius: 20))
-            }.buttonStyle(.plain).accessibilityIdentifier("hubProductManual")
+    @ViewBuilder
+    private func thumbnail(_ choice: TutorialDestination) -> some View {
+        switch choice {
+        case .everyday(let id):
+            EverydayTutorialVisual(courseID: id.rawValue, stepIndex: 0, progress: 0, showsCaption: false, showsAnnotations: false, showsPartLabels: false)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .origami:
+            modelThumbnail("dart-preview", symbol: "paperplane")
+                .shadow(color: .black.opacity(0.15), radius: 9, y: 12)
+        case .equipment(let id):
+            modelThumbnail(id == .gearmotor ? "gearmotor-preview" : "turbofan-preview", symbol: id.symbol)
+        case .product:
+            modelThumbnail("aeris-preview", symbol: "air.purifier")
         }
     }
 
-    private func sectionTitle(_ title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            Text(title).font(.system(size: 10, weight: .bold)).tracking(1.7)
-            Text(subtitle).font(.subheadline).foregroundStyle(TutorialColors.muted)
+    @ViewBuilder
+    private func modelThumbnail(_ name: String, symbol: String) -> some View {
+        if let image = UIImage(named: name) {
+            Image(uiImage: image).resizable().scaledToFit()
+        } else {
+            Image(systemName: symbol).font(.system(size: 70, weight: .ultraLight)).foregroundStyle(TutorialColors.muted)
+        }
+    }
+
+    private var about: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    Text("Choose a tutorial, watch the movement, then try it yourself.").font(.title3)
+                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use 3D or illustrated guidance.")
+                        .accessibilityIdentifier("hubCapabilityScope")
+                    Text("Classic Dart's paper alignment and outline checks are experimental. Everyday tutorials do not inspect your clothes or knots. Equipment AR places a virtual teaching model; it does not recognise or register to real equipment.")
+                    Text("AERIS One is an original concept product. These walkthroughs are demonstrations, not manufacturer-approved maintenance instructions. Equipment and everyday courses still need independent learning review.")
+                    Text("English narration and supported voice commands run on device. Cloud AI chat is not enabled. Normal use does not save or upload camera photos; progress stays on this device.")
+                }.font(.body).padding(24)
+            }.background(TutorialColors.paper).navigationTitle("About Protacta")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showAbout = false } } }
         }
     }
 }

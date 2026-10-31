@@ -25,6 +25,35 @@ final class EquipmentDepthStabilizerTests: XCTestCase {
         XCTAssertEqual(filter.filter(plane(1.2, time: 1.033)).depths[12], 1.2)
         XCTAssertEqual(filter.filter(plane(0.3, time: 1.066)).depths[12], 0.3)
     }
+    func testCurrentRawExposureClearsAWithdrawnHandDespiteSmoothedLag() {
+        var filter = EquipmentDepthStabilizer()
+        _ = filter.filter(plane())
+        let lagging = plane(0.5, time: 1.033), clear = plane(1.2, time: 1.033)
+        let result = filter.filter(lagging, current: clear)
+        XCTAssertTrue(result.depths.allSatisfy { $0 == 1.2 }, "Current background must replace the old hand in the same exposure")
+        let arriving = filter.filter(plane(1.2, time: 1.066), current: plane(0.3, time: 1.066))
+        XCTAssertTrue(arriving.depths.allSatisfy { $0 == 0.3 })
+    }
+    func testRawMotionCheckRejectsAnotherExposureOrCalibration() {
+        var filter = EquipmentDepthStabilizer()
+        let input = plane()
+        XCTAssertEqual(filter.filter(input, current: plane(1.2, time: 0.9)).depths[12], 0.5)
+        var wrongCamera = plane(1.2); wrongCamera.cameraTransform.columns.3.x = 0.1
+        filter.reset()
+        XCTAssertEqual(filter.filter(input, current: wrongCamera).depths[12], 0.5)
+        var invalid = plane(1.2); invalid.confidence = Array(repeating: 0, count: 25)
+        filter.reset()
+        XCTAssertEqual(filter.filter(input, current: invalid).depths[12], 0.5)
+    }
+    func testLargerStationaryNoiseIsHeldWithoutHoldingRealMotion() {
+        var filter = EquipmentDepthStabilizer()
+        _ = filter.filter(plane())
+        for frame in 1...10 {
+            let input = plane(frame.isMultiple(of: 2) ? 0.508 : 0.492, time: 1 + Double(frame) / 30)
+            XCTAssertEqual(filter.filter(input).depths[12], 0.5)
+        }
+        XCTAssertEqual(filter.filter(plane(0.65, time: 1.367)).depths[12], 0.65)
+    }
     func testCameraMovementAndLongFrameGapCannotReuseDepthHistory() {
         var filter = EquipmentDepthStabilizer()
         _ = filter.filter(plane())

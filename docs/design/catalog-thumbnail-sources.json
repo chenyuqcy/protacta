@@ -1,0 +1,37 @@
+{
+  "date": "2026-11-01",
+  "renderer": "scripts/render_catalog_thumbnails.swift",
+  "sourceManifest": "docs/assets/model_sources.json",
+  "scope": "Catalog artwork rendered from existing licensed USDZ geometry; no generated replacement model",
+  "renders": [
+    {
+      "asset": "ios/PaperSteps/Resources/helical-gearmotor.usdz",
+      "assetSHA256": "cec0d2ec83cbaea70f9aedd62428366d4ad2fd24840c2043d668b0ca9ed54891",
+      "license": "CC0-1.0",
+      "thumbnail": "ios/PaperSteps/Resources/gearmotor-preview.png",
+      "thumbnailSHA256": "491f5f7b16cb38b922b809f692d389b9fd7bae5a39701cd6c06aab7c9ed31d4a"
+    },
+    {
+      "asset": "ios/PaperSteps/Resources/turbofan-structure.usdz",
+      "assetSHA256": "30bf7afdad2ea8370fb011af59a7581d6d24a2c46621b001b31a5dd19385a6bf",
+      "license": "MIT",
+      "thumbnail": "ios/PaperSteps/Resources/turbofan-preview.png",
+      "thumbnailSHA256": "f44eb3b553ede22cd7e181341122881686944f1ebff0b7964f207dc9a24d0a32"
+    },
+    {
+      "asset": "ios/PaperSteps/ProductManual/Resources/aeris-one.usdz",
+      "assetSHA256": "3b405825eaacb6eb7591251e7c3d2ef9bb0c31cc02dd97c63f5fa4d258f17f95",
+      "license": "Original concept model",
+      "thumbnail": "ios/PaperSteps/Resources/aeris-preview.png",
+      "thumbnailSHA256": "bc99dac83040b49c7c4220b757415b5e0dfd69de9ada1f5d56778bf6abc52295"
+    }
+  ],
+  "additionalOriginalArtwork": {
+    "dart": "PaperGeometry.frame(step: lastStep, progress: 1), same source as the actual native Dart lesson",
+    "environment": "Original procedural softbox equirectangular texture; no downloaded imagery",
+    "script": "scripts/render_catalog_thumbnails.swift",
+    "environmentGenerator": "scripts/generate_studio_environment.py",
+    "environmentSHA256": "6fcf789567293f5f0b46fc5a6153f372b9c53ce30a52b01ca5fe3529d6764251",
+    "dartSHA256": "6fc41a8f5559faa0033a634ea807634745b61fae2a212a2121f978eb8454e9f4"
+  }
+}

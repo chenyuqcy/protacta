@@ -20,6 +20,7 @@ final class AssemblyPlayerUITests: XCTestCase {
 
     func testPartSelectionExplodeReplayCompactModeAndReturnToLegacyGuide() {
         capture("Assembly_full_screen_initial")
+        app.buttons["assemblyToggleDetails"].tap()
         app.buttons["assemblyPartMenu"].tap()
         app.buttons["Filter cartridge"].tap()
         XCTAssertTrue(app.staticTexts["assemblyPartDetail"].label.contains("pleated media"))
