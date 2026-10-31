@@ -380,6 +380,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             "depthWidth": depth.depthWidth, "depthHeight": depth.depthHeight,
             "sourceDepthWidth": depth.sourceWidth, "sourceDepthHeight": depth.sourceHeight,
             "depthPixelStep": depth.pixelStep, "depthCropX": depth.cropX, "depthCropY": depth.cropY,
+            "depthSamplingReason": depth.samplingReason, "depthProjectedTargetArea": depth.projectedTargetArea,
             "rejectedDepthSamples": depth.rejectedSamples,
             "rejectedDepthEdges": depth.rejectedDiscontinuities,
             "rejectedTableTriangles": depth.rejectedSupportTriangles,

@@ -13,13 +13,58 @@ final class ARFullScreenUITests: XCTestCase {
         #endif
         continueAfterFailure = false
         XCUIDevice.shared.orientation = .portrait
+        launchLesson()
+    }
+
+    private func launchLesson(extraArguments: [String] = []) {
+        app?.terminate()
         app = XCUIApplication()
-        app.launchArguments = ["--ui-testing", "--tabletop-layout-fixture"]
+        app.launchArguments = ["--ui-testing", "--tabletop-layout-fixture"] + extraArguments
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
         app.buttons["lesson_dart"].tap()
         app.buttons["startLesson"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
+    }
+
+    func testVoiceOnlyUnavailableOffersRecoveryWithoutNavigationButtonsOrPermissionAlert() throws {
+        let partial = try openPartialFoldInTabletopPreview()
+        app.buttons["enterARFullScreen"].tap()
+        app.buttons["enterARVoiceOnly"].tap()
+        XCTAssertTrue(app.buttons["exitVoiceOnlyAR"].waitForExistence(timeout: 5))
+        assertFullViewport()
+        waitForLabel(app.staticTexts["voiceOnlyRecoveryMessage"], containing: "Voice input is unavailable in automated tests")
+        for id in ["compactARNext", "compactARVoice", "nextStep", "backStep", "toggleHandsFree"] {
+            XCTAssertFalse(app.buttons[id].exists, id)
+        }
+        XCTAssertTrue(app.buttons["voiceOnlyRetry"].isHittable)
+        assertNoPermissionAlert()
+        capture("Voice_only_AR_recovery_no_navigation_buttons")
+        app.buttons["voiceOnlyShowControls"].tap()
+        XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sliders["foldProgress"].value as? String, partial)
+        XCTAssertFalse(app.buttons["exitVoiceOnlyAR"].exists)
+    }
+
+    func testVoiceOnlyCleanLayoutHasOnlyExitAndRestoresPartialFold() throws {
+        launchLesson(extraArguments: ["--voice-only-layout-fixture"])
+        let partial = try openPartialFoldInTabletopPreview()
+        app.buttons["enterARFullScreen"].tap(); app.buttons["enterARVoiceOnly"].tap()
+        XCTAssertTrue(app.buttons["exitVoiceOnlyAR"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["voiceOnlyFixtureLabel"].exists)
+        XCTAssertTrue(app.staticTexts["voiceOnlyFixtureLabel"].label.contains("MIC OFF"))
+        let hintGone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.staticTexts["voiceOnlyHint"])
+        XCTAssertEqual(XCTWaiter.wait(for: [hintGone], timeout: 8), .completed)
+        assertFullViewport(); assertFixtureLabel()
+        for id in ["compactARNext", "compactARVoice", "nextStep", "backStep", "voiceOnlyRetry", "voiceOnlyShowControls"] {
+            XCTAssertFalse(app.buttons[id].exists, id)
+        }
+        XCTAssertTrue(app.buttons["exitVoiceOnlyAR"].isHittable)
+        XCTAssertGreaterThanOrEqual(app.buttons["exitVoiceOnlyAR"].frame.height, 44)
+        capture("Voice_only_AR_clean_layout_MIC_OFF_NO_LIVE_CAMERA")
+        app.buttons["exitVoiceOnlyAR"].tap()
+        XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sliders["foldProgress"].value as? String, partial)
     }
 
     override func tearDownWithError() throws {
@@ -124,6 +169,7 @@ final class ARFullScreenUITests: XCTestCase {
 
     private func enterFullScreen(file: StaticString = #filePath, line: UInt = #line) {
         app.buttons["enterARFullScreen"].tap()
+        app.buttons["enterARCompactFullScreen"].tap()
         XCTAssertTrue(app.buttons["exitARFullScreen"].waitForExistence(timeout: 5), file: file, line: line)
         XCTAssertFalse(app.buttons["enterARFullScreen"].exists, file: file, line: line)
     }

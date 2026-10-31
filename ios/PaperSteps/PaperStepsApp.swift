@@ -88,6 +88,7 @@ struct PaperStepsView: View {
     @State private var afterAbout: String?
     @State private var selectedStepToReplay: Int?
     @State private var isARFullScreen = false
+    @State private var isVoiceOnlyAR = false
     @State private var compactVoiceFeedbackVisible = false
 
     var body: some View {
@@ -136,7 +137,7 @@ struct PaperStepsView: View {
         }) { stepListSheet }
         .onChange(of: scenePhase) { _, phase in
             if phase == .inactive { controller.suspendScreenAwake(); controller.pauseAndSave(); voice.handleSceneInactive() }
-            if phase == .background { controller.background(); voice.stop() }
+            if phase == .background { isVoiceOnlyAR = false; isARFullScreen = false; controller.background(); voice.stop() }
             if phase == .active { controller.resumeScreenAwake(); voice.handleSceneActive(); Task { await purchases.refresh() } }
         }
         .onAppear { configureVoiceCommands() }
@@ -157,6 +158,7 @@ struct PaperStepsView: View {
             voice.stop()
             if !active { isARFullScreen = false }
         }
+        .onChange(of: isARFullScreen) { _, active in if !active { isVoiceOnlyAR = false } }
         .onChange(of: controller.isPaperGuide) { _, active in if active { isARFullScreen = false } }
         .onChange(of: controller.placed) { _, placed in
             if !placed { voice.stop(); isARFullScreen = false }
@@ -349,7 +351,15 @@ struct PaperStepsView: View {
                     .allowsHitTesting(false)
             }
             if isARFullScreen {
-                fullScreenARControls(safeAreaInsets: safeAreaInsets)
+                if isVoiceOnlyAR {
+                    VoiceOnlyAROverlay(voice: voice,
+                                       trackingMessage: controller.needsRescan || !controller.trackingReady || controller.cameraError != nil
+                                           ? controller.cameraError ?? controller.status : nil,
+                                       commandFeedback: compactVoiceFeedbackVisible ? voiceFeedback : nil,
+                                       safeAreaInsets: safeAreaInsets) {
+                        voice.stop(); isVoiceOnlyAR = false; isARFullScreen = false
+                    }
+                } else { fullScreenARControls(safeAreaInsets: safeAreaInsets) }
             } else {
                 standardViewportControls
             }
@@ -378,13 +388,21 @@ struct PaperStepsView: View {
                 if controller.isAR && !controller.isPaperGuide {
                     if !controller.placed { Spacer() }
                     if controller.placed {
-                        Button { isARFullScreen = true } label: {
+                        Menu {
+                            Button("Full screen") { isVoiceOnlyAR = false; isARFullScreen = true }
+                                .accessibilityIdentifier("enterARCompactFullScreen")
+                            Button("Voice-only full screen") {
+                                controller.pauseAndSave(); voice.stop(); voiceFeedback = ""
+                                isVoiceOnlyAR = true; isARFullScreen = true
+                            }.disabled(!controller.canUseVoiceGuide || controller.isDartPractice)
+                                .accessibilityIdentifier("enterARVoiceOnly")
+                        } label: {
                             Image(systemName: "arrow.up.left.and.arrow.down.right")
                                 .font(.system(size: 16, weight: .semibold))
                                 .frame(width: 44, height: 44)
                                 .background(.regularMaterial, in: Circle())
                         }.accessibilityLabel("Full screen AR")
-                            .accessibilityHint("Show a larger view with next fold and voice controls. Exit full screen to adjust the model position.")
+                            .accessibilityHint("Choose touch controls or voice-only full screen.")
                             .accessibilityIdentifier("enterARFullScreen")
                     }
                     Button { showARHelp = true } label: {

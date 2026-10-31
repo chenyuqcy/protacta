@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-31",
+  "date": "2026-11-01",
   "baselineCommit": "6073275211606960398c3f34cb461e88469e138e",
   "objective": "Reusable 3D tutorials for everyday skills, equipment and large machinery",
   "stages": [
@@ -63,7 +63,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "18",
+    "build": "19",
     "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
@@ -90,14 +90,15 @@
         "JSON-authored equipment courses",
         "In-app model credits, licenses and scope",
         "Adaptive wide-screen model and instruction columns; stable renderer across layout changes",
-        "Visible voice feedback in compact and expanded views; unavailable-input messages survive step changes while touch remains usable"
+        "Visible voice feedback in compact and expanded views; unavailable-input messages survive step changes while touch remains usable",
+        "Optional voice-only full-screen AR with minimal exit, brief hint and voice-failure recovery"
       ],
       "limits": [
         "Linear part displacement; no imported animation-clip support yet",
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 18 installed and inventory verified 0.1.0 (18); launch blocked by iOS Locked, unlock requested",
+    "deviceInstallation": "Build 18 installed and inventory verified 0.1.0 (18); subsequent user screenshots and copied AR diagnostic prove an actual origami AR session despite CLI launch attempts returning Locked. Build 19 remains a local candidate.",
     "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
@@ -173,33 +174,31 @@
       "physicalCameraAndPlacement": "Motor initial placement, brief stability, manipulation, five actions and AR/studio pose preservation confirmed by user; recovery and turbofan pending",
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
-        "candidateBuild": "18",
-        "status": "installed_inventory_verified_launch_waiting_for_unlock",
+        "candidateBuild": "19",
+        "status": "local_candidate_physical_acceptance_deferred_by_user",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
         ],
         "limits": [
-          "Physical edge stability and withdrawal trails not yet tested",
+          "Physical edge stability and withdrawal trails remain unaccepted",
           "Stable mode requires supported scene depth",
-          "8–15 mm foreground depth tolerance is visual, not measurement accuracy",
-          "Paper depth policy remains unchanged"
+          "8–15 mm equipment foreground tolerance is visual, not measurement accuracy",
+          "Native hands A/B comparison deferred by user"
         ],
         "localEvidence": [
-          "DepthSampling.xcresult: 39 tests passed"
+          "Build 18 DepthSampling.xcresult: 39 checks passed",
+          "Build 19 VoiceOnlyAndSampling.xcresult: in progress"
         ],
-        "plan": "output/occlusion-build18-2026-11-01/build18-plan.json",
+        "plan": "output/voice-only-build19-2026-11-01/build19-plan.json",
         "newChanges": [
-          "Project current target world bounds into camera-depth coordinates and use native samples in a bounded padded region",
-          "Retain a quantized crop during small projection jitter so camera calibration/history remains stable",
-          "Crop principal point is adjusted exactly; camera pose remains tied to its own exposure",
-          "Native stride 1 when region <= 20000 pixels; bounded stride 2 for unusually large/near-camera targets",
-          "Require local current raw agreement before replacing smoothed depth with a motion discontinuity",
-          "Bridge supported confidence holes for at most two observations; current coherent withdrawal still bypasses history immediately",
-          "Remove per-triangle temporary arrays from mesh generation",
-          "Use the same sampling planner in equipment and origami tabletop modes"
+          "Use oriented local target corners instead of re-expanded world-axis bounds",
+          "Origami uses paper-face bounds rather than visual arrows and decorations",
+          "Allow an oversized retained crop to shrink after six stable observations",
+          "Record sampling reason and projected area for physical diagnosis",
+          "Keep the 20000-pixel native work budget, current raw withdrawal check, single depth owner and 120 ms stale cap"
         ],
-        "baselineFeedback": "Build 17: still flickers, no obvious withdrawal trail; stableEdges mode confirmed in live diagnostic"
+        "baselineFeedback": "Build 17: flickers with no obvious withdrawal trail. Build 18: user screenshots show jagged origami hand edges/holes; phone diagnostic confirms full-image stride 2 and no recorded expiry/empty-surface events."
       }
     },
     "baselineDeviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json",
@@ -221,10 +220,16 @@
         "FinalTabletUI.xcresult: 2 rotation flows passed; rapid toggle test failed before layout-state wait fix",
         "TabletDetailsFinal.xcresult: details test passed with explicit layout-state waits"
       ]
+    },
+    "voiceOnlyAR": {
+      "build": "19",
+      "plan": "output/voice-only-build19-2026-11-01/build19-plan.json",
+      "status": "implemented_local_checks_in_progress",
+      "physicalAcceptance": "pending; user deferred testing"
     }
   },
   "nextGates": [
-    "On Build 18, repeat stationary/moving hand-edge and withdrawal checks, then verify actual native sampling region, pixel step and mesh latency; keep remaining physical tasks separate.",
+    "When the user resumes physical testing, check Build 19 voice-only AR, then repeat stationary/moving hand-edge and withdrawal checks; inspect sampling reason, projected area, crop, pixel step and mesh timing.",
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
@@ -261,7 +266,7 @@
   ],
   "manualAcceptance": {
     "status": "in_progress",
-    "installationDecision": "Build 18 installed; iOS rejected launch because phone was locked. After unlock, launch immediately and repeat same-size gearmotor hand-edge/withdrawal check; inspect native sampling and timing diagnostics.",
+    "installationDecision": "User deferred physical comparison/testing. Prepare and retain local Build 19; do not repeatedly request unlock or launch.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
@@ -305,6 +310,12 @@
           "failed": "hand/model edges flicker even when hand is stationary",
           "pending": "repair retest, drag, recovery, turbofan"
         }
+      },
+      {
+        "id": "voice_only_fullscreen_ar",
+        "procedure": "In placed origami tabletop AR choose full-screen icon → Voice-only full screen. Wait for hint to disappear, then say Next step, Previous step, Show me again, Pause, Continue, and Read this step. Repeat in gearmotor/turbofan AR; equipment navigation should play the chosen action. Exit and verify step/partial pose/anchor retained. Check Stop listening and denied/unavailable speech recovery, tracking loss and background return.",
+        "record": "Real spoken phrases and actual observed response, microphone stop behavior, unreachable controls or lost pose; synthetic command/layout fixtures cannot fill this result",
+        "result": null
       }
     ],
     "learnerChecks": [
@@ -329,7 +340,7 @@
     ],
     "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
   },
-  "latestUserRequest": "User selected premium Apple-inspired visual concept v2; implement material lighting, hierarchy and refined controls while retaining concise copy",
+  "latestUserRequest": "Optional voice-only full-screen AR with no Next/Previous/footer controls",
   "designConcept": {
     "status": "historical_proposal",
     "direction": "Spatial teaching workbench",

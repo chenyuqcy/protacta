@@ -61,4 +61,51 @@ final class SceneDepthSamplingTests: XCTestCase {
         XCTAssertEqual(SceneDepthRegion(x: -1, y: 0, width: 100, height: 100).crop(input).calibration, input.calibration)
         XCTAssertNil(SceneDepthRegion.projected(minimum: [.nan, 0, -1], maximum: [1, 1, -0.5], into: input))
     }
+
+    func testOrientedCornersAvoidFalseNearPlaneFallbackFromWorldAxisBox() throws {
+        var input = snapshot()
+        let rotation = simd_float4x4(simd_quatf(angle: .pi / 4, axis: [0, 1, 0]))
+        input.cameraTransform = rotation
+        let cameraCorners = SceneDepthRegion.corners(minimum: [-0.18, -0.02, -0.201],
+                                                      maximum: [0.18, 0.02, -0.199])
+        let worldCorners = cameraCorners.map { point -> SIMD3<Float> in
+            let world = rotation * SIMD4(point, 1)
+            return SIMD3(world.x, world.y, world.z)
+        }
+        let low = worldCorners.reduce(SIMD3<Float>(repeating: .infinity), simd_min)
+        let high = worldCorners.reduce(SIMD3<Float>(repeating: -.infinity), simd_max)
+        XCTAssertNil(SceneDepthRegion.projected(minimum: low, maximum: high, into: input),
+                     "The expanded world box incorrectly reaches the near plane.")
+        let required = try XCTUnwrap(SceneDepthRegion.project(corners: worldCorners, into: input).region)
+        var sampling = SceneDepthSampling()
+        let plan = sampling.plan(for: input, worldCorners: worldCorners)
+        XCTAssertEqual(plan.pixelStep, 1)
+        XCTAssertTrue(plan.region.contains(required))
+        XCTAssertEqual(plan.reason, "Native oriented region")
+    }
+
+    func testOversizedInitialCropShrinksOnlyAfterSixStableSamples() {
+        let input = snapshot(); var sampling = SceneDepthSampling()
+        let large = sampling.plan(for: input, minimum: [-1, -1, -0.8], maximum: [1, 1, -0.6])
+        XCTAssertEqual(large.pixelStep, 2)
+        for _ in 0..<5 {
+            let waiting = sampling.plan(for: input, minimum: [-0.1, -0.1, -1.02], maximum: [0.1, 0.1, -0.98])
+            XCTAssertEqual(waiting.region, large.region)
+            XCTAssertEqual(waiting.pixelStep, 2)
+            XCTAssertEqual(waiting.reason, "Waiting for stable smaller region")
+        }
+        let native = sampling.plan(for: input, minimum: [-0.1, -0.1, -1.02], maximum: [0.1, 0.1, -0.98])
+        XCTAssertEqual(native.pixelStep, 1)
+        XCTAssertLessThan(native.region.area, large.region.area)
+    }
+
+    func testCropExpandsImmediatelyWhenModelLeavesRetainedRegion() throws {
+        let input = snapshot(); var sampling = SceneDepthSampling()
+        let small = sampling.plan(for: input, minimum: [-0.1, -0.1, -1.02], maximum: [0.1, 0.1, -0.98])
+        let required = try XCTUnwrap(SceneDepthRegion.projected(minimum: [-0.4, -0.3, -1.02], maximum: [0.4, 0.3, -0.98], into: input))
+        let expanded = sampling.plan(for: input, minimum: [-0.4, -0.3, -1.02], maximum: [0.4, 0.3, -0.98])
+        XCTAssertTrue(expanded.region.contains(required))
+        XCTAssertGreaterThan(expanded.region.area, small.region.area)
+        XCTAssertLessThanOrEqual(expanded.region.area / (expanded.pixelStep * expanded.pixelStep), 20_000)
+    }
 }

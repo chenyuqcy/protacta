@@ -12,6 +12,7 @@ struct AssemblyTutorialPlayer: View {
     @State private var speed: Double = 1
     @State private var showDetails = false
     @State private var showCredits = false
+    @State private var isVoiceOnlyAR = false
 
     init(tutorial: AssemblyTutorial, sharedView: ARView? = nil, onExit: @escaping () -> Void) {
         _scene = StateObject(wrappedValue: AssemblySceneController(tutorial: tutorial, sharedView: sharedView))
@@ -74,6 +75,7 @@ struct AssemblyTutorialPlayer: View {
             }
         }
         .foregroundStyle(TutorialColors.ink).preferredColorScheme(.light)
+        .statusBarHidden(isVoiceOnlyAR)
         .sheet(isPresented: $showCredits) { credits }
         .task {
             await scene.load()
@@ -92,10 +94,12 @@ struct AssemblyTutorialPlayer: View {
             if value == .active { screenAwake.acquire(); voice.handleSceneActive(); scene.tabletop.handleActive() }
             else {
                 screenAwake.release(); isPlaying = false; voice.handleSceneInactive()
+                if value == .background { isVoiceOnlyAR = false }
                 if !(value == .inactive && voice.isRequestingPermission) { scene.tabletop.handleInactive() }
             }
         }
         .onChange(of: scene.tabletop.trackingReady) { _, ready in if !ready { isPlaying = false } }
+        .onChange(of: scene.isAR) { _, active in if !active { isVoiceOnlyAR = false } }
     }
 
     private var modelViewport: some View {
@@ -117,10 +121,25 @@ struct AssemblyTutorialPlayer: View {
     private var arStage: some View {
         ZStack {
             modelViewport.ignoresSafeArea()
-            if !scene.tabletop.placed, scene.tabletop.error == nil {
+            if !isVoiceOnlyAR, !scene.tabletop.placed, scene.tabletop.error == nil {
                 Image(systemName: "viewfinder").font(.system(size: 42, weight: .light))
                     .foregroundStyle(.white).shadow(radius: 3).allowsHitTesting(false)
             }
+            if isVoiceOnlyAR {
+                VoiceOnlyAROverlay(voice: voice,
+                                   trackingMessage: !scene.tabletop.trackingReady || scene.tabletop.error != nil
+                                       ? scene.tabletop.error ?? scene.tabletop.status : nil) {
+                    voice.stop(); isVoiceOnlyAR = false
+                }
+                if scene.tabletop.isLayoutPreview {
+                    VStack {
+                        Text("AR LAYOUT PREVIEW · NO LIVE CAMERA").font(.system(size: 10, weight: .bold))
+                            .padding(8).background(.yellow, in: Capsule())
+                            .accessibilityIdentifier("assemblyARFixtureLabel")
+                        Spacer()
+                    }.padding(.top, 72).allowsHitTesting(false)
+                }
+            } else {
             VStack(spacing: 12) {
                 HStack {
                     Button {
@@ -133,6 +152,14 @@ struct AssemblyTutorialPlayer: View {
                         Text("\(scene.stepIndex + 1)/\(scene.tutorial.steps.count)").font(.system(size: 15, weight: .medium)).monospacedDigit()
                             .accessibilityIdentifier("assemblyARCounter")
                     }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 15))
+                    Button {
+                        isPlaying = false; showDetails = false; voice.stop(); isVoiceOnlyAR = true
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right").frame(width: 44, height: 44)
+                            .background(.regularMaterial, in: Circle())
+                    }.accessibilityLabel("Voice-only full screen")
+                        .accessibilityIdentifier("assemblyEnterVoiceOnlyAR")
+                        .disabled(!scene.canAnimate)
                     moreMenu
                 }
                 if scene.tabletop.isLayoutPreview {
@@ -161,6 +188,7 @@ struct AssemblyTutorialPlayer: View {
                 }
                 controls.frame(maxWidth: 720)
             }.padding(16)
+            }
         }
     }
 
@@ -338,8 +366,12 @@ struct AssemblyTutorialPlayer: View {
                 isPlaying = false; voice.speak(scene.tabletop.status); return
             }
             switch command {
-            case .next: next()
-            case .back: go(to: scene.stepIndex - 1)
+            case .next:
+                next()
+                if isVoiceOnlyAR { isPlaying = true }
+            case .back:
+                go(to: scene.stepIndex - 1)
+                if isVoiceOnlyAR { isPlaying = true }
             case .replay: scene.setExploded(false); scene.setProgress(0); isPlaying = true
             case .restart: go(to: 0)
             case .slower: speed = 0.4

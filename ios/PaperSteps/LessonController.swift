@@ -882,7 +882,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         if isPaperGuide { assessPaperGuide(frame); return }
         if occlusionMode == .automatic && occlusionCapabilities.sceneDepth {
             depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil,
-                                  target: placed ? paper.root : nil)
+                                  target: placed ? paper.root : nil, localBounds: paper.bounds)
         }
         guard frame.timestamp - lastAssessment > 0.12 else { return }
         lastAssessment = frame.timestamp
@@ -1045,6 +1045,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "liveOcclusionSourceHeight": depth.sourceHeight,
             "liveOcclusionPixelStep": depth.pixelStep,
             "liveOcclusionCropX": depth.cropX, "liveOcclusionCropY": depth.cropY,
+            "liveOcclusionSamplingReason": depth.samplingReason,
+            "liveOcclusionProjectedTargetArea": depth.projectedTargetArea,
             "error": cameraError ?? ""
         ]
         if let data = try? JSONSerialization.data(withJSONObject: values, options: [.prettyPrinted, .sortedKeys]),

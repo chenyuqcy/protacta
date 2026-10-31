@@ -34,6 +34,8 @@ final class SceneDepthOcclusion {
         let pixelStep: Int
         let cropX: Int
         let cropY: Int
+        let samplingReason: String
+        let projectedTargetArea: Int
     }
 
     private let anchor = AnchorEntity(world: .zero)
@@ -60,6 +62,8 @@ final class SceneDepthOcclusion {
     private var sourceSize = SIMD2<Int>.zero
     private var samplingStep = 2
     private var cropOrigin = SIMD2<Int>.zero
+    private var samplingReason = "Not active"
+    private var projectedTargetArea = 0
     private(set) var lastAcceptedDepthTimestamp: TimeInterval?
 
     private(set) var triangleCount = 0
@@ -84,7 +88,8 @@ final class SceneDepthOcclusion {
                            rejectedSamples: rejectedSamples, rejectedDiscontinuities: rejectedDiscontinuities,
                            rejectedSupportTriangles: rejectedSupportTriangles, depthSource: depthSource,
                            sourceWidth: sourceSize.x, sourceHeight: sourceSize.y, pixelStep: samplingStep,
-                           cropX: cropOrigin.x, cropY: cropOrigin.y)
+                           cropX: cropOrigin.x, cropY: cropOrigin.y,
+                           samplingReason: samplingReason, projectedTargetArea: projectedTargetArea)
     }
 
     init(profile: Profile = .rawPaper) {
@@ -127,7 +132,8 @@ final class SceneDepthOcclusion {
 
     /// Call for every ARFrame before any UI/tracking-status throttling. Pass the
     /// actual supporting table's world Y, not a paper-model animation height.
-    func update(frame: ARFrame, supportPlaneY: Float? = nil, target: Entity? = nil) {
+    func update(frame: ARFrame, supportPlaneY: Float? = nil, target: Entity? = nil,
+                localBounds: (minimum: SIMD3<Float>, maximum: SIMD3<Float>)? = nil) {
         guard let view else { return }
         ensureSceneAttachment(in: view)
         latestFrameTimestamp = frame.timestamp
@@ -149,10 +155,18 @@ final class SceneDepthOcclusion {
         let currentRaw = useSmoothed ? frame.sceneDepth.flatMap { Self.snapshot(frame: frame, depth: $0) } : nil
         depthSource = useSmoothed ? "Smoothed scene depth" : "Raw scene depth"
         if currentRaw != nil { depthSource += " + current raw motion check" }
-        let bounds = target?.visualBounds(relativeTo: nil)
+        // Project the eight oriented corners. Re-expanding a rotated object
+        // into a world-axis box can cross the camera near plane and force the
+        // entire session back to a coarse full-image mesh.
+        let worldCorners = target.map { target in
+            let bounds = target.visualBounds(relativeTo: target)
+            return SceneDepthRegion.corners(minimum: localBounds?.minimum ?? bounds.min,
+                                            maximum: localBounds?.maximum ?? bounds.max)
+                .map { target.convert(position: $0, to: nil) }
+        }
         let plan = profile == .rawPaper
             ? SceneDepthSampling.Plan(region: .full(snapshot), pixelStep: 2)
-            : sampling.plan(for: snapshot, minimum: bounds?.min, maximum: bounds?.max)
+            : sampling.plan(for: snapshot, worldCorners: worldCorners)
         lastAcceptedDepthTimestamp = snapshot.timestamp
         let receiptTime = ProcessInfo.processInfo.systemUptime
         let token = generation
@@ -162,6 +176,7 @@ final class SceneDepthOcclusion {
         sourceSize = [snapshot.width, snapshot.height]
         depthSize = [plan.region.width, plan.region.height]
         cropOrigin = [plan.region.x, plan.region.y]; samplingStep = plan.pixelStep
+        samplingReason = plan.reason; projectedTargetArea = plan.projectedArea
         buildTask = Task { [weak self] in
             let start = ProcessInfo.processInfo.systemUptime
             let result = await Task.detached(priority: .userInitiated) {
@@ -248,6 +263,7 @@ final class SceneDepthOcclusion {
         rejectedSupportTriangles = 0
         stabilizer.reset(); depthSource = "None"; lastAcceptedDepthTimestamp = nil
         sampling.reset(); sourceSize = .zero; samplingStep = 2; cropOrigin = .zero
+        samplingReason = "Not active"; projectedTargetArea = 0
     }
 
     private func invalidateMesh(reason: String, retainingFreshDisplay: Bool = false) {
