@@ -98,7 +98,7 @@
       ]
     },
     "deviceInstallation": "Build 15 installed and verified in iPhone 17 Pro Max inventory as 0.1.0 (15); automatic launch blocked by locked screen",
-    "physicalAcceptance": "Build 14 gearmotor initial loading was confirmed by user; Build 15 installed, real camera and tabletop placement awaiting user observation",
+    "physicalAcceptance": "Build 14 motor initial loading and Build 15 real camera startup confirmed by user; tabletop placement, controls, performance, speech and learner review still pending",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
     "evidenceDirectory": "output/3d-expansion-2026-10-30",
@@ -148,7 +148,7 @@
         "EquipmentARFinalUI.xcresult: final 3 AR layout/fallback UI checks passed"
       ],
       "fixtureScope": "DEBUG Simulator layout preview is visibly NO LIVE CAMERA and unavailable in device Release",
-      "physicalCameraAndPlacement": "pending",
+      "physicalCameraAndPlacement": "Camera feed confirmed on iPhone by user; surface placement and tracking/gesture behavior still awaiting observation",
       "capability": "Virtual tabletop reference; no real equipment recognition or registration"
     }
   },
@@ -239,5 +239,17 @@
     ],
     "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
   },
-  "latestUserRequest": "User confirmed motor and turbofan first; towel AR is outside this increment"
+  "latestUserRequest": "User confirmed motor and turbofan first; towel AR is outside this increment",
+  "designConcept": {
+    "status": "proposal",
+    "direction": "Spatial teaching workbench",
+    "brief": "docs/design/protacta-spatial-workbench-v1.json",
+    "image": "docs/design/protacta-spatial-workbench-v1.png",
+    "nextPriorities": [
+      "Truthful translucent HUD",
+      "Selected-part callout",
+      "Authored target ghost and arrow"
+    ],
+    "runtimeVersionUnchanged": "Build 15"
+  }
 }

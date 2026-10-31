@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-31",
+  "status": "proposed_visual_concept_not_implemented_UI",
+  "product": "Protacta",
+  "direction": "Spatial teaching workbench",
+  "audience": "People learning a practical action or equipment structure through a phone camera",
+  "primaryJob": "Show the next authored movement beside the selected model part while keeping the real camera view readable",
+  "signature": "A translucent target ghost and one direction arrow showing the current step end pose",
+  "palette": {
+    "carbon": "#0B1C28",
+    "mist": "#EEF6F5",
+    "selectedPart": "#64E7E6",
+    "movement": "#E5A84F",
+    "mutedText": "#9BADB1"
+  },
+  "type": {
+    "display": "SF Pro Display, restrained semibold",
+    "body": "SF Pro Text",
+    "utility": "SF Mono for step and truthful tracking state"
+  },
+  "layout": "Real camera is the canvas; a slim status strip at top, selected-part callout beside the object, compact Replay/Voice/Next controls at bottom",
+  "image": "docs/design/protacta-spatial-workbench-v1.png",
+  "generationTool": "built-in image_gen",
+  "prompt": "docs/design/protacta-spatial-workbench-v1-prompt.txt",
+  "currentEvidence": {
+    "installedBuild": "15",
+    "realCameraStartup": "User confirmed camera visible and searching for a table",
+    "physicalPlacement": "pending",
+    "existingSelectedPart": "Independent selection frame and authored part detail",
+    "voice": "Local predefined commands and narration; actual speech acceptance pending"
+  },
+  "nextIncrementPriorities": [
+    {
+      "feature": "Semantic translucent HUD",
+      "implementation": "Render actual session and step state; keep large touch targets, contrast and recovery messages"
+    },
+    {
+      "feature": "Selected-part callout",
+      "implementation": "Project the selected entity bounds into screen coordinates; place the label within safe areas and hide stale callouts"
+    },
+    {
+      "feature": "Target ghost and motion arrow",
+      "implementation": "Derive target from the current authored JSON pose; use separate preview geometry without replacing source model materials; omit the ghost on stationary inspection steps"
+    },
+    {
+      "feature": "Optional single-step focus",
+      "implementation": "Expose the selected part and its current action, with a one-tap return to the whole assembly"
+    }
+  ],
+  "laterResearch": [
+    "Recognize a specific physical object and align instructions with its position and orientation",
+    "Evaluate real-action checks with independent examples and learner observations",
+    "Add open-ended AI explanation only after the deferred product AI integration is resumed"
+  ],
+  "constraints": [
+    "The visual is a generated concept, not a Build 15 screenshot",
+    "Generated engine detail is illustrative and is not the bundled source asset",
+    "No fake accuracy percentages or sensor measurements",
+    "Keep original model materials and current step state",
+    "AR placement and tracking acceptance remain separate from visual design",
+    "The first visual update does not require cloud AI or equipment recognition"
+  ]
+}

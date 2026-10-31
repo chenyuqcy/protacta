@@ -598,3 +598,20 @@ validation targets. A first-fold technical demo is not the complete MVP.
   the screen was locked. The user has been asked to unlock; camera visibility
   and tabletop placement remain pending. Device receipts are in the
   build15-device subdirectory recorded by build15-current-deployment.json.
+
+## Camera observed; spatial-workbench concept — 2026-10-31
+
+- After the user unlocked the iPhone, the installed Build 15 launched
+  successfully. The user confirmed that the motor AR screen shows the real
+  camera and is searching for a table. Placement and tracking have not yet
+  been accepted; preserve this as camera-startup evidence only.
+- The user requested a more futuristic product concept. Created a proposed
+  spatial teaching workbench direction: restrained translucent controls,
+  selected-part callouts and an authored target ghost with a direction arrow.
+  The design image, palette, implementation priorities and full generation
+  prompt are saved in docs/design/protacta-spatial-workbench-v1 files.
+- The image was generated with built-in image_gen. It is a visual proposal,
+  with illustrative engine detail, not a screenshot of the current application.
+  No app runtime source or installed version changed in this concept pass.
+  Physical object recognition, automatic registration and real-action checking
+  remain later research, separate from the proposed visual update.
