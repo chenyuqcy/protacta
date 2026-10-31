@@ -23,6 +23,7 @@ struct SceneDepthSurface: Sendable {
 }
 
 enum SceneDepthMesher {
+    enum Policy: Sendable { case paper, stableEquipment }
     static let maximumAge: TimeInterval = 0.12
 
     static func isFresh(timestamp: TimeInterval, latestFrameTimestamp: TimeInterval,
@@ -32,7 +33,8 @@ enum SceneDepthMesher {
             secondsSinceReceived.isFinite && secondsSinceReceived >= 0 && secondsSinceReceived <= maximumAge
     }
 
-    static func build(_ snapshot: SceneDepthSnapshot, supportPlaneY: Float?, pixelStep: Int = 2) -> SceneDepthSurface {
+    static func build(_ snapshot: SceneDepthSnapshot, supportPlaneY: Float?, pixelStep: Int = 2,
+                      policy: Policy = .paper) -> SceneDepthSurface {
         var result = SceneDepthSurface(positions: [], triangles: [], rejectedSamples: 0,
                                        rejectedDiscontinuities: 0, rejectedSupportTriangles: 0)
         let width = snapshot.width, height = snapshot.height
@@ -54,9 +56,13 @@ enum SceneDepthMesher {
                     (snapshot.confidence[index] == 1 || snapshot.confidence[index] == 2)
                 valid.append(accepted); measuredDepth.append(accepted ? d : 0)
                 if accepted {
-                    // Retract the surface slightly, never pull it toward the
-                    // viewer. This avoids depth noise cutting into coplanar paper.
-                    let biased = d + max(0.004, min(0.012, d * 0.005))
+                    // The paper policy retracts the surface slightly to avoid
+                    // depth noise cutting into coplanar paper.
+                    // Equipment contact has a small foreground tolerance to
+                    // avoid alternating depth ownership at a hand/model edge.
+                    // Paper keeps its original conservative, retracted depth.
+                    let biased = policy == .paper ? d + max(0.004, min(0.012, d * 0.005))
+                        : d - max(0.008, min(0.015, d * 0.012))
                     // ARKit image coordinates are right/down/forward; its camera
                     // coordinates are right/up/back. No UI-orientation rotation
                     // is needed: RealityKit projects these world-space points.
@@ -86,7 +92,8 @@ enum SceneDepthMesher {
                 let centerY = (pa.y + pb.y + pc.y) / 3
                 // Ignore only nearly horizontal triangles in a narrow band at
                 // the detected table. Raised hands and vertical objects remain.
-                if magnitude > 1e-10 && abs(n.y / magnitude) > 0.90 && abs(centerY - supportPlaneY) < 0.010 {
+                let supportTolerance: Float = policy == .paper ? 0.010 : 0.020
+                if magnitude > 1e-10 && abs(n.y / magnitude) > 0.90 && abs(centerY - supportPlaneY) < supportTolerance {
                     result.rejectedSupportTriangles += 1; return
                 }
             }

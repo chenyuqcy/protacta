@@ -63,7 +63,7 @@
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
   "localDevelopment": {
-    "build": "15",
+    "build": "16",
     "downloadDecision": "Sketchfab login deferred by user; the qualified CC0 motor and MIT engine alternatives are already bundled",
     "towel": {
       "status": "simulator_checked",
@@ -97,8 +97,8 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 15 installed and version verified on iPhone 17 Pro Max; unlocked launch succeeded",
-    "physicalAcceptance": "User confirmed motor initial loading, real AR camera and initial tabletop placement; stability, manipulation, animations, speech, measured performance and learner review pending",
+    "deviceInstallation": "Build 15 installed and launched; Build 16 stable-edge candidate compiled locally, installation pending",
+    "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
     "evidenceDirectory": "output/3d-expansion-2026-10-30",
@@ -108,7 +108,29 @@
       "steps": 5,
       "meshes": 20,
       "groups": 7,
-      "scope": "Exterior parts only"
+      "scope": "Exterior parts only",
+      "physicalChecks": {
+        "build": "15",
+        "passedByUserObservation": [
+          "initial camera and tabletop placement",
+          "brief position stability",
+          "pinch and twist",
+          "all five authored AR actions and reassembly",
+          "return to studio retains 5/5 and assembled pose",
+          "clear English Read step narration",
+          "spoken Restart lesson and Next step in studio",
+          "spoken Next step after AR re-entry and re-placement"
+        ],
+        "pending": [
+          "stationary and moving hand-edge stability",
+          "drag gesture",
+          "additional speech commands",
+          "tracking/background recovery",
+          "measured performance",
+          "independent learner review"
+        ],
+        "occlusionDefect": "User reports stationary hand-edge flicker; no black patch in prior directed check"
+      }
     },
     "turbofan": {
       "status": "simulator_checked",
@@ -132,7 +154,7 @@
     },
     "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build15-device-v_jt78bq/device-acceptance.json",
     "equipmentAR": {
-      "status": "implemented_local_checks_passed_device_pending",
+      "status": "implemented_local_checks_passed_partial_device_acceptance_edge_defect_open",
       "features": [
         "Full-screen camera mode for shared motor/turbofan walkthroughs",
         "Deliberate horizontal-surface placement",
@@ -148,12 +170,31 @@
         "EquipmentARFinalUI.xcresult: final 3 AR layout/fallback UI checks passed"
       ],
       "fixtureScope": "DEBUG Simulator layout preview is visibly NO LIVE CAMERA and unavailable in device Release",
-      "physicalCameraAndPlacement": "Motor camera feed and first tabletop placement confirmed by user on iPhone; stability, gestures, animations, recovery and turbofan checks pending",
-      "capability": "Virtual tabletop reference; no real equipment recognition or registration"
+      "physicalCameraAndPlacement": "Motor initial placement, brief stability, manipulation, five actions and AR/studio pose preservation confirmed by user; recovery and turbofan pending",
+      "capability": "Virtual tabletop reference; no real equipment recognition or registration",
+      "handEdgeRepair": {
+        "candidateBuild": "16",
+        "status": "local_checks_passed_physical_retest_pending",
+        "modes": [
+          "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
+          "Native hands: original person depth for comparison/fallback"
+        ],
+        "limits": [
+          "Physical edge stability and withdrawal trails not yet tested",
+          "Stable mode requires supported scene depth",
+          "8–15 mm foreground depth tolerance is visual, not measurement accuracy",
+          "Paper depth policy remains unchanged"
+        ],
+        "localEvidence": [
+          "EquipmentStableEdges.xcresult: 26 logic and 3 UI tests passed",
+          "EquipmentStableEdgesOptimized.xcresult: final 27 logic tests passed"
+        ],
+        "plan": "output/3d-expansion-2026-10-30/build16-hand-edge-repair.json"
+      }
     }
   },
   "nextGates": [
-    "On installed Build 15, check placed motor stability while walking around it, then pinch/twist and authored animation",
+    "Retest Build 16 stationary/moving hand boundary, withdrawal trails and absence of black patches in Stable edges and Native hands; inspect actual depth diagnostics before accepting the repair",
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
@@ -190,7 +231,7 @@
   ],
   "manualAcceptance": {
     "status": "in_progress",
-    "installationDecision": "User resumed installation on 2026-10-31. Build 14 is installed; proceed with step-by-step real-device testing.",
+    "installationDecision": "Build 15 installed and launched on 2026-10-31; Build 16 hand-edge repair candidate awaiting installation and directed comparison.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
@@ -208,13 +249,32 @@
         "id": "local_speech",
         "procedure": "Use Read step and English next, back, replay, pause, resume and why commands. Confirm stopping voice and background return; with permission denied, touch navigation must remain usable.",
         "record": "What was spoken and what happened on the real device; do not replace microphone evidence with command injection",
-        "result": null
+        "result": {
+          "build": "15",
+          "status": "partial by user report",
+          "passed": [
+            "clear English narration",
+            "Restart lesson and Next step in studio",
+            "Next step after entering and re-placing in AR"
+          ],
+          "pending": [
+            "other commands",
+            "permission/interruption recovery",
+            "measured recognition accuracy"
+          ]
+        }
       },
       {
         "id": "equipment_tabletop_ar",
         "procedure": "In each equipment course, enter AR, allow camera if requested, scan a textured table and place the model. Orbit physically, drag/pinch/twist, play each action, check a hand crossing the model, interrupt tracking, rescan after background and return to 3D. Verify pose and step preservation.",
         "record": "Actual device, build, visible camera/model, placement stability, artifact or gesture failures; Simulator fixtures cannot fill this result",
-        "result": null
+        "result": {
+          "build": "15",
+          "status": "partial; hand-edge defect open",
+          "motorPassed": "camera, placement, brief stability, pinch/twist, five authored actions, studio return",
+          "failed": "hand/model edges flicker even when hand is stationary",
+          "pending": "repair retest, drag, recovery, turbofan"
+        }
       }
     ],
     "learnerChecks": [

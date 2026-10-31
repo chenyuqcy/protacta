@@ -29,6 +29,7 @@ final class EquipmentARUITests: XCTestCase {
         app.buttons["assemblyEnterAR"].tap()
         XCTAssertTrue(app.buttons["assemblyExitAR"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["assemblyARFixtureLabel"].label.contains("NO LIVE CAMERA"))
+        XCTAssertTrue(app.buttons["assemblyARHandEdges"].isHittable)
         XCTAssertTrue(app.staticTexts["assemblyARCounter"].label.contains("1"))
         XCTAssertGreaterThan(viewport.frame.height, studioHeight)
         XCTAssertGreaterThan(viewport.frame.height, app.frame.height * 0.9)

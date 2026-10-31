@@ -6,6 +6,17 @@ import XCTest
 /// stand in for a real-camera depth/hand-occlusion acceptance test.
 @MainActor
 final class SceneDepthOcclusionTests: XCTestCase {
+    func testEquipmentProfileStartsWithoutAClaimedDepthSurfaceAndResetsCleanly() {
+        let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
+        let occlusion = SceneDepthOcclusion(profile: .stableEquipment)
+        occlusion.configure(in: view)
+        XCTAssertEqual(occlusion.diagnostics.status, "Waiting for smoothed hand depth")
+        XCTAssertFalse(occlusion.diagnostics.isActive)
+        XCTAssertNil(occlusion.lastAcceptedDepthTimestamp)
+        occlusion.reset()
+        XCTAssertTrue(view.scene.anchors.isEmpty)
+        XCTAssertEqual(occlusion.diagnostics.depthSource, "None")
+    }
     func testConfigureRestoresRemovedDepthAnchorWithoutDuplicatingIt() throws {
         let view = ARView(frame: .zero, cameraMode: .nonAR, automaticallyConfigureSession: false)
         let occlusion = SceneDepthOcclusion()

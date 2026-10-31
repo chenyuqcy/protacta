@@ -135,6 +135,7 @@ struct AssemblyTutorialPlayer: View {
                     Text("AR LAYOUT PREVIEW · NO LIVE CAMERA").font(.system(size: 11, weight: .bold))
                         .padding(10).background(.regularMaterial, in: Capsule())
                         .accessibilityIdentifier("assemblyARFixtureLabel")
+                    handEdgeMenu
                 } else {
                     VStack(spacing: 8) {
                         Text(scene.tabletop.status).font(.system(size: 13, weight: .medium))
@@ -147,6 +148,8 @@ struct AssemblyTutorialPlayer: View {
                             Button("Scan again") { isPlaying = false; scene.tabletop.resetPlacement() }
                                 .frame(minHeight: 44).accessibilityIdentifier("assemblyARRescan")
                         }
+                        handEdgeMenu
+                        if let notice = scene.tabletop.handEdgeNotice { Text(notice).font(.caption) }
                     }.padding(12).frame(maxWidth: 620).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
                 Spacer(minLength: 8)
@@ -159,6 +162,20 @@ struct AssemblyTutorialPlayer: View {
                 controls.frame(maxWidth: 720)
             }.padding(16)
         }
+    }
+
+    private var handEdgeMenu: some View {
+        Menu {
+            ForEach(EquipmentOcclusionMode.allCases) { mode in
+                Button(mode.title) { isPlaying = false; scene.tabletop.setOcclusionMode(mode) }
+                    .disabled(mode == .stableEdges && !scene.tabletop.supportsStableEdges)
+            }
+        } label: {
+            Label(scene.tabletop.occlusionMode.title, systemImage: "hand.raised")
+                .font(.system(size: 12, weight: .medium)).padding(.horizontal, 12).frame(minHeight: 44)
+        }.background(.regularMaterial, in: Capsule())
+            .accessibilityIdentifier("assemblyARHandEdges")
+            .accessibilityValue(scene.tabletop.occlusionMode.title)
     }
 
     private var controls: some View {

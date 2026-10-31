@@ -47,6 +47,13 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     @Published private(set) var isRequestingCamera = false
     @Published private(set) var isLayoutPreview = false
     @Published private(set) var error: String?
+    @Published private(set) var occlusionMode: EquipmentOcclusionMode
+    @Published private(set) var handEdgeNotice: String?
+    private let occlusionCapabilities: EquipmentOcclusionCapabilities
+    private let handDepth = SceneDepthOcclusion(profile: .stableEquipment)
+    private var depthSessionStartedAt: TimeInterval = 0
+    private var lastDepthObservedAt: TimeInterval?
+    private var lastDiagnosticWrite: TimeInterval = 0
     private(set) weak var view: ARView?
     private var content: Entity?
     private var layout: TutorialTabletopLayout?
@@ -69,6 +76,14 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     private var panOffset = SIMD3<Float>.zero
     var onEntityTap: ((Entity?) -> Void)?
     var ready: Bool { placed && trackingReady && error == nil && !backgrounded }
+    var supportsStableEdges: Bool { occlusionCapabilities.stableDepth }
+
+    override init() {
+        let capabilities = EquipmentOcclusionCapabilities.current
+        occlusionCapabilities = capabilities
+        _occlusionMode = Published(initialValue: EquipmentOcclusionConfiguration.effective(.stableEdges, capabilities: capabilities))
+        super.init()
+    }
 
     static var supportsAR: Bool {
         #if targetEnvironment(simulator)
@@ -103,7 +118,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         view.environment.lighting.resource = nil
         view.environment.lighting.intensityExponent = 0
         view.environment.sceneUnderstanding.options = []
-        view.renderOptions = AROcclusionConfiguration.renderOptions(isAR: true)
+        view.renderOptions = EquipmentOcclusionConfiguration.renderOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.session.delegate = self; view.session.delegateQueue = .main
         let tap = UITapGestureRecognizer(target: self, action: #selector(tap(_:)))
         let pan = UIPanGestureRecognizer(target: self, action: #selector(pan(_:)))
@@ -148,9 +163,8 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
               AVCaptureDevice.authorizationStatus(for: .video) == .authorized else { return }
         removePlacement(); gate.reset(); lastFrame = nil
         pendingStart = false; error = nil
-        // Keep the earlier contact-shadow correction. Native people depth is
-        // optional; no shadow-catching plane or reconstructed mesh is added.
-        let config = AROcclusionConfiguration.make(mode: .peopleOnly, capabilities: .current)
+        let config = EquipmentOcclusionConfiguration.make(mode: occlusionMode, capabilities: occlusionCapabilities)
+        configureHandDepth()
         view.session.run(config, options: [.resetTracking, .removeExistingAnchors])
         setStatus("Move slowly. Aim at a clear, well-lit table.")
         watchdog?.cancel()
@@ -165,6 +179,30 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
                 }
             }
         }
+    }
+
+    /// Change only the depth provider. No anchor-removal or tracking-reset
+    /// options are passed; authored pose and the existing placement survive.
+    func setOcclusionMode(_ requested: EquipmentOcclusionMode) {
+        let selected = EquipmentOcclusionConfiguration.effective(requested, capabilities: occlusionCapabilities)
+        guard selected != occlusionMode else { return }
+        occlusionMode = selected; handEdgeNotice = nil
+        guard let view, view.session.delegate === self, !backgrounded else { return }
+        configureHandDepth()
+        if view.session.configuration != nil {
+            gate.reset(); setReady(false); setCanPlace(false); placementAnchor?.isEnabled = false
+            view.session.run(EquipmentOcclusionConfiguration.make(mode: selected, capabilities: occlusionCapabilities))
+        }
+        recordDiagnostic(force: true)
+    }
+
+    private func configureHandDepth() {
+        guard let view else { return }
+        handDepth.reset()
+        view.renderOptions = EquipmentOcclusionConfiguration.renderOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
+        view.environment.sceneUnderstanding.options = []
+        depthSessionStartedAt = CACurrentMediaTime(); lastDepthObservedAt = nil
+        if occlusionMode == .stableEdges { handDepth.configure(in: view) }
     }
 
     func place(at point: CGPoint? = nil) {
@@ -211,6 +249,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         backgrounded = true; pendingStart = false
         generation += 1; permissionTask?.cancel(); isRequestingCamera = false
         watchdog?.cancel(); view?.session.pause()
+        handDepth.reset()
         setReady(false); setCanPlace(false); placementAnchor?.isEnabled = false
         setStatus("Session paused. Return and scan the table again.")
     }
@@ -228,12 +267,14 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     func stop() {
         generation += 1; permissionTask?.cancel(); permissionTask = nil
         watchdog?.cancel(); watchdog = nil
+        handDepth.reset()
         if let view, view.session.delegate === self { view.session.pause(); view.session.delegate = nil }
         removePlacement()
         for gesture in gestures { gesture.view?.removeGestureRecognizer(gesture) }
         gestures.removeAll(); content?.removeFromParent(); content = nil; view = nil
         setReady(false); setCanPlace(false); placed = false; isRequestingCamera = false
         pendingStart = false; backgrounded = false; isLayoutPreview = false; error = nil
+        handEdgeNotice = nil
     }
 
     private func removePlacement() {
@@ -293,9 +334,23 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
     private func assess(_ frame: ARFrame) {
         guard view?.session.delegate === self, !backgrounded else { return }
-        lastFrame = frame.timestamp
         let normal: Bool
         if case .normal = frame.camera.trackingState { normal = true } else { normal = false }
+        if occlusionMode == .stableEdges {
+            handDepth.update(frame: frame, supportPlaneY: movable?.position(relativeTo: nil).y)
+            if !normal {
+                depthSessionStartedAt = CACurrentMediaTime(); lastDepthObservedAt = nil
+            } else if let accepted = handDepth.lastAcceptedDepthTimestamp, frame.timestamp - accepted < 0.15 {
+                lastDepthObservedAt = CACurrentMediaTime()
+            }
+            let missingFor = CACurrentMediaTime() - (lastDepthObservedAt ?? depthSessionStartedAt)
+            if normal, missingFor > (lastDepthObservedAt == nil ? 2 : 0.75) {
+                setOcclusionMode(.nativeHands)
+                handEdgeNotice = "Hand depth is unavailable. Native hands is active."
+            }
+        }
+        defer { recordDiagnostic() }
+        lastFrame = frame.timestamp
         let present = worldAnchor.map { anchor in frame.anchors.contains { $0.identifier == anchor.identifier } } ?? true
         let stable = gate.observe(timestamp: frame.timestamp, normal: normal, anchorPresent: present)
         setReady(stable)
@@ -306,6 +361,30 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             let found = stable && view.map { surfaceHit(at: CGPoint(x: $0.bounds.midX, y: $0.bounds.midY)) != nil } == true
             setCanPlace(found)
             setStatus(found ? "Surface found. Tap the table or choose Place here." : "Move slowly. Aim at a clear, well-lit table.")
+        }
+    }
+
+    private func recordDiagnostic(force: Bool = false) {
+        let now = CACurrentMediaTime()
+        guard force || now - lastDiagnosticWrite >= 1 else { return }
+        lastDiagnosticWrite = now
+        let depth = handDepth.diagnostics
+        let values: [String: Any] = [
+            "build": Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
+            "mode": occlusionMode.rawValue, "supportsStableDepth": supportsStableEdges,
+            "nativePersonOcclusionDisabled": view?.renderOptions.contains(.disablePersonOcclusion) ?? false,
+            "groundingShadowsDisabled": view?.renderOptions.contains(.disableGroundingShadows) ?? false,
+            "placed": placed, "trackingReady": trackingReady,
+            "depthSource": depth.depthSource, "depthStatus": depth.status,
+            "depthWidth": depth.depthWidth, "depthHeight": depth.depthHeight,
+            "triangles": depth.triangleCount, "meshBuildMilliseconds": depth.buildMilliseconds,
+            "meshAgeMilliseconds": depth.meshAgeMilliseconds ?? -1,
+            "displayedDepthFrames": depth.displayedFrames, "expiredDepthBuilds": depth.expiredBuilds,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+        if let folder = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first,
+           let data = try? JSONSerialization.data(withJSONObject: values, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: folder.appendingPathComponent("equipment-ar-diagnostic.json"), options: .atomic)
         }
     }
     nonisolated func sessionWasInterrupted(_ session: ARSession) {

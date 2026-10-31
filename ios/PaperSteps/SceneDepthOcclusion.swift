@@ -3,10 +3,11 @@ import Foundation
 import RealityKit
 import UIKit
 
-/// Fresh LiDAR surfaces augment ARKit's person/scene-mesh occlusion for moving
-/// hands and nearby objects. The material writes real depth, not a screen mask.
+/// Camera-calibrated LiDAR surfaces for hands and nearby objects. Paper may
+/// augment native occlusion; equipment uses one depth owner. No color is drawn.
 @MainActor
 final class SceneDepthOcclusion {
+    enum Profile: Sendable { case rawPaper, stableEquipment }
     /// Runtime state of the depth surface, not a claim that its pixels have
     /// visibly occluded the paper. That still needs a real-camera check.
     struct Diagnostics {
@@ -25,6 +26,7 @@ final class SceneDepthOcclusion {
         let rejectedSamples: Int
         let rejectedDiscontinuities: Int
         let rejectedSupportTriangles: Int
+        let depthSource: String
     }
 
     private let anchor = AnchorEntity(world: .zero)
@@ -42,6 +44,10 @@ final class SceneDepthOcclusion {
     private var rejectedSamples = 0
     private var rejectedDiscontinuities = 0
     private var rejectedSupportTriangles = 0
+    private let profile: Profile
+    private var stabilizer = EquipmentDepthStabilizer()
+    private var depthSource = "None"
+    private(set) var lastAcceptedDepthTimestamp: TimeInterval?
 
     private(set) var triangleCount = 0
     private(set) var status = "Not active"
@@ -62,10 +68,11 @@ final class SceneDepthOcclusion {
                            hasScene: anchor.scene != nil && surface.scene != nil,
                            displayedFrames: displayedFrames, expiredBuilds: expiredBuilds,
                            rejectedSamples: rejectedSamples, rejectedDiscontinuities: rejectedDiscontinuities,
-                           rejectedSupportTriangles: rejectedSupportTriangles)
+                           rejectedSupportTriangles: rejectedSupportTriangles, depthSource: depthSource)
     }
 
-    init() {
+    init(profile: Profile = .rawPaper) {
+        self.profile = profile
         anchor.name = "Current real-world depth"
         surface.name = "Live depth occluder"
         anchor.synchronization = nil
@@ -86,7 +93,9 @@ final class SceneDepthOcclusion {
             RunLoop.main.add(timer, forMode: .common)
             expirationTimer = timer
         }
-        if displayedTimestamp == nil { status = "Waiting for raw scene depth" }
+        if displayedTimestamp == nil {
+            status = profile == .rawPaper ? "Waiting for raw scene depth" : "Waiting for smoothed hand depth"
+        }
     }
 
     private func ensureSceneAttachment(in view: ARView) {
@@ -109,28 +118,40 @@ final class SceneDepthOcclusion {
         guard case .normal = frame.camera.trackingState else {
             invalidateMesh(reason: "Tracking unavailable"); return
         }
-        // Raw depth avoids the lag/trails of temporally smoothed moving objects.
-        guard let depth = frame.sceneDepth else {
+        // Paper retains raw depth; equipment explicitly consumes smoothed depth
+        // instead of assuming RealityKit's native person compositor uses it.
+        let useSmoothed = profile == .stableEquipment && frame.smoothedSceneDepth?.confidenceMap != nil
+        let selectedDepth = useSmoothed ? frame.smoothedSceneDepth : frame.sceneDepth
+        guard let depth = selectedDepth else {
             invalidateMesh(reason: "Raw scene depth unavailable", retainingFreshDisplay: true); return
         }
+        depthSource = useSmoothed ? "Smoothed scene depth" : "Raw scene depth"
         expireIfNeeded()
         guard buildTask == nil, frame.timestamp - lastScheduledTimestamp >= 1.0 / 30.0 else { return }
         guard let snapshot = Self.snapshot(frame: frame, depth: depth) else {
             invalidateMesh(reason: "Depth confidence unavailable", retainingFreshDisplay: true); return
         }
+        lastAcceptedDepthTimestamp = snapshot.timestamp
         let receiptTime = ProcessInfo.processInfo.systemUptime
         let token = generation
+        let previousFilter = stabilizer
+        let profile = self.profile
         lastScheduledTimestamp = snapshot.timestamp
         depthSize = [snapshot.width, snapshot.height]
         buildTask = Task { [weak self] in
             let start = ProcessInfo.processInfo.systemUptime
-            let mesh = await Task.detached(priority: .userInitiated) {
-                SceneDepthMesher.build(snapshot, supportPlaneY: supportPlaneY)
+            let result = await Task.detached(priority: .userInitiated) {
+                var filter = previousFilter
+                let filtered = profile == .stableEquipment ? filter.filter(snapshot, pixelStep: 2) : snapshot
+                let mesh = SceneDepthMesher.build(filtered, supportPlaneY: supportPlaneY,
+                                                 policy: profile == .stableEquipment ? .stableEquipment : .paper)
+                return (mesh, filter)
             }.value
             // A cancelled generation must never clear a newer generation's
             // in-flight task or replace its surface/diagnostics.
             guard let self, self.generation == token, !Task.isCancelled else { return }
             self.buildTask = nil
+            let mesh = result.0
             self.lastBuildMilliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1000
             self.rejectedSamples = mesh.rejectedSamples
             self.rejectedDiscontinuities = mesh.rejectedDiscontinuities
@@ -139,6 +160,7 @@ final class SceneDepthOcclusion {
                 self.expiredBuilds += 1
                 self.rejectBuild(reason: "Depth frame expired"); return
             }
+            self.stabilizer = result.1
             guard !mesh.triangles.isEmpty else {
                 self.rejectBuild(reason: "No reliable foreground surface"); return
             }
@@ -190,11 +212,13 @@ final class SceneDepthOcclusion {
         rejectedSamples = 0
         rejectedDiscontinuities = 0
         rejectedSupportTriangles = 0
+        stabilizer.reset(); depthSource = "None"; lastAcceptedDepthTimestamp = nil
     }
 
     private func invalidateMesh(reason: String, retainingFreshDisplay: Bool = false) {
         generation &+= 1
         buildTask?.cancel(); buildTask = nil
+        if !retainingFreshDisplay { stabilizer.reset() }
         if retainingFreshDisplay { rejectBuild(reason: reason) }
         else { hide(reason: reason) }
     }
