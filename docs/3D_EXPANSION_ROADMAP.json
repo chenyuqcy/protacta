@@ -98,7 +98,7 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Build 18 installed and inventory verified 0.1.0 (18); subsequent user screenshots and copied AR diagnostic prove an actual origami AR session despite CLI launch attempts returning Locked. Build 19 remains a local candidate.",
+    "deviceInstallation": "Build 19 installed and exact device inventory verified 0.1.0 (19); not launched because physical testing was deferred by user.",
     "physicalAcceptance": "Build 15 motor placement, brief stability, pinch/twist, five actions/reassembly, studio return, narration and directed restart/next commands passed by user report. Hand/model boundary flickers even with a stationary hand; repair remains physically unaccepted. Recovery, turbofan, measured performance and learner review pending.",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
@@ -153,7 +153,7 @@
       "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
       "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
     },
-    "deviceAcceptanceEvidence": "/Users/adrian/Desktop/QCRI/protacta_app/output/occlusion-build18-2026-11-01/build18-device-1710h4rr/device-acceptance.json",
+    "deviceAcceptanceEvidence": "/Users/adrian/Desktop/QCRI/protacta_app/output/voice-only-build19-2026-11-01/build19-device-a6i9wq6m/device-acceptance.json",
     "equipmentAR": {
       "status": "implemented_local_checks_passed_partial_device_acceptance_edge_defect_open",
       "features": [
@@ -175,7 +175,7 @@
       "capability": "Virtual tabletop reference; no real equipment recognition or registration",
       "handEdgeRepair": {
         "candidateBuild": "19",
-        "status": "local_candidate_physical_acceptance_deferred_by_user",
+        "status": "installed_inventory_verified_physical_acceptance_deferred_by_user",
         "modes": [
           "Stable edges: smoothed calibrated LiDAR surface, edge-aware filtering and small contact tolerance",
           "Native hands: original person depth for comparison/fallback"
@@ -187,8 +187,8 @@
           "Native hands A/B comparison deferred by user"
         ],
         "localEvidence": [
-          "Build 18 DepthSampling.xcresult: 39 checks passed",
-          "Build 19 VoiceOnlyAndSampling.xcresult: in progress"
+          "VoiceOnlyAndSampling.xcresult: 27 depth checks passed, including oriented-corner projection and stable crop shrink",
+          "FinalVoiceOnly.xcresult: 3 lifecycle checks passed"
         ],
         "plan": "output/voice-only-build19-2026-11-01/build19-plan.json",
         "newChanges": [
@@ -224,13 +224,19 @@
     "voiceOnlyAR": {
       "build": "19",
       "plan": "output/voice-only-build19-2026-11-01/build19-plan.json",
-      "status": "implemented_local_checks_in_progress",
-      "physicalAcceptance": "pending; user deferred testing"
+      "status": "installed_inventory_verified_local_checks_passed",
+      "physicalAcceptance": "pending; user deferred testing",
+      "localEvidence": [
+        "VoiceOnlyAndSampling.xcresult: 27 depth checks and 8 distinct UI flows passed; one tablet-only test skipped on phone",
+        "FinalVoiceOnly.xcresult: 3 depth lifecycle and 2 voice-only UI checks passed",
+        "FinalLayout.xcresult: 4 final voice-only UI flows passed; screenshots visually reviewed",
+        "Release compile, strict signature verification and ZIP integrity passed"
+      ]
     }
   },
   "nextGates": [
     "When the user resumes physical testing, check Build 19 voice-only AR, then repeat stationary/moving hand-edge and withdrawal checks; inspect sampling reason, projected area, crop, pixel step and mesh timing.",
-    "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
+    "Review equipment views, device performance and local speech when the user resumes physical testing.",
     "Physically follow the towel course and review motor/engine learning clarity with an independent learner",
     "Review the equipment player on a real iPad when available; Simulator layout checks cannot establish device acceptance",
     "Use the recorded manualAcceptance procedures and attach actual results; leave untested cases unaccepted"
@@ -266,7 +272,7 @@
   ],
   "manualAcceptance": {
     "status": "in_progress",
-    "installationDecision": "User deferred physical comparison/testing. Prepare and retain local Build 19; do not repeatedly request unlock or launch.",
+    "installationDecision": "Build 19 installed and inventory verified. Physical testing remains deferred by user; no automatic launch or repeated unlock requests.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
