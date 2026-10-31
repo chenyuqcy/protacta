@@ -545,3 +545,21 @@ validation targets. A first-fold technical demo is not the complete MVP.
 - Release Build 14 compiled and passed strict code-signature verification. Its
   bundled models and course resources match the reviewed Build 13 content. Keep
   its signed local bundle and test receipts alongside the earlier candidates.
+
+## Build 14 installed; equipment AR requested — 2026-10-31
+
+- The user resumed physical-device testing. The retained Build 14 archive was
+  checksum-verified, extracted separately and passed strict signature validation.
+  Installation succeeded on the paired iPhone 17 Pro Max (iOS 26.6.1); device
+  inventory confirms `org.realitycore.protacta.prototype` version 0.1.0 (14).
+- Initial installation and launch were each blocked by a locked phone. After
+  the user unlocked it, installation and a subsequent unlocked launch succeeded.
+  Receipts are retained in the `build14-device-frweopx6` subdirectory of the
+  existing 3D expansion output directory; historical failed attempts remain.
+- The user reported that the gearmotor model and 1/5 counter appear normally.
+  This confirms initial course loading on their phone, not animation, voice,
+  performance, complete course usability or learning acceptance.
+- The user then requested seeing these models in AR. Add camera-based tabletop
+  placement to the shared equipment player while retaining the authored model,
+  step state, part selection and lesson controls. Physical equipment recognition
+  and registration are separate capabilities from this virtual-model placement.

@@ -48,6 +48,17 @@
         "Device performance and content review"
       ],
       "localAcceptance": "Six virtual module separation/reassembly actions and focused part views implemented; physical-device performance and teaching review remain open"
+    },
+    {
+      "id": "equipment_tabletop_ar",
+      "status": "in_progress",
+      "acceptance": [
+        "Motor and turbofan in camera view with deliberate surface placement",
+        "Same authored step, pose and part selection across studio/AR switching",
+        "Tabletop sizing, rotation and touch/voice controls",
+        "Tracking loss and background recovery",
+        "Local checks and real-device acceptance kept separate"
+      ]
     }
   ],
   "assetStorage": "/Users/adrian/Desktop/QCRI/Protacta_3D_Assets",
@@ -86,8 +97,8 @@
         "Equipment walkthroughs are virtual structure illustrations; physical/teaching review pending"
       ]
     },
-    "deviceInstallation": "Deferred by user after iOS rejected the install because the phone was locked",
-    "physicalAcceptance": "Pending; no new physical evidence in this increment",
+    "deviceInstallation": "Build 14 installed and verified in iPhone 17 Pro Max inventory as 0.1.0 (14); unlocked launch succeeded",
+    "physicalAcceptance": "In progress: user confirmed gearmotor loads with counter 1/5; remaining controls, performance, speech and learner checks pending",
     "testFlightUpload": false,
     "externalMotorAndEngineInApp": true,
     "evidenceDirectory": "output/3d-expansion-2026-10-30",
@@ -118,7 +129,8 @@
       "iPhone17": "EquipmentVoiceRecoveryFinal.xcresult: nine voice state tests and two equipment/AERIS UI flows passed",
       "iPadMiniA17Pro": "EquipmentTabletVoiceRecovery.xcresult: recovery text fits compact portrait, compact landscape and expanded sidebar; retry and next remain usable",
       "scope": "Automated unavailable-input branch and feedback presentation only; real speech, denied-permission interaction and microphone operation remain unverified"
-    }
+    },
+    "deviceAcceptanceEvidence": "output/3d-expansion-2026-10-30/build14-device-frweopx6/device-acceptance.json"
   },
   "nextGates": [
     "Review equipment views, device performance and local speech on the iPhone when the user resumes installation",
@@ -156,8 +168,8 @@
     }
   ],
   "manualAcceptance": {
-    "status": "not_run",
-    "installationDecision": "Deferred by user; keep signed local builds and wait for the user to resume device installation",
+    "status": "in_progress",
+    "installationDecision": "User resumed installation on 2026-10-31. Build 14 is installed; proceed with step-by-step real-device testing.",
     "deviceChecks": [
       {
         "id": "equipment_render_and_controls",
@@ -199,5 +211,6 @@
       }
     ],
     "contentReview": "Source geometry and labels have local engineering review. Independent learning review remains pending. Model-specific maintenance instructions require separate authoritative review."
-  }
+  },
+  "latestUserRequest": "Add camera-based tabletop AR for the equipment models, retaining authored lesson controls; motor and turbofan first"
 }
