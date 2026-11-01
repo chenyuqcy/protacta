@@ -223,7 +223,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     private var placementInstruction: String {
-        positionLocked ? "Position locked. Tap Move paper to adjust it." : "Drag to move · Pinch to resize · Twist to turn"
+        positionLocked ? "Reference locked. Tap Adjust to move or resize it." : "Pinch to resize · Drag to move · Twist to turn"
     }
 
     private func updatePlacementGestures() {
@@ -451,7 +451,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
                   case .normal = frame.camera.trackingState,
                   OrigamiARFrameHealth.isFresh(timestamp: frame.timestamp, now: CACurrentMediaTime()),
                   frame.anchors.contains(where: { $0.identifier == anchorID }) else {
-                pauseForTracking("Move slowly. The paper returns when tracking recovers.")
+                pauseForTracking("Move slowly. The reference returns when tracking recovers.")
                 recordDiagnostic(force: true)
                 return
             }
@@ -507,7 +507,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
                                               normal: normal, anchorPresent: anchorPresent) else { return }
         // Avoid saving the same paused state on every display tick.
         guard trackingReady || canPlace || isPlaying || worldAnchor?.isEnabled == true else { return }
-        pauseForTracking("Move slowly. The paper returns when tracking recovers.")
+        pauseForTracking("Move slowly. The reference returns when tracking recovers.")
         depthHealth.reset()
         recordDiagnostic(force: true)
     }
@@ -917,7 +917,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         if isAR {
             depthOcclusion.reset()
             arView?.session.pause(); needsRescan = true
-            pauseForTracking("Session paused. Place the paper again to continue.")
+            pauseForTracking(isPaperGuide ? "Session paused. Place the paper again to continue."
+                                          : "Session paused. Scan the table again to continue.")
         }
     }
     func shutdown() {
@@ -951,23 +952,24 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         lastAssessment = frame.timestamp
         guard case .normal = frame.camera.trackingState,
               OrigamiARFrameHealth.isFresh(timestamp: frame.timestamp, now: CACurrentMediaTime()) else {
-            pauseForTracking("Move slowly. The paper returns when tracking recovers.")
+            pauseForTracking(placed ? "Move slowly. The reference returns when tracking recovers."
+                                   : "Move slowly across a well-lit, textured table.")
             recordDiagnostic(); return
         }
         if placed {
             let sameAnchor = frame.anchors.contains { $0.identifier == anchorID }
             if !sameAnchor {
-                pauseForTracking("Recovering the paper's position…")
+                pauseForTracking("Recovering the reference's position…")
                 recordDiagnostic()
                 return
             }
             trackingReady = sameAnchor
             worldAnchor?.isEnabled = sameAnchor
-            status = sameAnchor ? placementInstruction : "Recovering the paper's position…"
+            status = sameAnchor ? placementInstruction : "Recovering the reference's position…"
         } else {
             canPlace = surfaceHit(placementPoint) != nil
             trackingReady = true
-            status = canPlace ? "Surface found. Tap Place paper." : "Scan a well-lit table. Include its edges and surroundings."
+            status = canPlace ? "Surface found. Tap Place reference." : "Scan a well-lit table. Include its edges and surroundings."
         }
         updatePlacementGestures()
         recordDiagnostic()
@@ -981,7 +983,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     nonisolated func session(_ session: ARSession, didRemove anchors: [ARAnchor]) {
         MainActor.assumeIsolated {
             guard let anchorID, anchors.contains(where: { $0.identifier == anchorID }) else { return }
-            background(); status = "The position was lost. Place the paper again."
+            background(); status = "The position was lost. Place the reference again."
         }
     }
     nonisolated func session(_ session: ARSession, didFailWithError error: Error) {

@@ -148,6 +148,53 @@ final class LearningControllerTests: XCTestCase {
     }
 
     @MainActor
+    func testRetryTableScanPausesAndPreservesThePartialFoldWithoutKeepingPlacement() throws {
+        let store = LearningProgressStore(defaults: nil)
+        let controller = LessonController(progressStore: store)
+        controller.selectLesson(.dart)
+        controller.begin()
+        controller.goToStep(3)
+        controller.scrub(to: 0.4)
+        controller.togglePlayback()
+        XCTAssertTrue(controller.isPlaying)
+        // Flags only: this exercises recovery state, not an AR raycast or camera.
+        controller.isAR = true
+        controller.placed = true
+        controller.trackingReady = true
+        controller.togglePositionLock()
+        XCTAssertFalse(controller.positionLocked)
+        controller.needsRescan = true
+
+        controller.placeAgain()
+
+        XCTAssertTrue(controller.isAR)
+        XCTAssertTrue(controller.started)
+        XCTAssertFalse(controller.placed)
+        XCTAssertFalse(controller.trackingReady)
+        XCTAssertFalse(controller.canPlace)
+        XCTAssertFalse(controller.needsRescan)
+        XCTAssertTrue(controller.positionLocked)
+        XCTAssertFalse(controller.placementGesturesEnabled)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(controller.stepIndex, 3)
+        XCTAssertEqual(controller.progress, 0.4, accuracy: 0.0001)
+        XCTAssertNil(controller.arView)
+        let saved = try XCTUnwrap(store.record(for: .dart))
+        XCTAssertEqual(saved.stepIndex, 3)
+        XCTAssertEqual(saved.progress, 0.4, accuracy: 0.0001)
+        XCTAssertFalse(saved.completed)
+
+        // The new Retry scan action also works while still searching, with
+        // no placement and no interruption flag to unlock a recovery button.
+        controller.placeAgain()
+        XCTAssertFalse(controller.placed)
+        XCTAssertFalse(controller.canPlace)
+        XCTAssertFalse(controller.isPlaying)
+        XCTAssertEqual(controller.stepIndex, 3)
+        XCTAssertEqual(controller.progress, 0.4, accuracy: 0.0001)
+    }
+
+    @MainActor
     func testPositionLockAndTrackingGateGesturesWithoutChangingLessonOrOcclusionPreference() {
         let controller = LessonController(progressStore: LearningProgressStore(defaults: nil))
         controller.selectLesson(.dart)

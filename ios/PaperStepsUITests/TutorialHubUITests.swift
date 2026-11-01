@@ -15,6 +15,50 @@ final class TutorialHubUITests: XCTestCase {
     }
     override func tearDownWithError() throws { app?.terminate(); app = nil }
 
+    func testOrigamiLeadsTheCatalogAndFiltersKeepOtherTutorialsReachable() {
+        let origami = app.buttons["hubOrigami"]
+        XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
+        XCTAssertTrue(origami.isHittable, "Origami should open directly from the first screen")
+        let motor = app.buttons["hubEquipment_gearmotor"]
+        XCTAssertTrue(motor.waitForExistence(timeout: 5))
+        XCTAssertLessThan(origami.frame.minY, motor.frame.minY, "The origami hero precedes the remaining catalog")
+        capture("Build24_Origami_first_home")
+        origami.tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
+        app.buttons["returnTutorialHub"].tap()
+        waitForDismissal(app.buttons["returnTutorialHub"])
+
+        selectHomeFilter("Everyday")
+        let everydayCatalog = XCTNSPredicateExpectation(predicate: NSPredicate { [weak self] _, _ in
+            guard let app = self?.app else { return false }
+            return !app.buttons["hubOrigami"].exists && !app.buttons["hubEquipment_turbofan"].exists
+                && app.buttons["hubCourse_towel"].exists
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [everydayCatalog], timeout: 5), .completed,
+                       "Everyday must replace the hero and equipment with the everyday catalog")
+        XCTAssertFalse(app.buttons["hubOrigami"].exists)
+        XCTAssertFalse(app.buttons["hubEquipment_turbofan"].exists)
+        XCTAssertTrue(app.buttons["hubCourse_towel"].exists)
+        tapHome("hubCourse_towel")
+        XCTAssertTrue(app.staticTexts["everydayCounter"].waitForExistence(timeout: 10))
+        app.buttons["everydayClose"].tap()
+        waitForDismissal(app.buttons["everydayClose"])
+
+        selectHomeFilter("3D & AR")
+        XCTAssertTrue(origami.waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
+        tapHome("hubEquipment_turbofan")
+        XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
+        XCTAssertTrue(app.staticTexts["assemblyCounter"].label.contains("1/6"))
+        app.buttons["assemblyClose"].tap()
+        waitForDismissal(app.buttons["assemblyClose"])
+        selectHomeFilter("All")
+        XCTAssertTrue(origami.waitForExistence(timeout: 5))
+        reveal(origami)
+        XCTAssertTrue(origami.isHittable)
+        XCTAssertFalse(app.alerts.firstMatch.exists)
+    }
+
     func testAllFiveEverydayCoursesHaveCompleteConfirmedFlows() {
         capture("Protacta_course_hub")
         for (id, count) in [("t_shirt", 6), ("towel", 3), ("flat_bedsheet", 4), ("square_knot", 5), ("four_in_hand", 7)] {
@@ -146,6 +190,21 @@ final class TutorialHubUITests: XCTestCase {
         for _ in 0..<6 where !button.isHittable { app.scrollViews.firstMatch.swipeUp() }
         for _ in 0..<6 where !button.isHittable { app.scrollViews.firstMatch.swipeDown() }
         XCTAssertTrue(button.isHittable, id); button.tap()
+    }
+    private func selectHomeFilter(_ title: String) {
+        let filter = app.segmentedControls["hubFilter"]
+        reveal(filter)
+        let segment = filter.buttons[title]
+        XCTAssertTrue(segment.isHittable)
+        segment.tap()
+        let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "selected == true"), object: segment)
+        XCTAssertEqual(XCTWaiter.wait(for: [selected], timeout: 5), .completed,
+                       "The category tap must reach the picker rather than an overlapping tutorial card")
+        XCTAssertFalse(app.buttons["returnTutorialHub"].exists)
+    }
+    private func waitForDismissal(_ close: XCUIElement) {
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: close)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 5), .completed)
     }
     private func tapPlayer(_ id: String) {
         if id == "everydayConfirm" && !app.buttons[id].label.contains("I've done it") {

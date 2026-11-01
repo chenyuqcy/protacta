@@ -371,9 +371,22 @@ struct PaperStepsView: View {
             HStack {
                 if !controller.isAR { Spacer() }
                 else if controller.placed && !controller.isPaperGuide {
-                    Label(controller.trackingReady ? "Placed" : "Recovering tracking", systemImage: "circle.fill")
-                        .font(.system(size: 9, weight: .semibold)).tracking(1)
-                        .padding(10).background(.regularMaterial, in: Capsule())
+                    if controller.trackingReady {
+                        Button { controller.togglePositionLock() } label: {
+                            Label(controller.positionLocked ? "Adjust" : "Done",
+                                  systemImage: controller.positionLocked ? "arrow.up.and.down.and.arrow.left.and.right" : "checkmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .padding(.horizontal, 13).frame(minHeight: 44)
+                                .background(.regularMaterial, in: Capsule())
+                        }.buttonStyle(.plain)
+                            .disabled(!controller.trackingReady || controller.needsRescan || controller.cameraError != nil)
+                            .accessibilityHint(controller.positionLocked ? "Move and resize the 3D reference." : "Lock the reference in place.")
+                            .accessibilityIdentifier("adjustReference")
+                    } else {
+                        Label("Recovering tracking", systemImage: "circle.fill")
+                            .font(.system(size: 9, weight: .semibold)).tracking(1)
+                            .padding(10).background(.regularMaterial, in: Capsule())
+                    }
                     Spacer()
                 }
                 if controller.isAR && !controller.isPaperGuide {
@@ -436,6 +449,14 @@ struct PaperStepsView: View {
                         .frame(width: 44, height: 44).background(.regularMaterial, in: Circle())
                 }.accessibilityLabel("View options").accessibilityIdentifier("viewportOptions")
             }.padding(.horizontal, 22).padding(.top, 14)
+            if controller.isAR && !controller.isPaperGuide && controller.placed && controller.trackingReady && !controller.positionLocked {
+                Text("Pinch to resize · Drag to move · Twist to turn")
+                    .font(.system(size: 11, weight: .medium))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.horizontal, 22)
+                    .accessibilityIdentifier("adjustReferenceHint")
+            }
             Spacer()
             if voice.isEnabled || voice.isSpeaking {
                 Label(voice.isSpeaking ? "Reading aloud" : voice.isListening ? "Listening for a command" : voice.status,
@@ -623,6 +644,9 @@ struct PaperStepsView: View {
                 } else {
                     primaryButton("Place reference", symbol: "plus.viewfinder", id: "placePaper") { controller.place() }
                         .disabled(!controller.canPlace)
+                    Button("Retry scan", systemImage: "arrow.clockwise") { controller.placeAgain() }
+                        .font(.system(size: 12, weight: .semibold)).frame(minHeight: 44)
+                        .accessibilityIdentifier("retryTableScan")
                 }
             } else if controller.cameraError != nil {
                 Button("Open Settings") {

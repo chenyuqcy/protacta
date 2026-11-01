@@ -27,7 +27,7 @@ final class EquipmentTutorialUITests: XCTestCase {
         XCTAssertFalse(app.buttons["hubEquipment_gearmotor"].exists)
         filter.buttons["3D & AR"].tap()
         XCTAssertTrue(app.buttons["hubOrigami"].exists)
-        XCTAssertFalse(app.buttons["hubCourse_towel"].exists)
+        XCTAssertTrue(app.buttons["hubCourse_towel"].exists, "Everyday lessons also include 3D and tabletop AR")
         capture("Simple_model_catalog")
         filter.buttons["All"].tap()
         let card = app.buttons["hubEquipment_gearmotor"]; reveal(card); card.tap()

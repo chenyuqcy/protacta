@@ -85,11 +85,11 @@ struct ProtactaHomeView: View {
                         ForEach(CatalogFilter.allCases) { item in Text(item.rawValue).tag(item) }
                     }.pickerStyle(.segmented).accessibilityIdentifier("hubFilter")
                     if filter != .everyday {
-                        featuredEngine
+                        featuredOrigami
                     }
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .regular ? 210 : 150, maximum: 300), spacing: 16)],
                               alignment: .leading, spacing: 26) {
-                        ForEach(visibleChoices.filter { $0.id != "equipment_turbofan" }) { choice in tile(choice) }
+                        ForEach(visibleChoices.filter { $0.id != "origami" }) { choice in tile(choice) }
                     }
                 }.padding(22).frame(maxWidth: 900).frame(maxWidth: .infinity)
             }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
@@ -107,30 +107,35 @@ struct ProtactaHomeView: View {
         .sheet(isPresented: $showAbout) { about }
     }
 
-    private var featuredEngine: some View {
-        Button { destination = .equipment(.turbofan) } label: {
+    private var featuredOrigami: some View {
+        Button { destination = .origami } label: {
             GeometryReader { geometry in
                 ZStack(alignment: .bottomLeading) {
                     RoundedRectangle(cornerRadius: 28).fill(
-                        RadialGradient(colors: [Color(red: 0.53, green: 0.55, blue: 0.55),
-                                                Color(red: 0.19, green: 0.22, blue: 0.23),
-                                                Color(red: 0.11, green: 0.13, blue: 0.14)],
+                        RadialGradient(colors: [Color(red: 0.65, green: 0.72, blue: 0.68),
+                                                Color(red: 0.26, green: 0.34, blue: 0.30),
+                                                Color(red: 0.12, green: 0.17, blue: 0.15)],
                                        center: .topTrailing, startRadius: 0, endRadius: geometry.size.width * 1.1))
                     Ellipse().fill(.black.opacity(0.24)).frame(width: geometry.size.width * 0.64, height: 22)
                         .blur(radius: 13).position(x: geometry.size.width * 0.51, y: geometry.size.height * 0.72)
-                    modelThumbnail("turbofan-preview", symbol: "engine.combustion")
+                    modelThumbnail("dart-preview", symbol: "paperplane")
+                        .scaleEffect(1.4)
                         .padding(.horizontal, 4).padding(.top, 6).padding(.bottom, 46)
                         .shadow(color: .black.opacity(0.18), radius: 20, y: 12)
                     HStack(alignment: .center) {
-                        Text("Jet engine").font(.system(size: 27, weight: .medium)).tracking(-0.6)
+                        Text("Origami").font(.system(size: 27, weight: .medium)).tracking(-0.6)
                         Spacer()
                         Image(systemName: "arrow.right").font(.system(size: 19))
                             .frame(width: 44, height: 44).background(.white.opacity(0.18), in: Circle())
                     }.foregroundStyle(.white).padding(22)
-                }.overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(.white.opacity(0.16), lineWidth: 0.7) }
+                }.clipShape(RoundedRectangle(cornerRadius: 28))
+                    .overlay { RoundedRectangle(cornerRadius: 28).strokeBorder(.white.opacity(0.16), lineWidth: 0.7) }
             }.aspectRatio(horizontalSizeClass == .regular ? 1.8 : 1.02, contentMode: .fit)
                 .frame(maxHeight: 440)
-        }.buttonStyle(.plain).accessibilityLabel("Jet engine").accessibilityIdentifier("hubEquipment_turbofan")
+                // The enlarged transparent image must not intercept taps on
+                // the category picker above the card. Clipping is visual only.
+                .contentShape(RoundedRectangle(cornerRadius: 28))
+        }.buttonStyle(.plain).accessibilityLabel("Origami").accessibilityIdentifier("hubOrigami")
     }
 
     private func tile(_ choice: TutorialDestination) -> some View {

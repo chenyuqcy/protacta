@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: The user prioritised origami. Build 23 defaults supported devices to Hands first, removing depth ordering at hand/paper intersections, and adds paused-camera/depth-health recovery. 71 native tests and three focused Simulator UI cases passed. The signed app is installed and independently version/container-queried on iPhone 17 Pro Max; remote launch failed after device disconnection. The user was asked to open it and compare the exact hand-through-paper symptom. Build 23 physical improvement is pending. See ORIGAMI_CONTACT_BUILD23.md. Build 22 depth refinements and Build 21's other 3D/AR courses remain integrated; their historical evidence and open checks retain their original scope.
+Current work: Build 24 places Origami first and adds visible tabletop adjustment and scan recovery, following team feedback. 32 native tests and six focused Simulator UI flows passed. The signed app is installed, independently version/container-queried and successfully launched on iPhone 17 Pro Max. App Store Connect accepted the upload for processing; external Build 24 availability is unconfirmed. The shared 17-slide presentation is being updated with current photo-free prototype imagery. See ORIGAMI_FIRST_BUILD24.md. Build 23's Hands first contact policy remains integrated and its physical comparison is pending; prior builds' evidence and open checks retain their original scope.
 
 ## Build 7: USB phone update and basic course entry
 

@@ -46,6 +46,36 @@ final class ARFullScreenUITests: XCTestCase {
         XCTAssertFalse(app.buttons["exitVoiceOnlyAR"].exists)
     }
 
+    func testVisibleAdjustAndDonePreserveAPausedPartialFoldAndStayOutOfFullScreen() throws {
+        let partial = try openPartialFoldInTabletopPreview()
+        let adjust = app.buttons["adjustReference"]
+        XCTAssertTrue(adjust.isHittable)
+        XCTAssertGreaterThanOrEqual(adjust.frame.height, 44)
+        waitForLabel(adjust, containing: "Adjust")
+        XCTAssertFalse(app.staticTexts["adjustReferenceHint"].exists)
+
+        adjust.tap()
+        waitForLabel(adjust, containing: "Done")
+        XCTAssertTrue(app.staticTexts["adjustReferenceHint"].exists)
+        XCTAssertEqual(app.foldProgressValue, partial)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
+
+        adjust.tap()
+        waitForLabel(adjust, containing: "Adjust")
+        XCTAssertFalse(app.staticTexts["adjustReferenceHint"].exists)
+        XCTAssertEqual(app.foldProgressValue, partial)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
+
+        enterFullScreen()
+        XCTAssertFalse(adjust.exists)
+        XCTAssertFalse(app.staticTexts["adjustReferenceHint"].exists)
+        app.buttons["exitARFullScreen"].tap()
+        XCTAssertTrue(adjust.waitForExistence(timeout: 5))
+        waitForLabel(adjust, containing: "Adjust")
+        XCTAssertEqual(app.foldProgressValue, partial)
+        assertNoPermissionAlert()
+    }
+
     func testVoiceOnlyCleanLayoutHasOnlyExitAndRestoresPartialFold() throws {
         launchLesson(extraArguments: ["--voice-only-layout-fixture"])
         let partial = try openPartialFoldInTabletopPreview()
@@ -185,7 +215,7 @@ final class ARFullScreenUITests: XCTestCase {
             XCTAssertTrue(app.frame.contains(button.frame), "Control outside the app bounds: \(identifier), \(button.frame)", file: file, line: line)
             XCTAssertGreaterThanOrEqual(button.frame.height, 44, identifier, file: file, line: line)
         }
-        for identifier in ["chooseLesson", "openARHelp", "togglePositionLock", "placeAgain", "toggleHints", "nextStep", "playPause", "stepList"] {
+        for identifier in ["chooseLesson", "openARHelp", "togglePositionLock", "adjustReference", "placeAgain", "toggleHints", "nextStep", "playPause", "stepList"] {
             XCTAssertFalse(app.buttons[identifier].exists, "Expanded lesson controls must not cover the full-screen viewport: \(identifier)", file: file, line: line)
         }
         XCTAssertFalse(app.sliders["foldProgress"].exists, file: file, line: line)
