@@ -38,7 +38,13 @@ Local validation and the final signed artifact are retained in `output/ar-edge-r
 
 The final retained app was installed successfully on the paired iPhone 17 Pro Max. A separate app inventory query confirmed `org.realitycore.protacta.prototype`, version `0.1.0`, build `22`, and the same final installation container returned by installation. See `final-install.json` and `final-installed-apps.json`.
 
-Both automatic foreground-launch attempts were rejected by iOS as locked (`final-launch.json`, `unlocked-launch.json`), including the attempt after the user reported unlocking. The user was asked to open the app directly and compare a stationary hand at the gearmotor edge in Refined edges mode. No result has yet been reported. Installation is confirmed; foreground launch and physical improvement are not inferred.
+Both automatic foreground-launch attempts were rejected by iOS as locked (`final-launch.json`, `unlocked-launch.json`), including the attempt after the user reported unlocking. The user was asked to open the app directly. A subsequent process query (`stationary-processes.json`) found PID 8541 using the final Build 22 installation container. This confirms that the installed executable was running; it does not independently establish the selected course or occlusion mode.
+
+## User-reported physical result
+
+On 2026-11-01, the user answered the requested stationary-hand comparison with **“更稳定，基本不闪”** (more stable, essentially no flicker). The requested setup was Gearmotor tabletop AR, Refined edges, with the phone and hand held still for five seconds. This is a positive user-reported stationary result, not a measured improvement percentage or acceptance of every AR scene.
+
+The diagnostic copied after that report (`build22-stationary-user-report-diagnostic.json`) still contains the historical Build 17 timestamp from 2026-10-31. It cannot corroborate the current course/mode or depth metrics. The installed/running Build 22 identity is independently verified as described above. Slow hand movement and complete withdrawal are the next pending physical checks; no new rendering change was made after the positive report.
 
 ## Physical comparison
 
