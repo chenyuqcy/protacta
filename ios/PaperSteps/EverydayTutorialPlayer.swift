@@ -5,317 +5,422 @@ struct EverydayTutorialPlayer: View {
     let onExit: () -> Void
     private let store: EverydayTutorialProgressStore
     @State private var session: EverydayTutorialSession
+    @StateObject private var scene: EverydaySceneController
     @StateObject private var voice = VoiceGuide()
     @StateObject private var screenAwake = HandsOnScreenAwakeLease.system()
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var progress: Double = 0
-    @State private var isPlaying = false
-    @State private var speed: Double = 1
+    @Environment(\.scenePhase) private var phase
     @State private var showHelp = false
     @State private var showSteps = false
+    @State private var showSetup = false
+    @State private var isVoiceOnlyAR = false
     @State private var feedback = ""
-    @State private var shows3D = true
-    @State private var reset3DView = 0
+    @State private var feedbackRevision = 0
+    @State private var pendingReplay = false
 
     init(courseID: EverydayTutorialID, onExit: @escaping () -> Void) {
         self.courseID = courseID; self.onExit = onExit
-        let store = EverydayTutorialProgressStore.appDefault()
-        self.store = store
+        let store = EverydayTutorialProgressStore.appDefault(); self.store = store
         let restored = store.load(courseID: courseID) ?? EverydayTutorialSession(courseID: courseID)
         _session = State(initialValue: restored)
-        _progress = State(initialValue: restored.completed ? 1 : 0)
+        let scene = EverydaySceneController(courseID: courseID)
+        scene.select(actionIndex: restored.currentAction - 1, progress: restored.completed ? 1 : 0)
+        _scene = StateObject(wrappedValue: scene)
     }
-
     private var course: EverydayTutorialCourse { EverydayTutorialCourse.course(courseID) }
-    private var action: EverydayTutorialAction { course.actions[session.currentAction - 1] }
+    private var action: EverydayTutorialAction { course.actions[scene.motion.actionIndex] }
+    private var previewing: Bool { scene.motion.actionIndex != session.currentAction - 1 }
+    private var modalPresented: Bool { showHelp || showSteps || showSetup }
+    private var primaryTitle: String {
+        if session.completed { return "Start again" }
+        if scene.motion.isPlaying { return "Playing move…" }
+        if previewing { return "Return to my practice" }
+        if scene.motion.progress < 0.999 { return scene.motion.progress == 0 ? "Watch move" : "Continue move" }
+        return session.currentAction == course.actions.count ? "I've done it · Finish" : "I've done it · Next"
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    titleBlock.id("everydayTop")
-                    visualCard
-                    if session.completed { completionCard }
-                    else { actionCard }
-                    setupCard
-                }.padding(22).frame(maxWidth: 820).frame(maxWidth: .infinity)
-            }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
-                .onChange(of: session.currentAction) { _, _ in proxy.scrollTo("everydayTop", anchor: .top) }
-                .onChange(of: session.completed) { _, _ in proxy.scrollTo("everydayTop", anchor: .top) }
-                .onChange(of: isPlaying) { _, playing in if playing { proxy.scrollTo("everydayTop", anchor: .top) } }
-                .navigationTitle(course.title).navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { close() } label: { Image(systemName: "house") }
-                            .accessibilityLabel("All tutorials").accessibilityIdentifier("everydayClose")
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { isPlaying = false; voice.stop(); showSteps = true } label: { Image(systemName: "list.number") }
-                            .accessibilityLabel("Tutorial actions").accessibilityIdentifier("everydaySteps")
-                    }
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                if !scene.isAR { header.accessibilityHidden(modalPresented) }
+                viewport(safeAreaInsets: geometry.safeAreaInsets).accessibilityHidden(modalPresented)
+                if !scene.isAR { lessonPanel.accessibilityHidden(modalPresented) }
+            }.ignoresSafeArea(.container, edges: scene.isAR ? .all : [])
+        }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
+            .statusBarHidden(isVoiceOnlyAR)
+            .onAppear {
+                screenAwake.acquire(); configureVoice()
+                if !session.completed { scene.play() }
+            }
+            .onDisappear { stopAndSave(); screenAwake.release(); voice.onCommand = nil; scene.shutdown() }
+            .task {
+                var last = CACurrentMediaTime()
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .milliseconds(40))
+                    guard !Task.isCancelled else { return }
+                    let now = CACurrentMediaTime(); let elapsed = now - last; last = now
+                    scene.tick(elapsed: elapsed, allowed: phase == .active && !modalPresented)
                 }
             }
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 40_000_000)
-                guard !Task.isCancelled else { return }
-                if isPlaying && scenePhase == .active {
-                    progress = min(1, progress + 0.008 * speed)
-                    if progress >= 1 { isPlaying = false }
+            .task(id: feedbackRevision) {
+                guard !feedback.isEmpty else { return }
+                try? await Task.sleep(for: .seconds(5))
+                if !Task.isCancelled { feedback = "" }
+            }
+            .onChange(of: phase) { _, value in
+                if value == .active { screenAwake.acquire(); voice.handleSceneActive(); scene.handleActive() }
+                else {
+                    scene.pause(); screenAwake.release(); _ = store.save(session); voice.handleSceneInactive()
+                    scene.handleInactive()
+                    if value == .background { voice.stop(); isVoiceOnlyAR = false }
                 }
             }
-        }
-        .onAppear { screenAwake.acquire(); configureVoice() }
-        .onDisappear { screenAwake.release(); stopAndSave(); voice.onCommand = nil }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active { screenAwake.acquire(); voice.handleSceneActive() }
-            else if phase == .background { screenAwake.release(); stopAndSave(); voice.handleSceneInactive() }
-            else {
-                // Speech permission sheets temporarily make the scene inactive;
-                // VoiceGuide preserves its matching permission request itself.
-                screenAwake.release(); isPlaying = false; _ = store.save(session); voice.handleSceneInactive()
-            }
-        }
-        .sheet(isPresented: $showHelp, onDismiss: { voice.stop() }) { helpSheet }
-        .sheet(isPresented: $showSteps) { stepSheet }
+            .onChange(of: scene.tabletop.trackingReady) { _, ready in if scene.isAR && !ready { scene.pause() } }
+            .onChange(of: modalPresented) { _, presented in if presented { scene.pause(); voice.stop() } }
+            .sheet(isPresented: $showHelp, onDismiss: {
+                voice.stop()
+                if pendingReplay { pendingReplay = false; if phase == .active && !session.completed { scene.replay() } }
+            }) { helpSheet }
+            .sheet(isPresented: $showSteps) { stepSheet }
+            .sheet(isPresented: $showSetup) { PhoneSetupView() }
     }
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    private var header: some View {
+        HStack(spacing: 12) {
+            Button(action: close) { Image(systemName: "house").font(.system(size: 19)).frame(width: 44, height: 44) }
+                .accessibilityLabel("All tutorials").accessibilityIdentifier("everydayClose")
+            Text(course.title).font(.system(size: 17, weight: .medium)).lineLimit(2)
+            Spacer(minLength: 4)
+            Button { voice.stop(); _ = scene.enterAR() } label: {
+                Label("AR", systemImage: "arkit").font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 14).frame(minHeight: 44)
+                    .background(TutorialColors.ink, in: Capsule()).foregroundStyle(.white)
+            }.accessibilityLabel("View in AR").accessibilityIdentifier("everydayEnterAR")
+                .disabled(scene.failure != nil)
+        }.padding(.horizontal, 16).padding(.vertical, 10)
+    }
+
+    private func viewport(safeAreaInsets: EdgeInsets) -> some View {
+        ZStack {
+            // This call stays at one location. AR and voice-only presentation
+            // change the surrounding controls, never the renderer's ownership.
+            EverydaySceneView(controller: scene, isActive: phase == .active)
+                .accessibilityLabel("Animated 3D teaching model")
+                .accessibilityValue("Action \(scene.motion.actionIndex + 1), movement \(Int(scene.motion.progress * 100)) percent")
+                .accessibilityIdentifier("everydayViewport")
+            if scene.isAR {
+                arControls(safeAreaInsets: safeAreaInsets)
+            } else {
+                VStack {
+                    HStack { Spacer(); moreMenu }
+                    Spacer()
+                    if let message = scene.failure ?? scene.arEntryError {
+                        Text(message).font(.system(size: 12)).multilineTextAlignment(.center)
+                            .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                            .accessibilityIdentifier("everydayARUnavailable")
+                    }
+                    if !feedback.isEmpty { feedbackBadge }
+                    HStack {
+                        if !session.completed { playbackButton }
+                        Spacer()
+                        if !session.completed { voiceControl }
+                    }
+                }.padding(16)
+            }
+        }.frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+    }
+
+    private var lessonPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text(session.completed ? "Complete" : "\(session.currentAction)/\(course.actions.count)")
-                    .font(.system(size: 13)).monospacedDigit().foregroundStyle(TutorialColors.muted)
-                    .accessibilityLabel(session.completed ? "PRACTICE COMPLETE" : "ACTION \(session.currentAction) OF \(course.actions.count)")
+                Text(session.completed ? "PRACTICE COMPLETE" : "\(previewing ? "PREVIEW" : "ACTION") \(scene.motion.actionIndex + 1) OF \(course.actions.count)")
+                    .font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(TutorialColors.orange)
                     .accessibilityIdentifier("everydayCounter")
                 Spacer()
+                if scene.motion.speed < 1 { Text("½×").font(.caption.monospacedDigit()) }
             }
-            Text(session.completed ? "You have practised every action." : action.title)
-                .font(.system(size: 27, weight: .semibold, design: .rounded)).tracking(-0.5)
+            Text(session.completed ? "Made by you." : action.title)
+                .font(.system(size: 25, weight: .medium)).tracking(-0.5)
                 .accessibilityIdentifier("everydayActionTitle")
-            if !session.completed {
-            DisclosureGroup("Details") {
-            Text(action.instruction)
-                .font(.system(size: 16)).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
-                .accessibilityIdentifier("everydayInstruction")
-            }.font(.system(size: 14, weight: .medium))
-            }
-        }
-    }
-
-    private var visualCard: some View {
-        VStack(spacing: 12) {
-            if courseID == .towel {
-                Picker("Teaching view", selection: $shows3D) {
-                    Text("3D").tag(true)
-                    Text("Diagram").tag(false)
-                }.pickerStyle(.segmented).accessibilityIdentifier("everydayViewMode")
-            }
-            if courseID == .towel && shows3D {
-                Towel3DViewport(actionIndex: session.currentAction - 1, progress: progress,
-                                isActive: scenePhase == .active, resetToken: reset3DView)
-                    .frame(height: 320).clipped()
-                    .overlay(alignment: .topTrailing) { visualMenu }
-                    .accessibilityLabel("Towel 3D teaching model")
-                    .accessibilityValue("Action \(session.currentAction), movement \(Int(progress * 100)) percent")
-                    .overlay(alignment: .bottomTrailing) {
-                        Button { reset3DView &+= 1 } label: { Image(systemName: "viewfinder").frame(width: 44, height: 44) }
-                            .accessibilityLabel("Reset view").accessibilityIdentifier("resetTowel3DView")
-                    }
+            if session.completed {
+                Text("All \(course.actions.count) actions confirmed by you")
+                    .font(.subheadline).foregroundStyle(TutorialColors.muted).accessibilityIdentifier("everydayCompletion")
             } else {
-            EverydayTutorialVisual(courseID: courseID.rawValue, stepIndex: session.currentAction - 1, progress: progress, showsCaption: false, showsAnnotations: false)
-                .frame(height: 360).clipped()
-                .overlay(alignment: .topTrailing) { visualMenu }
-                .accessibilityLabel("Teaching diagram")
-                .accessibilityValue("Action \(session.currentAction), movement \(Int(progress * 100)) percent")
-                .accessibilityIdentifier("everydayVisual")
+                Text(action.instruction).font(.system(size: 14)).lineSpacing(3).foregroundStyle(TutorialColors.muted)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("everydayInstruction")
+                movementSlider(identifier: "everydayProgressSlider")
             }
-            Slider(value: $progress, in: 0...1, onEditingChanged: { editing in
-                if editing { isPlaying = false }
-                else if progress > 0.98 { progress = 1 }
-                else if progress < 0.02 { progress = 0 }
-            })
-                .tint(TutorialColors.ink).accessibilityLabel("Movement progress")
-                .accessibilityIdentifier("everydayProgressSlider")
-            HStack(spacing: 12) {
-                Button {
-                    voice.contextDidChange()
-                    if progress >= 1 { progress = 0 }
-                    isPlaying.toggle()
-                } label: { Image(systemName: isPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44) }
-                    .accessibilityLabel(isPlaying ? "Pause" : "Play move")
-                    .accessibilityIdentifier("everydayPlay")
-                Spacer()
-                voiceControls
-            }.font(.system(size: 16, weight: .medium))
-        }.padding(14).background(.white, in: RoundedRectangle(cornerRadius: 20))
+            actionControls
+        }.padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 20)
+            .frame(maxWidth: 720).frame(maxWidth: .infinity).background(TutorialColors.paper)
     }
 
-    private var visualMenu: some View {
+    private func movementSlider(identifier: String) -> some View {
+        Slider(value: Binding(get: { scene.motion.progress }, set: { scene.seek($0) }), in: 0...1,
+               onEditingChanged: { editing in if editing { voice.stop(); scene.pause() } })
+            .tint(TutorialColors.orange).accessibilityLabel("Movement progress")
+            .accessibilityIdentifier(identifier).disabled(!scene.canAnimate)
+    }
+
+    private var actionControls: some View {
+        HStack(spacing: 12) {
+            Button(action: previous) {
+                Image(systemName: "arrow.left").font(.system(size: 18)).frame(width: 50, height: 50)
+                    .background(TutorialColors.line.opacity(0.55), in: Circle())
+            }.accessibilityLabel("Previous action").accessibilityIdentifier("everydayPrevious")
+                .disabled((session.currentAction == 1 && scene.motion.actionIndex == 0) || !scene.canAnimate)
+            Button(action: primaryAction) {
+                HStack {
+                    Spacer(); Text(primaryTitle)
+                    Image(systemName: session.completed ? "arrow.counterclockwise" : "arrow.right")
+                    Spacer()
+                }.font(.system(size: 14, weight: .semibold)).frame(minHeight: 50)
+                    .background(TutorialColors.ink, in: RoundedRectangle(cornerRadius: 15)).foregroundStyle(.white)
+            }.accessibilityIdentifier(session.completed ? "everydayRestart" : "everydayConfirm")
+                .disabled(!scene.canAnimate || scene.motion.isPlaying)
+            Button { showHelp = true } label: {
+                VStack(spacing: 3) {
+                    Image(systemName: "questionmark").font(.system(size: 16, weight: .semibold))
+                    Text("Help").font(.system(size: 10, weight: .medium))
+                }.frame(width: 50, height: 50).background(TutorialColors.line.opacity(0.55), in: Circle())
+            }.accessibilityLabel("Help").accessibilityIdentifier("everydayHelp")
+        }.buttonStyle(.plain)
+    }
+
+    private var moreMenu: some View {
         Menu {
-                Button { isPlaying = false; progress = 0 } label: {
-                    Label("Start position", systemImage: "backward.end")
-                }.accessibilityLabel("Show start position")
-                    .accessibilityIdentifier("everydayShowStart")
-                Button { isPlaying = false; progress = 1 } label: {
-                    Label("Target position", systemImage: "forward.end")
-                }.accessibilityLabel("Show target position")
-                    .accessibilityIdentifier("everydayShowTarget")
-                Button { progress = 0; isPlaying = true } label: { Label("Replay", systemImage: "arrow.counterclockwise") }
-                    .accessibilityLabel("Replay movement").accessibilityIdentifier("everydayReplay")
-                Button { speed = speed == 1 ? 0.4 : 1 } label: { Text(speed == 1 ? "Slow down" : "Normal speed") }
-                    .accessibilityLabel("Playback speed").accessibilityValue(speed == 1 ? "Normal" : "Slow")
-                    .accessibilityIdentifier("everydaySpeed")
-            } label: {
-                Image(systemName: "ellipsis").frame(width: 44, height: 44)
-            }.accessibilityLabel("More options").accessibilityIdentifier("everydayMore")
-    }
-
-    private var actionCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            DisclosureGroup("Check your result") {
-            Text(action.manualCheckpoint).font(.subheadline).lineSpacing(3)
-                .accessibilityIdentifier("everydayCheckpoint")
-            Text("You confirm the action. This guide does not inspect your object with the camera.")
-                .font(.footnote).foregroundStyle(TutorialColors.muted).accessibilityIdentifier("everydayCameraScope")
-            }.font(.system(size: 14, weight: .medium))
-            Button { confirm() } label: {
-                Label(session.currentAction == course.actions.count ? "Finish" : "I've done it", systemImage: "checkmark")
-                    .font(.system(size: 15, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
-            }.buttonStyle(.borderedProminent).tint(TutorialColors.ink).foregroundStyle(.white)
-                .accessibilityIdentifier("everydayConfirm")
-            HStack {
-                Button("Previous action") { previous() }.disabled(session.currentAction == 1)
-                    .accessibilityIdentifier("everydayPrevious")
-                Spacer()
-                Button("I'm stuck") { isPlaying = false; voice.stop(); showHelp = true }
-                    .accessibilityIdentifier("everydayHelp")
-            }.font(.system(size: 13, weight: .medium)).frame(minHeight: 40)
-            if !feedback.isEmpty {
-                Text(feedback).font(.footnote).foregroundStyle(TutorialColors.muted)
-                    .accessibilityIdentifier("everydayVoiceFeedback")
+            Button("Start position", systemImage: "backward.end") { voice.stop(); scene.seek(0) }.accessibilityIdentifier("everydayShowStart")
+            Button("Target position", systemImage: "forward.end") { voice.stop(); scene.seek(1) }.accessibilityIdentifier("everydayShowTarget")
+            Button("Replay", systemImage: "arrow.counterclockwise") { scene.replay() }.accessibilityIdentifier("everydayReplay")
+                .disabled(session.completed || !scene.canAnimate)
+            Button(scene.motion.speed == 1 ? "Slow down" : "Normal speed", systemImage: "tortoise") { scene.setSlow(scene.motion.speed == 1) }
+                .accessibilityIdentifier("everydaySpeed").accessibilityValue(scene.motion.speed == 1 ? "Normal" : "Slow")
+            Button("Reset view", systemImage: "viewfinder") { scene.resetView() }.accessibilityIdentifier("everydayResetViewMenu")
+            Button("All actions", systemImage: "list.number") { showSteps = true }.accessibilityIdentifier("everydaySteps")
+            Button("Phone setup", systemImage: "iphone") { showSetup = true }.accessibilityIdentifier("everydayPhoneSetup")
+            if scene.isAR {
+                Button("Place again", systemImage: "viewfinder") { scene.pause(); voice.stop(); scene.tabletop.resetPlacement() }
+                    .accessibilityIdentifier("everydayARResetPlacement")
+                Button("Start again", systemImage: "arrow.counterclockwise") { restart() }
             }
-        }.padding(18).background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 18))
+        } label: {
+            Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44).background(.regularMaterial, in: Circle())
+        }.accessibilityLabel("More options").accessibilityIdentifier("everydayMore")
     }
 
-    private var completionCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Label("All \(course.actions.count) actions confirmed by you", systemImage: "checkmark.circle")
-                .font(.headline).accessibilityIdentifier("everydayCompletion")
-            Button("Start again") { restart() }.buttonStyle(.borderedProminent).tint(TutorialColors.ink)
-                .accessibilityIdentifier("everydayRestart")
-            Button("All tutorials") { close() }.buttonStyle(.bordered).accessibilityIdentifier("everydayFinishClose")
-        }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
-            .background(.white, in: RoundedRectangle(cornerRadius: 18))
+    private var playbackButton: some View {
+        Button {
+            voice.contextDidChange()
+            if scene.motion.isPlaying { scene.pause() } else { scene.play() }
+        } label: {
+            Image(systemName: scene.motion.isPlaying ? "pause.fill" : "play.fill")
+                .font(.system(size: 16, weight: .medium)).frame(width: 44, height: 44)
+                .background(.regularMaterial, in: Circle())
+        }.accessibilityLabel(scene.motion.isPlaying ? "Pause move" : "Play move")
+            .accessibilityIdentifier("everydayPlay").disabled(!scene.canAnimate)
     }
 
-    private var setupCard: some View {
-        DisclosureGroup("Materials & guide notes") {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(course.materials.joined(separator: " · ")).font(.subheadline.weight(.medium))
-            Text(course.setup).font(.subheadline).foregroundStyle(TutorialColors.muted)
-            Text(course.reviewNotice).font(.footnote).foregroundStyle(TutorialColors.muted)
-                .accessibilityIdentifier("everydayReviewNotice")
-            if !course.references.isEmpty {
-                ForEach(course.references, id: \.url) { reference in
-                    Link(reference.title, destination: reference.url).font(.footnote)
+    private var voiceControl: some View {
+        VStack(alignment: .trailing, spacing: 6) {
+            if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission || voice.recoveryMessage != nil {
+                Text(voice.recoveryMessage ?? voice.status)
+                    .font(.system(size: 11)).multilineTextAlignment(.trailing).lineLimit(3)
+                    .padding(10).frame(maxWidth: 300)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("everydayVoiceStatus")
+            }
+            Button {
+                if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
+                else {
+                    Task {
+                        guard !modalPresented, phase == .active, scene.canAnimate, !session.completed else { return }
+                        await voice.startListening()
+                    }
                 }
-            }
-        }.padding(.top, 12)
-        }.font(.system(size: 14, weight: .medium)).padding(18).frame(maxWidth: .infinity, alignment: .leading)
+            } label: {
+                Label(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Voice",
+                      systemImage: voice.isEnabled ? "mic.fill" : voice.isSpeaking ? "speaker.wave.2" : "mic")
+                    .font(.system(size: 12, weight: .medium)).padding(.horizontal, 16).frame(minHeight: 44)
+                    .background(.regularMaterial, in: Capsule())
+            }.accessibilityIdentifier("everydayVoice").accessibilityValue(voice.status)
+                .disabled(!scene.canAnimate && !voice.isEnabled && !voice.isSpeaking && !voice.isRequestingPermission)
+        }
     }
 
-    private var voiceControls: some View {
-        VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Button {
-                    if voice.isEnabled || voice.isSpeaking || voice.isRequestingPermission { voice.stop() }
-                    else { isPlaying = false; Task { await voice.startListening() } }
-                } label: { Image(systemName: voice.isEnabled ? "mic.fill" : "mic").frame(width: 44, height: 44) }
-                    .accessibilityLabel(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Hands-free")
-                    .accessibilityIdentifier("everydayVoice")
-                Spacer()
-                Button { isPlaying = false; voice.speak(action.instruction) } label: { Image(systemName: "speaker.wave.2").frame(width: 44, height: 44) }
-                    .accessibilityLabel("Read step")
-                    .accessibilityIdentifier("everydayReadStep")
-            }.font(.system(size: 16, weight: .medium))
-            if voice.isEnabled || voice.isSpeaking || !voice.lastHeard.isEmpty || voice.recoveryMessage != nil {
-            Text(voice.feedbackMessage ?? voice.status)
-                .font(.system(size: 11)).foregroundStyle(TutorialColors.muted)
+    private var feedbackBadge: some View {
+        Text(feedback).font(.system(size: 12)).multilineTextAlignment(.center).lineLimit(3)
+            .padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .accessibilityIdentifier("everydayVoiceFeedback")
+    }
+
+    private func arControls(safeAreaInsets: EdgeInsets) -> some View {
+        ZStack {
+            if isVoiceOnlyAR {
+                VoiceOnlyAROverlay(voice: voice,
+                                   trackingMessage: scene.tabletop.ready ? nil : scene.tabletop.error ?? scene.tabletop.status,
+                                   commandFeedback: feedback.isEmpty ? nil : feedback,
+                                   safeAreaInsets: safeAreaInsets) {
+                    voice.stop(); isVoiceOnlyAR = false
+                }
+                if scene.tabletop.isLayoutPreview { fixtureLabel.padding(.top, safeAreaInsets.top + 70).frame(maxHeight: .infinity, alignment: .top) }
+            } else {
+                VStack(spacing: 12) {
+                    HStack {
+                        Button { voice.stop(); scene.exitAR() } label: {
+                            Label("3D", systemImage: "arrow.uturn.backward").font(.system(size: 13, weight: .semibold))
+                                .padding(.horizontal, 14).frame(minHeight: 44).background(.regularMaterial, in: Capsule())
+                        }.accessibilityIdentifier("everydayExitAR")
+                        Spacer()
+                        Button { scene.pause(); voice.stop(); isVoiceOnlyAR = true } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right").frame(width: 44, height: 44)
+                                .background(.regularMaterial, in: Circle())
+                        }.accessibilityLabel("Voice-only full screen").accessibilityIdentifier("everydayVoiceOnlyAR")
+                            .disabled(!scene.canAnimate || session.completed)
+                        moreMenu
+                    }
+                    if scene.tabletop.isLayoutPreview { fixtureLabel }
+                    if !scene.tabletop.placed || !scene.tabletop.trackingReady || scene.tabletop.error != nil {
+                        VStack(spacing: 8) {
+                            Text(scene.tabletop.error ?? scene.tabletop.status).font(.system(size: 13)).multilineTextAlignment(.center)
+                                .accessibilityIdentifier("everydayARStatus")
+                            if !scene.tabletop.placed && scene.tabletop.error == nil {
+                                Button("Place here") { scene.tabletop.place() }.frame(minHeight: 44)
+                                    .disabled(!scene.tabletop.canPlace).accessibilityIdentifier("everydayARPlace")
+                            }
+                            if scene.tabletop.error != nil {
+                                Button("Open Settings") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
+                            }
+                        }.padding(14).frame(maxWidth: 600).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    }
+                    Spacer(minLength: 8)
+                    if !feedback.isEmpty { feedbackBadge }
+                    if !session.completed { HStack { playbackButton; Spacer(); voiceControl } }
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text(session.completed ? "Complete" : "\(previewing ? "Preview " : "")\(scene.motion.actionIndex + 1)/\(course.actions.count)")
+                                .font(.system(size: 12, weight: .semibold)).monospacedDigit()
+                                .accessibilityIdentifier("everydayARCounter")
+                            Spacer()
+                            Text(action.title).font(.system(size: 13, weight: .medium)).lineLimit(2)
+                        }
+                        actionControls
+                    }.padding(14).frame(maxWidth: 720).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22))
+                }.padding(.leading, max(16, safeAreaInsets.leading + 12))
+                    .padding(.trailing, max(16, safeAreaInsets.trailing + 12))
+                    .padding(.top, safeAreaInsets.top + 10).padding(.bottom, max(16, safeAreaInsets.bottom + 10))
             }
         }
+    }
+    private var fixtureLabel: some View {
+        Text("AR LAYOUT PREVIEW · NO LIVE CAMERA").font(.system(size: 10, weight: .bold))
+            .padding(8).background(.yellow, in: Capsule()).accessibilityIdentifier("everydayARFixtureLabel")
     }
 
     private var helpSheet: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text(action.title).font(.title2.weight(.semibold))
-                    helpBlock("What should I see?", action.manualCheckpoint)
-                    helpBlock("A common difficulty", action.commonMistake)
+                VStack(alignment: .leading, spacing: 22) {
+                    Text(action.title).font(.title2.weight(.medium))
+                    movementSlider(identifier: "everydayHelpProgressSlider")
+                    Button("Replay the movement", systemImage: "arrow.counterclockwise") { voice.stop(); pendingReplay = true; showHelp = false }
+                        .buttonStyle(.borderedProminent).tint(TutorialColors.ink).frame(minHeight: 44)
+                        .accessibilityIdentifier("everydayHelpReplay").disabled(session.completed || !scene.canAnimate)
+                    Button(scene.motion.speed == 1 ? "Slow down" : "Normal speed", systemImage: "tortoise") { scene.setSlow(scene.motion.speed == 1) }
+                        .frame(minHeight: 44).accessibilityIdentifier("everydayHelpSpeed")
+                    helpBlock("Check your result", action.manualCheckpoint)
+                    helpBlock("Watch out", action.commonMistake)
                     helpBlock("Try this", action.help)
-                    Text("Written guidance for this action. It is not a camera assessment or generated AI answer.")
-                        .font(.footnote).foregroundStyle(TutorialColors.muted)
-                    Button("Replay the movement") { voice.stop(); progress = 0; isPlaying = true; showHelp = false }
-                        .buttonStyle(.borderedProminent).tint(TutorialColors.ink).accessibilityIdentifier("everydayHelpReplay")
-                    Button("Read this help") { voice.speak(action.help) }.buttonStyle(.bordered)
-                }.padding(22)
+                    Button("Read this help", systemImage: "speaker.wave.2") { voice.speak(action.help) }.frame(minHeight: 44)
+                    DisclosureGroup("Diagram reference") {
+                        EverydayTutorialVisual(courseID: courseID.rawValue, stepIndex: scene.motion.actionIndex,
+                                               progress: scene.motion.progress, showsCaption: false)
+                            .frame(height: 300)
+                    }.accessibilityIdentifier("everydayDiagramReference")
+                    DisclosureGroup("Materials & setup") {
+                        Text(course.materials.joined(separator: " · ")).font(.subheadline)
+                        Text(course.setup).font(.subheadline).lineSpacing(4)
+                    }
+                    Text("The AR model is a visual reference. You confirm your own actions; the camera does not check your clothes or knots.")
+                        .font(.footnote).foregroundStyle(.secondary).accessibilityIdentifier("everydayCameraScope")
+                    Text("Voice: Next step previews the next move. Read this step explains it. Use the button to confirm your own work.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }.padding(24)
             }.background(TutorialColors.paper).navigationTitle("Help with this action").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showHelp = false } } }
-        }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showHelp = false }.accessibilityIdentifier("everydayCloseHelp") } }
+        }.presentationDetents([.large])
     }
-
     private func helpBlock(_ title: String, _ text: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) { Text(title).font(.headline); Text(text).lineSpacing(4) }
+        VStack(alignment: .leading, spacing: 7) { Text(title).font(.subheadline.weight(.semibold)); Text(text).font(.subheadline).lineSpacing(4).foregroundStyle(.secondary) }
     }
-
     private var stepSheet: some View {
         NavigationStack {
             List(course.actions) { item in
                 VStack(alignment: .leading, spacing: 6) {
                     Label("\(item.id). \(item.title)", systemImage: session.confirmedActions.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                        .font(.subheadline.weight(.medium))
                     Text(item.instruction).font(.footnote).foregroundStyle(.secondary)
-                }.padding(.vertical, 5)
+                }.padding(.vertical, 6)
             }.navigationTitle("All actions").navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSteps = false } } }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showSteps = false }.accessibilityIdentifier("everydayCloseSteps") } }
         }
     }
 
+    private func primaryAction() {
+        guard scene.canAnimate, !modalPresented, phase == .active else { return }
+        voice.contextDidChange()
+        if session.completed { restart(); return }
+        if scene.motion.isPlaying { return }
+        if previewing { scene.select(actionIndex: session.currentAction - 1, autoplay: true); return }
+        if scene.motion.progress < 0.999 { scene.play(); return }
+        confirm()
+    }
+    private func confirm() {
+        guard !previewing, scene.motion.progress >= 0.999, !scene.motion.isPlaying else { return }
+        _ = EverydayPracticeVoiceBoundary.confirm(&session, stop: { voice.stop() }, continueListening: { voice.contextDidChange() })
+        _ = store.save(session)
+        scene.select(actionIndex: session.currentAction - 1, progress: session.completed ? 1 : 0, autoplay: !session.completed)
+        if session.completed { voice.stop(); isVoiceOnlyAR = false }
+        feedback = ""
+    }
+    private func previous() {
+        guard scene.canAnimate, !modalPresented else { return }
+        voice.contextDidChange(); scene.pause()
+        if previewing { scene.select(actionIndex: max(0, scene.motion.actionIndex - 1)); return }
+        _ = session.previousAction(); _ = store.save(session)
+        scene.select(actionIndex: session.currentAction - 1); feedback = ""
+    }
+    private func restart() {
+        guard scene.canAnimate, !modalPresented else { return }
+        voice.contextDidChange(); session.restart(); _ = store.save(session)
+        scene.select(actionIndex: 0, autoplay: true); feedback = ""
+    }
+    private func stopAndSave() { scene.pause(); voice.stop(); _ = store.save(session) }
+    private func close() { stopAndSave(); screenAwake.release(); onExit() }
+    private func sayFeedback(_ text: String) { feedback = text; feedbackRevision &+= 1 }
+
     private func configureVoice() {
         voice.onCommand = { command in
-            guard EverydayPracticeVoiceBoundary.permitsCommand(completed: session.completed,
-                                                               stop: { voice.stop() }) else { return }
+            guard !modalPresented, phase == .active,
+                  EverydayPracticeVoiceBoundary.permitsCommand(completed: session.completed, stop: { voice.stop() }) else { voice.stop(); return }
             switch command {
-            case .next: feedback = "Use I have done this to confirm your own action and continue."
+            case .next:
+                guard scene.canAnimate else { sayFeedback("Wait for the table to be ready."); return }
+                if scene.motion.progress < 0.999 { scene.play() }
+                else if scene.motion.actionIndex + 1 < course.actions.count {
+                    scene.select(actionIndex: scene.motion.actionIndex + 1, autoplay: true)
+                    sayFeedback("Previewing the next move. Your practice confirmations stay unchanged.")
+                } else { sayFeedback("This is the last movement. Use the controls to confirm your own work.") }
             case .back: previous()
-            case .replay: progress = 0; isPlaying = true; feedback = "Replaying this movement."
-            case .restart: restart(); feedback = "Practice restarted."
-            case .slower: speed = 0.4; feedback = "Slower playback."
-            case .normalSpeed: speed = 1; feedback = "Normal playback."
-            case .pause: isPlaying = false
-            case .resume: if progress >= 1 { progress = 0 }; isPlaying = true
-            case .readStep: isPlaying = false; voice.speak(action.instruction)
-            case .explainSimply, .help: isPlaying = false; voice.speak(action.help)
-            case .why: isPlaying = false; voice.speak(action.manualCheckpoint)
+            case .replay: if scene.canAnimate { scene.replay() }
+            case .restart: restart(); sayFeedback("Practice restarted.")
+            case .slower: scene.setSlow(true)
+            case .normalSpeed: scene.setSlow(false)
+            case .pause: scene.pause()
+            case .resume: scene.play()
+            case .readStep: scene.pause(); voice.speak(action.instruction)
+            case .explainSimply, .help: scene.pause(); voice.speak(action.help)
+            case .why: scene.pause(); voice.speak(action.manualCheckpoint)
             case .stopListening: voice.stop()
             }
         }
     }
-    private func confirm() {
-        isPlaying = false
-        _ = EverydayPracticeVoiceBoundary.confirm(&session, stop: { voice.stop() },
-                                                  continueListening: { voice.contextDidChange() })
-        _ = store.save(session); progress = session.completed ? 1 : 0; feedback = ""
-    }
-    private func previous() {
-        voice.contextDidChange(); isPlaying = false
-        _ = session.previousAction(); _ = store.save(session); progress = 0; feedback = ""
-    }
-    private func restart() {
-        voice.contextDidChange(); isPlaying = false; session.restart(); _ = store.save(session); progress = 0
-    }
-    private func stopAndSave() { isPlaying = false; voice.stop(); _ = store.save(session) }
-    private func close() { screenAwake.release(); stopAndSave(); onExit() }
 }

@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 20 simplifies the origami entry and lesson controls in response to teammate feedback and the user’s screenshot. It is installed and independently version-queried on the iPhone 17 Pro Max; foreground launch was blocked by the device lock. See TEAM_FEEDBACK_BUILD20.md for current validation and deployment. Historical build sections below retain their original evidence. Real-paper review, independent samples and beginner outcomes remain open.
+Current work: Build 21 adds continuous authored 3D movements and optional tabletop AR to all five everyday courses. It is installed, independently version-queried and launched on iPhone 17 Pro Max. See EVERYDAY_3D_AR_BUILD21.md for scoped validation and open physical/landscape checks. Historical build sections retain their original evidence. The user's AR overlap-edge flicker remains open and is the next repair task.
 
 ## Build 7: USB phone update and basic course entry
 

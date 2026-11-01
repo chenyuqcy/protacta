@@ -64,7 +64,7 @@ struct ProtactaHomeView: View {
         choices.filter { choice in
             switch (filter, choice) {
             case (.all, _), (.everyday, .everyday): return true
-            case (.spatial, .origami), (.spatial, .product), (.spatial, .equipment): return true
+            case (.spatial, .origami), (.spatial, .product), (.spatial, .equipment), (.spatial, .everyday): return true
             default: return false
             }
         }
@@ -189,9 +189,9 @@ struct ProtactaHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     Text("Choose a tutorial, watch the movement, then try it yourself.").font(.title3)
-                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use 3D or illustrated guidance.")
+                    Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use continuous 3D movement and optional tabletop AR.")
                         .accessibilityIdentifier("hubCapabilityScope")
-                    Text("Classic Dart's paper alignment and outline checks are experimental. Everyday tutorials do not inspect your clothes or knots. Equipment AR places a virtual teaching model; it does not recognise or register to real equipment.")
+                    Text("Classic Dart's paper alignment and outline checks are experimental. Everyday AR places a virtual teaching reference beside your object; it does not inspect or align to your clothes or knots. Equipment AR places a virtual teaching model; it does not recognise or register to real equipment.")
                     Text("AERIS One is an original concept product. These walkthroughs are demonstrations, not manufacturer-approved maintenance instructions. Equipment and everyday courses still need independent learning review.")
                     Text("English narration and supported voice commands run on device. Cloud AI chat is not enabled. Normal use does not save or upload camera photos; progress stays on this device.")
                 }.font(.body).padding(24)

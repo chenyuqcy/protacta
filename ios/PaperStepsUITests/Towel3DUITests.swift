@@ -19,9 +19,7 @@ final class Towel3DUITests: XCTestCase {
     override func tearDownWithError() throws { app?.terminate(); app = nil }
 
     func test3DFoldsDiagramSwitchAndManualConfirmationsStayInSync() {
-        let mode = app.segmentedControls["everydayViewMode"]
-        XCTAssertTrue(mode.waitForExistence(timeout: 5))
-        XCTAssertTrue(mode.buttons["3D"].isSelected)
+        XCTAssertFalse(app.segmentedControls["everydayViewMode"].exists)
         XCTAssertTrue(viewport.waitForExistence(timeout: 5))
         capture("Towel_3D_start")
 
@@ -36,14 +34,14 @@ final class Towel3DUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION \(action) OF 3", "Playing/showing a target must not confirm the real action")
             capture("Towel_3D_action_\(action)_target")
 
-            // Switching presentation preserves this action and progress.
-            reveal(mode); mode.buttons["Diagram"].tap()
-            XCTAssertTrue(mode.buttons["Diagram"].isSelected)
-            XCTAssertEqual(slider.value as? String, "100%")
-            mode.buttons["3D"].tap()
+            // The optional diagram lives in Help; the main renderer stays 3D.
+            app.buttons["everydayHelp"].tap()
+            XCTAssertTrue(app.buttons["everydayCloseHelp"].waitForExistence(timeout: 5))
+            XCTAssertEqual(app.sliders["everydayHelpProgressSlider"].value as? String, "100%")
+            app.buttons["everydayCloseHelp"].tap()
             XCTAssertTrue(viewport.waitForExistence(timeout: 5))
             XCTAssertEqual(slider.value as? String, "100%")
-            reveal(app.buttons["resetTowel3DView"]); app.buttons["resetTowel3DView"].tap()
+            app.buttons["everydayMore"].tap(); app.buttons["everydayResetViewMenu"].tap()
             let confirm = app.buttons["everydayConfirm"]
             reveal(confirm); confirm.tap()
         }
@@ -62,14 +60,15 @@ final class Towel3DUITests: XCTestCase {
         let confirm = app.buttons["everydayConfirm"]
         reveal(confirm)
         XCTAssertTrue(confirm.isHittable, "Rotating the model must not block one-finger lesson scrolling")
+        app.sliders["everydayProgressSlider"].adjust(toNormalizedSliderPosition: 1)
         confirm.tap()
         waitForLabel(app.staticTexts["everydayCounter"], containing: "ACTION 2 OF 3")
-        reveal(app.segmentedControls["everydayViewMode"])
+        XCTAssertTrue(viewport.exists)
         capture("Towel_3D_after_background_action_2")
     }
 
     private var viewport: XCUIElement {
-        app.descendants(matching: .any).matching(identifier: "towel3DViewport").firstMatch
+        app.descendants(matching: .any).matching(identifier: "everydayViewport").firstMatch
     }
 
     private func reveal(_ element: XCUIElement) {

@@ -39,7 +39,7 @@ final class TutorialHubUITests: XCTestCase {
             if id == "towel" {
                 tapHome("hubCourse_towel")
                 XCTAssertTrue(app.staticTexts["everydayCompletion"].waitForExistence(timeout: 5))
-                XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, "100%", "A restored completion must show the final visual")
+                XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "everydayViewport").firstMatch.value as? String == "Action 3, movement 100 percent", "A restored completion must show the final visual")
                 app.buttons["everydayClose"].tap()
             }
         }
@@ -148,6 +148,10 @@ final class TutorialHubUITests: XCTestCase {
         XCTAssertTrue(button.isHittable, id); button.tap()
     }
     private func tapPlayer(_ id: String) {
+        if id == "everydayConfirm" && !app.buttons[id].label.contains("I've done it") {
+            let slider = app.sliders["everydayProgressSlider"]
+            if slider.exists { slider.adjust(toNormalizedSliderPosition: 1) }
+        }
         if ["everydayShowStart", "everydayShowTarget", "everydayReplay", "everydaySpeed"].contains(id) {
             let more = app.buttons["everydayMore"]; reveal(more); more.tap()
         }
