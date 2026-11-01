@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 24 places Origami first and adds visible tabletop adjustment and scan recovery, following team feedback. 32 native tests and six focused Simulator UI flows passed. The signed app is installed, independently version/container-queried and successfully launched on iPhone 17 Pro Max. App Store Connect accepted the upload for processing; external Build 24 availability is unconfirmed. The shared 17-slide presentation is updated and visually verified with current photo-free prototype imagery; a verified editable PPTX copy is in Downloads. See ORIGAMI_FIRST_BUILD24.md. Build 23's Hands first contact policy remains integrated and its physical comparison is pending; prior builds' evidence and open checks retain their original scope.
+Current work: Build 24 places Origami first and adds visible tabletop adjustment and scan recovery, following team feedback. 32 native tests and six focused Simulator UI flows passed. The signed app is installed, independently version/container-queried and successfully launched on iPhone 17 Pro Max. Build 24 is now Testing in the existing four-person external TestFlight group with automatic notification enabled; App Store Connect reports Hana installed it. See TESTFLIGHT_BUILD_24.md. The shared 17-slide presentation is updated and visually verified with current photo-free prototype imagery; a verified editable PPTX copy is in Downloads. See ORIGAMI_FIRST_BUILD24.md. Build 23's Hands first contact policy remains integrated and its physical comparison is pending; prior builds' evidence and open checks retain their original scope.
 
 ## Build 7: USB phone update and basic course entry
 
