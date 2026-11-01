@@ -5,10 +5,10 @@ enum AROcclusionMode: String, CaseIterable, Identifiable {
     case automatic, peopleOnly
 
     var id: String { rawValue }
-    var title: String { self == .automatic ? "Stable edges" : "Native hands" }
+    var title: String { self == .automatic ? "Refined edges" : "Native hands" }
     var explanation: String {
         self == .automatic
-            ? "Steadier hand and object edges on supported LiDAR devices."
+            ? "Apple's refined hand outline, with supported LiDAR depth for other objects."
             : "Use Apple's hand occlusion. Other objects may stay behind the model."
     }
 }
@@ -18,31 +18,50 @@ struct AROcclusionCapabilities: Equatable {
     let sceneDepth: Bool
     let sceneMesh: Bool
     let smoothedDepth: Bool
+    let combinedPersonAndSceneDepth: Bool
 
-    init(personDepth: Bool, sceneDepth: Bool, sceneMesh: Bool, smoothedDepth: Bool = false) {
+    /// Existing synthetic callers can omit the combination result. Runtime
+    /// capabilities always supply the device's check of the complete option set.
+    init(personDepth: Bool, sceneDepth: Bool, sceneMesh: Bool, smoothedDepth: Bool = false,
+         combinedPersonAndSceneDepth: Bool? = nil) {
         self.personDepth = personDepth; self.sceneDepth = sceneDepth
         self.sceneMesh = sceneMesh; self.smoothedDepth = smoothedDepth
+        self.combinedPersonAndSceneDepth = combinedPersonAndSceneDepth ?? (personDepth && sceneDepth)
     }
 
     static var current: Self {
-        Self(personDepth: ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDepth),
-             sceneDepth: ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth),
-             sceneMesh: ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification),
-             smoothedDepth: ARWorldTrackingConfiguration.supportsFrameSemantics(.smoothedSceneDepth))
+        let person = ARWorldTrackingConfiguration.supportsFrameSemantics(.personSegmentationWithDepth)
+        let depth = ARWorldTrackingConfiguration.supportsFrameSemantics(.sceneDepth)
+        let smooth = depth && ARWorldTrackingConfiguration.supportsFrameSemantics([.sceneDepth, .smoothedSceneDepth])
+        var combined: ARConfiguration.FrameSemantics = [.personSegmentationWithDepth, .sceneDepth]
+        if smooth { combined.insert(.smoothedSceneDepth) }
+        return Self(personDepth: person, sceneDepth: depth,
+                    sceneMesh: ARWorldTrackingConfiguration.supportsSceneReconstruction(.meshWithClassification),
+                    smoothedDepth: smooth,
+                    combinedPersonAndSceneDepth: person && depth && ARWorldTrackingConfiguration.supportsFrameSemantics(combined))
     }
 }
 
 enum AROcclusionConfiguration {
+    /// Custom depth is for non-person objects only. When native hands also run,
+    /// the renderer must exclude their current segmentation region and its edge
+    /// margin after filtering; missing segmentation must hide the custom mask.
+    static func usesObjectDepth(mode: AROcclusionMode, capabilities: AROcclusionCapabilities) -> Bool {
+        mode == .automatic && capabilities.sceneDepth &&
+            (!capabilities.personDepth || capabilities.combinedPersonAndSceneDepth)
+    }
+
+    static func usesNativeHands(mode: AROcclusionMode, capabilities: AROcclusionCapabilities) -> Bool {
+        capabilities.personDepth
+    }
+
     static func renderOptions(isAR: Bool, mode: AROcclusionMode? = nil,
                               capabilities: AROcclusionCapabilities? = nil) -> ARView.RenderOptions {
         var options: ARView.RenderOptions = [.disableMotionBlur, .disableDepthOfField]
-        // A teaching model can intersect real paper, hands and the table.
-        // Grounding adds ambient occlusion/contact shadows at that intersection;
-        // keep the camera image visible there instead of drawing a dark patch.
+        // Native matting owns hand silhouettes. Do not disable it when custom
+        // non-person depth is enabled; that mask must exclude the hand region.
+        // Grounding at a real-paper/hand/table intersection can add a dark patch.
         if isAR { options.insert(.disableGroundingShadows) }
-        if isAR, mode == .automatic, capabilities?.sceneDepth == true {
-            options.insert(.disablePersonOcclusion)
-        }
         return options
     }
 
@@ -51,14 +70,14 @@ enum AROcclusionConfiguration {
         configuration.planeDetection = [.horizontal]
         configuration.environmentTexturing = .automatic
         configuration.isLightEstimationEnabled = true
-        if mode == .automatic && capabilities.sceneDepth {
-            configuration.frameSemantics.insert(.sceneDepth)
-            if capabilities.smoothedDepth { configuration.frameSemantics.insert(.smoothedSceneDepth) }
-        } else if capabilities.personDepth {
+        if usesNativeHands(mode: mode, capabilities: capabilities) {
             configuration.frameSemantics.insert(.personSegmentationWithDepth)
         }
-        // Use one depth owner. Native silhouettes and a reconstructed mesh
-        // must not independently alternate at the moving hand's boundary.
+        if usesObjectDepth(mode: mode, capabilities: capabilities) {
+            configuration.frameSemantics.insert(.sceneDepth)
+            if capabilities.smoothedDepth { configuration.frameSemantics.insert(.smoothedSceneDepth) }
+        }
+        // No reconstructed scene mesh adds a second owner at the hand boundary.
         return configuration
     }
 

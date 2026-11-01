@@ -745,7 +745,9 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         view.session.run(config, options: resetTracking ? [.resetTracking, .removeExistingAnchors] : [])
         // Attach only after resetting the AR session. A mode change keeps the
         // paper's existing ARAnchor, position, lesson and partial fold.
-        if !isPaperGuide && occlusionMode == .automatic && occlusionCapabilities.sceneDepth { depthOcclusion.configure(in: view) }
+        if !isPaperGuide && AROcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) {
+            depthOcclusion.configure(in: view, excludingNativePeople: AROcclusionConfiguration.usesNativeHands(mode: occlusionMode, capabilities: occlusionCapabilities))
+        }
         if resetTracking {
             lastAssessment = 0
             status = "Move slowly across a well-lit table."
@@ -880,7 +882,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private func assess(_ frame: ARFrame) {
         guard isAR, !needsRescan else { return }
         if isPaperGuide { assessPaperGuide(frame); return }
-        if occlusionMode == .automatic && occlusionCapabilities.sceneDepth {
+        if AROcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) {
             depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil,
                                   target: placed ? paper.root : nil, localBounds: paper.bounds)
         }
@@ -963,7 +965,9 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         } else if needsRescan || cameraError != nil {
             occlusionSummary = "AR is paused. Return to the guide and scan the table again."
         } else if occlusionMode == .automatic && depth.isActive && depth.triangleCount > 0 {
-            occlusionSummary = "The depth surface is active. Move your hand in front of the paper to check the result."
+            occlusionSummary = personRenderingEnabled
+                ? "Apple's refined hand outline and separate object depth are active. Test a hand pass and removal."
+                : "Object depth is active. Test a hand pass and removal on this device."
         } else if personRenderingEnabled && personReceived {
             occlusionSummary = "Apple's person-depth data is available. Move your hand in front of the paper to check the result."
         } else if personRenderingEnabled {
@@ -993,6 +997,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "Raw depth received": flag(frame?.sceneDepth != nil),
             "Object depth status": depth.status,
             "Depth source": depth.depthSource,
+            "Native hand region excluded from object mesh": flag(depth.nativePersonExclusion),
+            "Excluded person depth pixels": String(depth.excludedPersonPixels),
             "Depth pixel step": String(depth.pixelStep),
             "Depth anchor in scene": flag(depth.hasScene),
             "Depth anchor ready": flag(depth.isAnchored),
@@ -1032,6 +1038,9 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "occlusionDetails": occlusionDetails,
             "liveOcclusionStatus": depthOcclusion.status,
             "liveOcclusionDepthSource": depth.depthSource,
+            "nativePersonExclusion": depth.nativePersonExclusion,
+            "excludedPersonPixels": depth.excludedPersonPixels,
+            "lastAppliedDepthTimestamp": depth.appliedFrameTimestamp ?? -1,
             "liveOcclusionMeshAgeMilliseconds": depth.meshAgeMilliseconds ?? -1,
             "liveOcclusionDisplayedFrames": depth.displayedFrames,
             "liveOcclusionExpiredBuilds": depth.expiredBuilds,

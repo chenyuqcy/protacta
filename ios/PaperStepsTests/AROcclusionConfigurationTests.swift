@@ -18,7 +18,7 @@ final class AROcclusionConfigurationTests: XCTestCase {
                     let options = AROcclusionConfiguration.sceneOptions(mode: .automatic, capabilities: capabilities)
                     let context = "personDepth=\(personDepth), sceneDepth=\(sceneDepth), sceneMesh=\(sceneMesh)"
 
-                    XCTAssertEqual(configuration.frameSemantics.contains(.personSegmentationWithDepth), personDepth && !sceneDepth, context)
+                    XCTAssertEqual(configuration.frameSemantics.contains(.personSegmentationWithDepth), personDepth, context)
                     XCTAssertEqual(configuration.frameSemantics.contains(.sceneDepth), sceneDepth, context)
                     XCTAssertFalse(configuration.frameSemantics.contains(.smoothedSceneDepth), context)
                     XCTAssertEqual(configuration.sceneReconstruction, [], context)
@@ -30,18 +30,50 @@ final class AROcclusionConfigurationTests: XCTestCase {
     }
 
     @MainActor
-    func testStablePaperUsesOneSmoothedDepthOwnerWithConservativePaperGeometry() {
-        let supported = AROcclusionCapabilities(personDepth: true, sceneDepth: true, sceneMesh: true, smoothedDepth: true)
-        let config = AROcclusionConfiguration.make(mode: .automatic, capabilities: supported)
-        XCTAssertTrue(config.frameSemantics.contains(.sceneDepth))
-        XCTAssertTrue(config.frameSemantics.contains(.smoothedSceneDepth))
-        XCTAssertFalse(config.frameSemantics.contains(.personSegmentationWithDepth))
-        XCTAssertEqual(config.sceneReconstruction, [])
-        let stable = AROcclusionConfiguration.renderOptions(isAR: true, mode: .automatic, capabilities: supported)
-        XCTAssertTrue(stable.contains(.disablePersonOcclusion))
-        XCTAssertTrue(stable.contains(.disableGroundingShadows))
-        let native = AROcclusionConfiguration.renderOptions(isAR: true, mode: .peopleOnly, capabilities: supported)
-        XCTAssertFalse(native.contains(.disablePersonOcclusion))
+    func testRefinedModeKeepsNativeHandMattingAndOnlyAddsObjectDepthWhenCombinedSemanticsWork() {
+        for person in [false, true] {
+            for depth in [false, true] {
+                for smoothed in [false, true] {
+                    for combined in [false, true] {
+                        let supported = AROcclusionCapabilities(personDepth: person, sceneDepth: depth, sceneMesh: true,
+                                                               smoothedDepth: smoothed, combinedPersonAndSceneDepth: combined)
+                        let config = AROcclusionConfiguration.make(mode: .automatic, capabilities: supported)
+                        let objectDepth = depth && (!person || combined)
+                        let context = "person=\(person), depth=\(depth), smoothed=\(smoothed), combined=\(combined)"
+                        XCTAssertEqual(AROcclusionConfiguration.usesObjectDepth(mode: .automatic, capabilities: supported), objectDepth, context)
+                        XCTAssertEqual(AROcclusionConfiguration.usesNativeHands(mode: .automatic, capabilities: supported), person, context)
+                        XCTAssertEqual(config.frameSemantics.contains(.sceneDepth), objectDepth, context)
+                        XCTAssertEqual(config.frameSemantics.contains(.smoothedSceneDepth), objectDepth && smoothed, context)
+                        XCTAssertEqual(config.frameSemantics.contains(.personSegmentationWithDepth), person, context)
+                        XCTAssertEqual(config.sceneReconstruction, [], context)
+                        let render = AROcclusionConfiguration.renderOptions(isAR: true, mode: .automatic, capabilities: supported)
+                        XCTAssertFalse(render.contains(.disablePersonOcclusion), "The custom non-person mask must not turn off hand matting: \(context)")
+                        XCTAssertTrue(render.contains(.disableGroundingShadows), context)
+                        XCTAssertFalse(AROcclusionConfiguration.sceneOptions(mode: .automatic, capabilities: supported).contains(.occlusion),
+                                       "A reconstructed scene mesh must not add another hand silhouette owner")
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testUnsupportedCombinedSetFallsBackToNativeHandsInsteadOfRequestingIndividualUnsupportedUnion() {
+        let separateOnly = AROcclusionCapabilities(personDepth: true, sceneDepth: true, sceneMesh: true,
+                                                  smoothedDepth: true, combinedPersonAndSceneDepth: false)
+        let config = AROcclusionConfiguration.make(mode: .automatic, capabilities: separateOnly)
+        XCTAssertEqual(config.frameSemantics, [.personSegmentationWithDepth])
+        XCTAssertFalse(AROcclusionConfiguration.usesObjectDepth(mode: .automatic, capabilities: separateOnly))
+        XCTAssertTrue(AROcclusionConfiguration.usesNativeHands(mode: .automatic, capabilities: separateOnly))
+    }
+
+    func testSyntheticInitializerPreservesExistingCallersAndModeRawValues() {
+        let both = AROcclusionCapabilities(personDepth: true, sceneDepth: true, sceneMesh: false)
+        XCTAssertTrue(both.combinedPersonAndSceneDepth)
+        XCTAssertFalse(AROcclusionCapabilities(personDepth: false, sceneDepth: true, sceneMesh: false).combinedPersonAndSceneDepth)
+        XCTAssertEqual(AROcclusionMode.automatic.rawValue, "automatic")
+        XCTAssertEqual(AROcclusionMode.peopleOnly.rawValue, "peopleOnly")
+        XCTAssertEqual(AROcclusionMode.automatic.title, "Refined edges")
     }
 
     @MainActor
@@ -57,6 +89,8 @@ final class AROcclusionConfigurationTests: XCTestCase {
                     let context = "personDepth=\(personDepth), sceneDepth=\(sceneDepth), sceneMesh=\(sceneMesh)"
 
                     XCTAssertEqual(configuration.frameSemantics.contains(.personSegmentationWithDepth), personDepth, context)
+                    XCTAssertFalse(AROcclusionConfiguration.usesObjectDepth(mode: .peopleOnly, capabilities: capabilities), context)
+                    XCTAssertEqual(AROcclusionConfiguration.usesNativeHands(mode: .peopleOnly, capabilities: capabilities), personDepth, context)
                     XCTAssertFalse(configuration.frameSemantics.contains(.sceneDepth), context)
                     XCTAssertFalse(configuration.frameSemantics.contains(.smoothedSceneDepth), context)
                     XCTAssertEqual(configuration.sceneReconstruction, [], context)

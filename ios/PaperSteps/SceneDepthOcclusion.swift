@@ -3,8 +3,9 @@ import Foundation
 import RealityKit
 import UIKit
 
-/// Camera-calibrated LiDAR surfaces for hands and nearby objects. Paper may
-/// augment native occlusion; equipment uses one depth owner. No color is drawn.
+/// Camera-calibrated LiDAR surfaces for non-person objects. Native RealityKit
+/// matting owns hands; its current region and margin are excluded from this mesh.
+/// No color is drawn, and old meshes cannot reclaim a newly recognised hand.
 @MainActor
 final class SceneDepthOcclusion {
     enum Profile: Sendable { case rawPaper, stablePaper, stableEquipment }
@@ -36,6 +37,9 @@ final class SceneDepthOcclusion {
         let cropY: Int
         let samplingReason: String
         let projectedTargetArea: Int
+        let nativePersonExclusion: Bool
+        let excludedPersonPixels: Int
+        let appliedFrameTimestamp: TimeInterval?
     }
 
     private let anchor = AnchorEntity(world: .zero)
@@ -65,6 +69,14 @@ final class SceneDepthOcclusion {
     private var samplingReason = "Not active"
     private var projectedTargetArea = 0
     private(set) var lastAcceptedDepthTimestamp: TimeInterval?
+    /// A fresh completed upload or reliable clear observation, not receipt alone.
+    private(set) var lastAppliedDepthTimestamp: TimeInterval?
+    private var excludingNativePeople = false
+    private var latestPersonExclusion: [Bool]?
+    private var latestPersonFrame: SceneDepthSnapshot?
+    private var displayedSurface: SceneDepthSurface?
+    private var displayedCameraTransform = matrix_identity_float4x4
+    private var excludedPersonPixels = 0
 
     private(set) var triangleCount = 0
     private(set) var status = "Not active"
@@ -89,7 +101,9 @@ final class SceneDepthOcclusion {
                            rejectedSupportTriangles: rejectedSupportTriangles, depthSource: depthSource,
                            sourceWidth: sourceSize.x, sourceHeight: sourceSize.y, pixelStep: samplingStep,
                            cropX: cropOrigin.x, cropY: cropOrigin.y,
-                           samplingReason: samplingReason, projectedTargetArea: projectedTargetArea)
+                           samplingReason: samplingReason, projectedTargetArea: projectedTargetArea,
+                           nativePersonExclusion: excludingNativePeople, excludedPersonPixels: excludedPersonPixels,
+                           appliedFrameTimestamp: lastAppliedDepthTimestamp)
     }
 
     init(profile: Profile = .rawPaper) {
@@ -104,8 +118,9 @@ final class SceneDepthOcclusion {
 
     deinit { buildTask?.cancel(); expirationTimer?.invalidate() }
 
-    func configure(in view: ARView) {
+    func configure(in view: ARView, excludingNativePeople: Bool = false) {
         if self.view !== view { reset(); self.view = view }
+        self.excludingNativePeople = excludingNativePeople
         ensureSceneAttachment(in: view)
         if expirationTimer == nil {
             let timer = Timer(timeInterval: 0.04, repeats: true) { [weak self] _ in
@@ -145,9 +160,34 @@ final class SceneDepthOcclusion {
         let useSmoothed = profile != .rawPaper && frame.smoothedSceneDepth?.confidenceMap != nil
         let selectedDepth = useSmoothed ? frame.smoothedSceneDepth : frame.sceneDepth
         guard let depth = selectedDepth else {
-            invalidateMesh(reason: "Raw scene depth unavailable", retainingFreshDisplay: true); return
+            if excludingNativePeople { latestPersonExclusion = nil; latestPersonFrame = nil }
+            // A missing depth exposure cannot prove current native coverage.
+            // Retaining a custom mesh here could cut a newly recognised hand.
+            invalidateMesh(reason: "Raw scene depth unavailable", retainingFreshDisplay: !excludingNativePeople); return
         }
         expireIfNeeded()
+        // Refresh native coverage on EVERY camera frame, even while a mesh is
+        // being built. A past mesh must not clip a newly recognised hand.
+        let fullWidth = CVPixelBufferGetWidth(depth.depthMap), fullHeight = CVPixelBufferGetHeight(depth.depthMap)
+        var personExclusion: [Bool]?
+        if excludingNativePeople {
+            guard let person = Self.personMask(frame: frame),
+                  let mask = person.exclusionMask(depthWidth: fullWidth, depthHeight: fullHeight) else {
+                latestPersonExclusion = nil
+                invalidateMesh(reason: "Waiting for native hand coverage"); return
+            }
+            guard let required = person.exclusionMask(depthWidth: fullWidth, depthHeight: fullHeight, radius: 2) else {
+                invalidateMesh(reason: "Native hand coverage unavailable"); return
+            }
+            let currentFrame = Self.metadata(frame: frame, width: fullWidth, height: fullHeight)
+            latestPersonExclusion = required; latestPersonFrame = currentFrame; personExclusion = mask
+            if let displayedSurface,
+               !SceneDepthPersonCoverage.isDisjoint(surface: displayedSurface,
+                                                   sourceCameraTransform: displayedCameraTransform,
+                                                   current: currentFrame, personMask: required) {
+                hide(reason: "Native hand boundary updated")
+            }
+        }
         guard buildTask == nil, frame.timestamp - lastScheduledTimestamp >= 1.0 / 30.0 else { return }
         guard let snapshot = Self.snapshot(frame: frame, depth: depth) else {
             invalidateMesh(reason: "Depth confidence unavailable", retainingFreshDisplay: true); return
@@ -171,6 +211,7 @@ final class SceneDepthOcclusion {
         let receiptTime = ProcessInfo.processInfo.systemUptime
         let token = generation
         let previousFilter = stabilizer
+        let capturedExclusion = personExclusion
         let profile = self.profile
         lastScheduledTimestamp = snapshot.timestamp
         sourceSize = [snapshot.width, snapshot.height]
@@ -179,15 +220,43 @@ final class SceneDepthOcclusion {
         samplingReason = plan.reason; projectedTargetArea = plan.projectedArea
         buildTask = Task { [weak self] in
             let start = ProcessInfo.processInfo.systemUptime
-            let result = await Task.detached(priority: .userInitiated) {
+            let result = await Task.detached(priority: .userInitiated) { () -> (SceneDepthSurface, EquipmentDepthStabilizer, Int, Int) in
                 var filter = previousFilter
                 let local = plan.region.crop(snapshot)
                 let raw = currentRaw.map { plan.region.crop($0) }
-                let filtered = profile != .rawPaper ? filter.filter(local, current: raw, pixelStep: plan.pixelStep) : local
+                var localExclusion: [Bool]?
+                if let mask = capturedExclusion {
+                    var cropped: [Bool] = []; cropped.reserveCapacity(plan.region.area)
+                    for y in 0..<plan.region.height {
+                        let start = (plan.region.y + y) * snapshot.width + plan.region.x
+                        cropped.append(contentsOf: mask[start..<(start + plan.region.width)])
+                    }
+                    localExclusion = cropped
+                }
+                var filtered = profile != .rawPaper ? filter.filter(local, current: raw, pixelStep: plan.pixelStep,
+                                                                    excluding: localExclusion) : local
+                // Defend the ownership boundary after ALL spatial/temporal work.
+                // Masking only before filtering could fill the hand back in.
+                if let localExclusion {
+                    for index in localExclusion.indices where localExclusion[index] {
+                        filtered.depths[index] = 0; filtered.confidence[index] = 0
+                    }
+                }
                 let mesh = SceneDepthMesher.build(filtered, supportPlaneY: supportPlaneY,
                                                  pixelStep: plan.pixelStep,
                                                  policy: profile == .stableEquipment ? .stableEquipment : .paper)
-                return (mesh, filter)
+                let observation: SceneDepthSnapshot
+                if let raw, raw.width == local.width, raw.height == local.height,
+                   raw.depths.count == local.depths.count, raw.confidence.count == local.confidence.count,
+                   raw.calibration == local.calibration { observation = raw }
+                else { observation = local }
+                var excludedCount = 0, reliableNonPersonCount = 0
+                for index in observation.depths.indices {
+                    if localExclusion?[index] == true { excludedCount += 1 }
+                    else if observation.depths[index].isFinite, (0.12...3).contains(observation.depths[index]),
+                            (1...2).contains(observation.confidence[index]) { reliableNonPersonCount += 1 }
+                }
+                return (mesh, filter, excludedCount, reliableNonPersonCount)
             }.value
             // A cancelled generation must never clear a newer generation's
             // in-flight task or replace its surface/diagnostics.
@@ -202,9 +271,24 @@ final class SceneDepthOcclusion {
                 self.expiredBuilds += 1
                 self.rejectBuild(reason: "Depth frame expired"); return
             }
+            if capturedExclusion != nil {
+                guard let current = self.latestPersonFrame, let required = self.latestPersonExclusion,
+                      SceneDepthPersonCoverage.isDisjoint(surface: mesh, sourceCameraTransform: snapshot.cameraTransform,
+                                                          current: current, personMask: required) else {
+                    self.hide(reason: "Native hand boundary changed during depth work"); return
+                }
+            }
             self.stabilizer = result.1
+            self.excludedPersonPixels = result.2
             guard !mesh.triangles.isEmpty else {
                 self.emptyForegroundBuilds += 1
+                // A fresh view of only the support plane/person exclusion is a
+                // valid clear observation. An all-invalid depth map is not.
+                if SceneDepthClearObservation.isReliableEmpty(surface: mesh, pixelCount: plan.region.area,
+                                                             excludedPixels: result.2,
+                                                             reliableNonPersonPixels: result.3) {
+                    self.lastAppliedDepthTimestamp = snapshot.timestamp
+                }
                 if profile != .rawPaper {
                     // A current clear observation must not retain the previous
                     // hand until the stale-frame timer expires.
@@ -231,6 +315,9 @@ final class SceneDepthOcclusion {
                 self.surface.transform = Transform(matrix: snapshot.cameraTransform)
                 self.surface.isEnabled = true
                 self.displayedTimestamp = snapshot.timestamp
+                self.lastAppliedDepthTimestamp = snapshot.timestamp
+                self.displayedSurface = capturedExclusion == nil ? nil : mesh
+                self.displayedCameraTransform = snapshot.cameraTransform
                 self.displayedReceiptTime = receiptTime
                 self.triangleCount = mesh.triangles.count / 3
                 self.displayedFrames += 1
@@ -261,7 +348,9 @@ final class SceneDepthOcclusion {
         rejectedSamples = 0
         rejectedDiscontinuities = 0
         rejectedSupportTriangles = 0
-        stabilizer.reset(); depthSource = "None"; lastAcceptedDepthTimestamp = nil
+        stabilizer.reset(); depthSource = "None"; lastAcceptedDepthTimestamp = nil; lastAppliedDepthTimestamp = nil
+        excludingNativePeople = false; latestPersonExclusion = nil; latestPersonFrame = nil
+        displayedSurface = nil; displayedCameraTransform = matrix_identity_float4x4; excludedPersonPixels = 0
         sampling.reset(); sourceSize = .zero; samplingStep = 2; cropOrigin = .zero
         samplingReason = "Not active"; projectedTargetArea = 0
     }
@@ -288,6 +377,7 @@ final class SceneDepthOcclusion {
 
     private func hide(reason: String) {
         surface.isEnabled = false
+        displayedSurface = nil
         displayedTimestamp = nil
         displayedReceiptTime = 0
         triangleCount = 0
@@ -309,6 +399,30 @@ final class SceneDepthOcclusion {
         return SceneDepthMesher.isFresh(timestamp: timestamp,
                                         latestFrameTimestamp: max(latestFrameTimestamp, frame.timestamp),
                                         secondsSinceReceived: ProcessInfo.processInfo.systemUptime - receivedAt)
+    }
+
+    private static func metadata(frame: ARFrame, width: Int, height: Int) -> SceneDepthSnapshot {
+        let resolution = frame.camera.imageResolution, k = frame.camera.intrinsics
+        let sx = Float(width) / Float(resolution.width), sy = Float(height) / Float(resolution.height)
+        return SceneDepthSnapshot(width: width, height: height, depths: [], confidence: [],
+                                  calibration: [k[0][0] * sx, k[1][1] * sy, k[2][0] * sx, k[2][1] * sy],
+                                  cameraTransform: frame.camera.transform, timestamp: frame.timestamp)
+    }
+
+    private static func personMask(frame: ARFrame) -> SceneDepthPersonMask? {
+        guard let buffer = frame.segmentationBuffer,
+              CVPixelBufferGetPixelFormatType(buffer) == kCVPixelFormatType_OneComponent8 else { return nil }
+        let width = CVPixelBufferGetWidth(buffer), height = CVPixelBufferGetHeight(buffer)
+        guard width > 0, height > 0, width <= 4096, height <= 4096,
+              CVPixelBufferLockBaseAddress(buffer, .readOnly) == kCVReturnSuccess else { return nil }
+        defer { CVPixelBufferUnlockBaseAddress(buffer, .readOnly) }
+        guard let address = CVPixelBufferGetBaseAddress(buffer) else { return nil }
+        let stride = CVPixelBufferGetBytesPerRow(buffer)
+        var values: [UInt8] = []; values.reserveCapacity(width * height)
+        for y in 0..<height {
+            values.append(contentsOf: UnsafeBufferPointer(start: address.advanced(by: y * stride).assumingMemoryBound(to: UInt8.self), count: width))
+        }
+        return SceneDepthPersonMask(width: width, height: height, values: values)
     }
 
     private static func snapshot(frame: ARFrame, depth: ARDepthData) -> SceneDepthSnapshot? {

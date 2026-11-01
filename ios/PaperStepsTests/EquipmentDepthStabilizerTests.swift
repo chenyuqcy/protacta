@@ -34,6 +34,14 @@ final class EquipmentDepthStabilizerTests: XCTestCase {
         let arriving = filter.filter(plane(1.2, time: 1.066), current: plane(0.3, time: 1.066))
         XCTAssertTrue(arriving.depths.allSatisfy { $0 == 0.3 })
     }
+    func testCoherentRawMotionDoesNotReenterTheTemporalDeadbandAfterReprojection() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        var smoothed = plane(0.49, time: 1.033)
+        smoothed.cameraTransform.columns.3.z = 0.002
+        var current = smoothed; current.depths = Array(repeating: 0.515, count: 25)
+        XCTAssertEqual(filter.filter(smoothed, current: current).depths[12], 0.515,
+                       "Accepted same-exposure raw motion must bypass our own hold/blend as well")
+    }
     func testRawMotionCheckRejectsAnotherExposureOrCalibration() {
         var filter = EquipmentDepthStabilizer()
         let input = plane()
@@ -123,21 +131,155 @@ final class EquipmentDepthStabilizerTests: XCTestCase {
             }
         }
     }
+    func testSmallCameraTranslationAlignsTheForegroundBeforeTheDeadband() {
+        var old = SceneDepthSnapshot(width: 9, height: 5, depths: Array(repeating: 1.2, count: 45),
+            confidence: Array(repeating: 2, count: 45), calibration: [200, 200, 4, 2],
+            cameraTransform: matrix_identity_float4x4, timestamp: 1)
+        for y in 0..<5 { for x in 3...5 { old.depths[y * 9 + x] = 0.25 } }
+        var current = old
+        current.timestamp = 1.033; current.cameraTransform.columns.3.x = 0.0025
+        current.depths = Array(repeating: 1.2, count: 45)
+        for y in 0..<5 { for x in 1...3 { current.depths[y * 9 + x] = 0.253 } }
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(old)
+        let result = filter.filter(current)
+        XCTAssertEqual(result.depths[2 * 9 + 2], 0.25, accuracy: 0.000001,
+                       "The stable near surface moved two pixels; the old screen pixel held background")
+        XCTAssertEqual(result.depths[2 * 9 + 5], 1.2, accuracy: 0.000001,
+                       "The old foreground screen pixel must clear immediately")
+    }
+
+    private func supportedHole(centerX: Int = 2, principalX: Float = 2, time: Double) -> SceneDepthSnapshot {
+        var hole = plane(time: time)
+        hole.calibration.z = principalX
+        hole.confidence = Array(repeating: 0, count: 25)
+        for (dx, dy) in [(-1, -1), (0, -1), (1, -1), (-1, 0)] {
+            hole.confidence[(2 + dy) * 5 + centerX + dx] = 2
+        }
+        for (dx, dy) in [(1, 0), (-1, 1)] {
+            let index = (2 + dy) * 5 + centerX + dx
+            hole.confidence[index] = 2; hole.depths[index] = 1.2
+        }
+        return hole
+    }
+
+    func testCropShiftTransportsTheTwoFrameHoleLimit() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        XCTAssertEqual(filter.filter(supportedHole(time: 1.033)).confidence[12], 1)
+        let shifted = supportedHole(centerX: 1, principalX: 1, time: 1.066)
+        XCTAssertEqual(filter.filter(shifted).confidence[11], 1)
+        var third = shifted; third.timestamp = 1.099
+        XCTAssertEqual(filter.filter(third).confidence[11], 0,
+                       "A shifted crop must not reset a retained pixel's hold counter")
+    }
+
+    func testHeldPixelCannotAccumulateMoreThan120MillisecondsAcrossShortFrameGaps() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        XCTAssertEqual(filter.filter(supportedHole(time: 1.08)).confidence[12], 1)
+        XCTAssertEqual(filter.filter(supportedHole(time: 1.15)).confidence[12], 0,
+                       "The latest frame is 70ms old, but the retained center was last seen 150ms ago")
+    }
+
+    func testDuplicateAndBackwardsFramesDoNotBecomeANewHistorySource() {
+        for staleTime in [0.99, 1.0] {
+            var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+            XCTAssertEqual(filter.filter(plane(0.7, time: staleTime)).depths[12], 0.7)
+            XCTAssertEqual(filter.filter(plane(0.705, time: 1.033)).depths[12], 0.705,
+                           "An out-of-order exposure must not become the next deadband reference")
+        }
+    }
+
+    func testExcludedHandIsNotPersistedOrResurrectedWhenTheMaskDisappears() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        let mask = Array(repeating: true, count: 25)
+        let masked = filter.filter(plane(time: 1.033), current: plane(time: 1.033), pixelStep: 2, excluding: mask)
+        XCTAssertTrue(masked.depths.allSatisfy { $0 == 0 })
+        XCTAssertTrue(masked.confidence.allSatisfy { $0 == 0 }, "Even unsampled person pixels must be cleared")
+        var unknown = plane(time: 1.066)
+        unknown.confidence = Array(repeating: 0, count: 25)
+        let cleared = filter.filter(unknown, current: unknown)
+        XCTAssertTrue(cleared.confidence.allSatisfy { $0 == 0 }, "A native-person region cannot return as a custom ghost")
+    }
+
+    func testExcludedCurrentAndRawNeighborsCannotFillAnUnmaskedHole() {
+        var input = plane(time: 1.033), raw = input
+        input.confidence = Array(repeating: 0, count: 25)
+        raw.confidence = Array(repeating: 0, count: 25)
+        var mask = Array(repeating: false, count: 25)
+        for index in [6, 7, 8, 11, 13] {
+            input.confidence[index] = 2; raw.confidence[index] = 2; mask[index] = true
+        }
+        var filter = EquipmentDepthStabilizer()
+        let result = filter.filter(input, current: raw, excluding: mask)
+        XCTAssertEqual(result.confidence[12], 0)
+        XCTAssertTrue(result.confidence.allSatisfy { $0 == 0 })
+    }
+
+    func testMalformedExclusionFailsClosedAndClearsHistory() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        let result = filter.filter(plane(time: 1.033), excluding: [true])
+        XCTAssertTrue(result.depths.allSatisfy { $0 == 0 })
+        XCTAssertTrue(result.confidence.allSatisfy { $0 == 0 })
+        XCTAssertEqual(filter.filter(plane(0.505, time: 1.066)).depths[12], 0.505)
+    }
+
+    func testDuplicateFrameStillHonorsTheCurrentExclusion() {
+        var filter = EquipmentDepthStabilizer(); _ = filter.filter(plane())
+        var mask = Array(repeating: false, count: 25); mask[12] = true
+        XCTAssertEqual(filter.filter(plane(), excluding: mask).confidence[12], 0)
+        var unknown = plane(time: 1.033); unknown.confidence = Array(repeating: 0, count: 25)
+        XCTAssertTrue(filter.filter(unknown).confidence.allSatisfy { $0 == 0 })
+    }
+
     @MainActor
-    func testStablePolicyHasOneDepthOwnerAndNoGroundingOrSceneMesh() {
-        let supported = EquipmentOcclusionCapabilities(stableDepth: true, personDepth: true)
-        let stable = EquipmentOcclusionConfiguration.make(mode: .stableEdges, capabilities: supported)
-        XCTAssertTrue(stable.frameSemantics.contains(.sceneDepth))
-        XCTAssertTrue(stable.frameSemantics.contains(.smoothedSceneDepth))
-        XCTAssertFalse(stable.frameSemantics.contains(.personSegmentationWithDepth))
-        XCTAssertEqual(stable.sceneReconstruction, [])
-        let options = EquipmentOcclusionConfiguration.renderOptions(mode: .stableEdges, capabilities: supported)
-        XCTAssertTrue(options.contains(.disablePersonOcclusion))
-        XCTAssertTrue(options.contains(.disableGroundingShadows))
-        let unsupported = EquipmentOcclusionCapabilities(stableDepth: false, personDepth: true)
-        let fallback = EquipmentOcclusionConfiguration.make(mode: .stableEdges, capabilities: unsupported)
-        XCTAssertTrue(fallback.frameSemantics.contains(.personSegmentationWithDepth))
-        XCTAssertFalse(fallback.frameSemantics.contains(.smoothedSceneDepth))
-        XCTAssertFalse(EquipmentOcclusionConfiguration.renderOptions(mode: .stableEdges, capabilities: unsupported).contains(.disablePersonOcclusion))
+    func testRefinedEquipmentUsesNativeHandsPlusOnlySupportedNonPersonDepthWithoutSceneMesh() {
+        for depth in [false, true] {
+            for person in [false, true] {
+                for combined in [false, true] {
+                    let capabilities = EquipmentOcclusionCapabilities(stableDepth: depth, personDepth: person,
+                                                                     combinedPersonAndSceneDepth: combined)
+                    let config = EquipmentOcclusionConfiguration.make(mode: .stableEdges, capabilities: capabilities)
+                    let objectDepth = depth && (!person || combined)
+                    let context = "depth=\(depth), person=\(person), combined=\(combined)"
+                    XCTAssertEqual(EquipmentOcclusionConfiguration.usesObjectDepth(mode: .stableEdges, capabilities: capabilities), objectDepth, context)
+                    XCTAssertEqual(EquipmentOcclusionConfiguration.usesNativeHands(mode: .stableEdges, capabilities: capabilities), person, context)
+                    XCTAssertEqual(EquipmentOcclusionConfiguration.effective(.stableEdges, capabilities: capabilities), objectDepth ? .stableEdges : .nativeHands, context)
+                    XCTAssertEqual(config.frameSemantics.contains(.sceneDepth), objectDepth, context)
+                    XCTAssertEqual(config.frameSemantics.contains(.smoothedSceneDepth), objectDepth, context)
+                    XCTAssertEqual(config.frameSemantics.contains(.personSegmentationWithDepth), person, context)
+                    XCTAssertEqual(config.sceneReconstruction, [], context)
+                    let options = EquipmentOcclusionConfiguration.renderOptions(mode: .stableEdges, capabilities: capabilities)
+                    XCTAssertFalse(options.contains(.disablePersonOcclusion), "Native matting must remain the only hand-boundary owner: \(context)")
+                    XCTAssertTrue(options.contains(.disableGroundingShadows), context)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    func testUnsupportedEquipmentCombinationFallsBackToNativeOnlyWhileDepthOnlyDevicesRemainUsable() {
+        let separateOnly = EquipmentOcclusionCapabilities(stableDepth: true, personDepth: true, combinedPersonAndSceneDepth: false)
+        let fallback = EquipmentOcclusionConfiguration.make(mode: .stableEdges, capabilities: separateOnly)
+        XCTAssertEqual(fallback.frameSemantics, [.personSegmentationWithDepth])
+        XCTAssertEqual(EquipmentOcclusionConfiguration.effective(.stableEdges, capabilities: separateOnly), .nativeHands)
+        let depthOnly = EquipmentOcclusionCapabilities(stableDepth: true, personDepth: false, combinedPersonAndSceneDepth: false)
+        let depth = EquipmentOcclusionConfiguration.make(mode: .stableEdges, capabilities: depthOnly)
+        XCTAssertEqual(depth.frameSemantics, [.sceneDepth, .smoothedSceneDepth])
+        XCTAssertTrue(EquipmentOcclusionConfiguration.usesObjectDepth(mode: .stableEdges, capabilities: depthOnly))
+        XCTAssertFalse(EquipmentOcclusionConfiguration.usesNativeHands(mode: .stableEdges, capabilities: depthOnly))
+    }
+
+    @MainActor
+    func testEquipmentNativePreferenceNeverRequestsObjectDepthAndKeepsPersistedModeValues() {
+        let capabilities = EquipmentOcclusionCapabilities(stableDepth: true, personDepth: true)
+        let config = EquipmentOcclusionConfiguration.make(mode: .nativeHands, capabilities: capabilities)
+        XCTAssertEqual(config.frameSemantics, [.personSegmentationWithDepth])
+        XCTAssertFalse(EquipmentOcclusionConfiguration.usesObjectDepth(mode: .nativeHands, capabilities: capabilities))
+        XCTAssertTrue(EquipmentOcclusionConfiguration.usesNativeHands(mode: .nativeHands, capabilities: capabilities))
+        XCTAssertFalse(EquipmentOcclusionConfiguration.renderOptions(mode: .nativeHands, capabilities: capabilities).contains(.disablePersonOcclusion))
+        XCTAssertTrue(capabilities.combinedPersonAndSceneDepth)
+        XCTAssertFalse(EquipmentOcclusionCapabilities(stableDepth: true, personDepth: false).combinedPersonAndSceneDepth)
+        XCTAssertEqual(EquipmentOcclusionMode.stableEdges.rawValue, "stableEdges")
+        XCTAssertEqual(EquipmentOcclusionMode.nativeHands.rawValue, "nativeHands")
+        XCTAssertEqual(EquipmentOcclusionMode.stableEdges.title, "Refined edges")
     }
 }

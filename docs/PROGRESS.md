@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 21 adds continuous authored 3D movements and optional tabletop AR to all five everyday courses. It is installed, independently version-queried and launched on iPhone 17 Pro Max. See EVERYDAY_3D_AR_BUILD21.md for scoped validation and open physical/landscape checks. Historical build sections retain their original evidence. The user's AR overlap-edge flicker remains open and is the next repair task.
+Current work: Build 22 refines AR hand/object edge ownership and reprojects depth history using camera pose/calibration. The final signed app is installed and independently version/container-queried on iPhone 17 Pro Max; iOS rejected automatic foreground launch as locked. 87 native depth tests passed. Real hand-edge comparison remains pending. Build 21's continuous 3D movements and tabletop AR for all five everyday courses remain integrated. See AR_EDGE_REFINEMENT_BUILD22.md and EVERYDAY_3D_AR_BUILD21.md for scoped evidence and remaining physical/landscape checks. Historical build sections retain their original evidence.
 
 ## Build 7: USB phone update and basic course entry
 

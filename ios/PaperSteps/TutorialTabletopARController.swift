@@ -202,7 +202,9 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         view.renderOptions = EquipmentOcclusionConfiguration.renderOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         view.environment.sceneUnderstanding.options = []
         depthSessionStartedAt = CACurrentMediaTime(); lastDepthObservedAt = nil
-        if occlusionMode == .stableEdges { handDepth.configure(in: view) }
+        if EquipmentOcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) {
+            handDepth.configure(in: view, excludingNativePeople: EquipmentOcclusionConfiguration.usesNativeHands(mode: occlusionMode, capabilities: occlusionCapabilities))
+        }
     }
 
     func place(at point: CGPoint? = nil) {
@@ -336,18 +338,18 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         guard view?.session.delegate === self, !backgrounded else { return }
         let normal: Bool
         if case .normal = frame.camera.trackingState { normal = true } else { normal = false }
-        if occlusionMode == .stableEdges {
+        if EquipmentOcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) {
             handDepth.update(frame: frame, supportPlaneY: movable?.position(relativeTo: nil).y,
                              target: placed ? content : nil)
             if !normal {
                 depthSessionStartedAt = CACurrentMediaTime(); lastDepthObservedAt = nil
-            } else if let accepted = handDepth.lastAcceptedDepthTimestamp, frame.timestamp - accepted < 0.15 {
+            } else if let accepted = handDepth.lastAppliedDepthTimestamp, frame.timestamp - accepted < 0.15 {
                 lastDepthObservedAt = CACurrentMediaTime()
             }
             let missingFor = CACurrentMediaTime() - (lastDepthObservedAt ?? depthSessionStartedAt)
             if normal, missingFor > (lastDepthObservedAt == nil ? 2 : 0.75) {
                 setOcclusionMode(.nativeHands)
-                handEdgeNotice = "Hand depth is unavailable. Native hands is active."
+                handEdgeNotice = "Object depth is paused. Native hands is active."
             }
         }
         defer { recordDiagnostic() }
@@ -377,6 +379,9 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             "groundingShadowsDisabled": view?.renderOptions.contains(.disableGroundingShadows) ?? false,
             "placed": placed, "trackingReady": trackingReady,
             "depthSource": depth.depthSource, "depthStatus": depth.status,
+            "nativePersonExclusion": depth.nativePersonExclusion,
+            "excludedPersonPixels": depth.excludedPersonPixels,
+            "lastAppliedDepthTimestamp": depth.appliedFrameTimestamp ?? -1,
             "depthWidth": depth.depthWidth, "depthHeight": depth.depthHeight,
             "sourceDepthWidth": depth.sourceWidth, "sourceDepthHeight": depth.sourceHeight,
             "depthPixelStep": depth.pixelStep, "depthCropX": depth.cropX, "depthCropY": depth.cropY,

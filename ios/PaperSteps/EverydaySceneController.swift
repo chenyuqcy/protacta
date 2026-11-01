@@ -163,9 +163,13 @@ final class EverydaySceneController: ObservableObject {
 struct EverydaySceneView: UIViewRepresentable {
     @ObservedObject var controller: EverydaySceneController
     let isActive: Bool
-    func makeUIView(context: Context) -> ARView { controller.makeView() }
-    func updateUIView(_ view: ARView, context: Context) {
-        if !controller.isAR { controller.renderer.setActive(isActive); controller.renderer.updateLayout() }
+    func makeUIView(context: Context) -> AssemblyViewportContainer {
+        AssemblyViewportContainer(renderer: controller.renderer, view: controller.makeView())
     }
-    static func dismantleUIView(_ view: ARView, coordinator: ()) { view.session.pause() }
+    func updateUIView(_ view: AssemblyViewportContainer, context: Context) {
+        if !controller.isAR { controller.renderer.setActive(isActive) }
+        controller.renderer.updateLayout()
+    }
+    // The controller owns shutdown. The container resizes the SAME ARView on
+    // rotation; changing studio/AR chrome must not detach or pause that session.
 }
