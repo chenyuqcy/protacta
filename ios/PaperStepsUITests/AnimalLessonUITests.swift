@@ -48,7 +48,7 @@ final class AnimalLessonUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 9")
             capture(String(format: "Rabbit_%02d_Complete", step))
             if step == 8 {
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.45)
+                app.scrubFold(to: 0.45)
                 capture("Rabbit_08_Forehead_between_ears_midfold")
                 app.buttons["nextStep"].tap()
                 enabled(app.buttons["nextStep"])
@@ -67,12 +67,12 @@ final class AnimalLessonUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 18")
             capture(String(format: "Butterfly_%02d_Complete", step))
             if [8, 9, 17].contains(step) {
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.45)
+                app.scrubFold(to: 0.45)
                 XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
                 capture(String(format: "Butterfly_%02d_Midfold_angle", step))
-                app.buttons["topView"].tap()
+                app.tapViewOption("topView")
                 capture(String(format: "Butterfly_%02d_Midfold_top", step))
-                app.buttons["angleView"].tap()
+                app.tapViewOption("angleView")
                 app.buttons["nextStep"].tap()
                 enabled(app.buttons["nextStep"])
                 XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 18")
@@ -89,7 +89,7 @@ final class AnimalLessonUITests: XCTestCase {
                        ("frog", "The Jumping Frog"), ("turtle", "The Paper Turtle"), ("fullRabbit", "The Standing Rabbit"), ("sittingDog", "The Sitting Dog"), ("fullFox", "The Long-Tail Fox"), ("elephant", "The Paper Elephant")]
         capture("Library_Twelve_lesson_intro_choices")
         begin("fox", title: "Begin with a diamond")
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         XCTAssertTrue(app.buttons["library_crane"].waitForExistence(timeout: 5))
         for (id, title) in lessons {
             let row = app.buttons["library_\(id)"]
@@ -104,14 +104,14 @@ final class AnimalLessonUITests: XCTestCase {
         butterfly.tap()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["startLesson"].label.contains("Start folding"))
-        XCTAssertTrue(app.buttons["lesson_butterfly"].isSelected)
+        XCTAssertTrue(app.staticTexts["The Paper Butterfly"].exists)
     }
 
     private func begin(_ id: String, title: String, file: StaticString = #filePath, line: UInt = #line) {
         if app.buttons["lesson_\(id)"].isHittable {
             app.buttons["lesson_\(id)"].tap()
         } else {
-            app.buttons["chooseLesson"].tap()
+            app.openOrigamiLibrary()
             let row = app.buttons["library_\(id)"]
             XCTAssertTrue(row.waitForExistence(timeout: 5))
             reveal(row)
@@ -124,9 +124,9 @@ final class AnimalLessonUITests: XCTestCase {
     }
 
     private func finish(_ name: String) {
-        app.buttons["topView"].tap()
+        app.tapViewOption("topView")
         capture("\(name)_Finished_top")
-        app.buttons["angleView"].tap()
+        app.tapViewOption("angleView")
         capture("\(name)_Finished_angle")
         next()
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "LESSON COMPLETE")
@@ -141,7 +141,7 @@ final class AnimalLessonUITests: XCTestCase {
     }
 
     private func enabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed, file: file, line: line)
     }
 
@@ -227,7 +227,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         XCTAssertFalse(app.buttons["returnTo3D"].exists)
         closePaywall()
 
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let fox = app.buttons["library_fox"]
         XCTAssertTrue(fox.waitForExistence(timeout: 5))
         for _ in 0..<5 {
@@ -245,7 +245,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 6")
         capture("Access_Free_fox_without_purchase")
 
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let dart = app.buttons["library_dart"]
         XCTAssertTrue(dart.waitForExistence(timeout: 5))
         for _ in 0..<4 {
@@ -365,7 +365,7 @@ final class LibraryPurchaseUITests: XCTestCase {
 
     private func next() {
         let button = app.buttons["nextStep"]
-        let ready = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: button) }
+        let ready = { XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: button) }
         XCTAssertEqual(XCTWaiter.wait(for: [ready()], timeout: 15), .completed)
         button.tap()
         XCTAssertEqual(XCTWaiter.wait(for: [ready()], timeout: 15), .completed)

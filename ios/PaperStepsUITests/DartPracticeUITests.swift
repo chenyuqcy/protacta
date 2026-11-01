@@ -11,8 +11,8 @@ final class DartPracticeUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--reset-learning-progress", "--paper-guide-fixture"]
         app.launch()
-        XCTAssertTrue(app.buttons["openDartPractice"].waitForExistence(timeout: 15))
-        app.buttons["openDartPractice"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
+        app.openPaperTool("openDartPractice")
         XCTAssertTrue(app.staticTexts["practiceFixtureLabel"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["saveValidationSample"].exists, "Normal practice does not expose local photo recording")
     }
@@ -32,7 +32,7 @@ final class DartPracticeUITests: XCTestCase {
         tap("practice3DReference")
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 2 OF 10")
-        app.buttons["openDartPractice"].tap()
+        app.openPaperTool("openDartPractice")
         checkCounter(2)
         tap("confirmPracticeAction")
         checkCounter(3)
@@ -93,7 +93,7 @@ final class DartPracticeUITests: XCTestCase {
         tap("practice3DReference")
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 10 OF 10")
-        app.buttons["openDartPractice"].tap()
+        app.openPaperTool("openDartPractice")
         checkCounter(10)
         tap("confirmPracticeAction")
         XCTAssertTrue(app.staticTexts["practiceCompletion"].waitForExistence(timeout: 5))

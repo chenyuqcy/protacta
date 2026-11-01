@@ -357,6 +357,12 @@ final class DemoCaptureUITests: XCTestCase {
     }
 
     private func tap(_ identifier: String) {
+        switch identifier {
+        case "replayStep", "foldNotes", "stepList": app.tapFoldTool(identifier); return
+        case "openPaperGuide", "openDartPractice": app.openPaperTool(identifier); return
+        case "chooseLesson", "topView", "angleView": app.tapViewOption(identifier); return
+        default: break
+        }
         let button = app.buttons[identifier]
         reveal(button)
         ready(button)
@@ -367,7 +373,7 @@ final class DemoCaptureUITests: XCTestCase {
         let expectation = XCTNSPredicateExpectation(
             predicate: NSPredicate { _, _ in
                 guard element.exists else { return false }
-                return element.isEnabled
+                return element.isEnabled && !(element.identifier == "nextStep" && element.label.contains("Pause fold"))
             }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed,
                        "Control did not become ready: \(element.identifier)")

@@ -1,0 +1,26 @@
+{
+  "date": "2026-11-01",
+  "intent": "Keep the approved premium object-first visual style while simplifying the learner's decisions.",
+  "source": "Capstone Project teammate feedback and the team's clickable mockup; participant slots in the shared testing document are still blank.",
+  "palette": "Existing graphite, off-white and deep green",
+  "typography": "Native system type, clear step hierarchy, no new decorative fonts",
+  "layout": "Large stable model/camera viewport; current action plus Back, Next/Pause and Help; secondary tools in a sheet",
+  "signature": "The animated AR reference remains the visual teacher. Voice is optional control for the same lesson.",
+  "changes": [
+    "Consolidate replay, speed, scrub, explanations and step list into Help",
+    "Keep Pause immediately available during an animation",
+    "Remove the entry carousel, header library button, extra practice/alignment CTAs and visible restart; retain routes in separate library/Help/options",
+    "Consolidate placement and hints in a viewport options menu",
+    "Add a short solo-phone setup guide without requesting camera or microphone permission"
+  ],
+  "critique": "Do not replace the selected premium catalog, hide recovery controls, promise universal paper tracking or turn scripted mockup checks into real CV.",
+  "acceptance": "Local UI/navigation checks and visual review first. Independent phone setup, voice recognition and real-paper learning still require physical learner tests.",
+  "status": "implemented_and_installed_build20; foreground_launch_blocked_by_device_lock",
+  "validation": {
+    "logicCasesPassed": 22,
+    "distinctSimulatorUICasesPassed": 26,
+    "phoneOnlySkipsNotCountedAsPasses": 2,
+    "physicalLearnerAndCameraAcceptance": "pending",
+    "screenshots": "output/team-feedback-build20-2026-11-01/screens/"
+  }
+}

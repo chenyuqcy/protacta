@@ -36,8 +36,8 @@ final class TabletLayoutUITests: XCTestCase {
         for landscape in [false, true] {
             orient(landscape)
             capture("iPad_\(direction)_Welcome")
-            assertVisible(["chooseLesson", "openAR", "startLesson"])
-            app.buttons["chooseLesson"].tap()
+            assertVisible(["viewportOptions", "openAR", "startLesson"])
+            app.openOrigamiLibrary()
             XCTAssertTrue(app.buttons["closeLibrary"].waitForExistence(timeout: 5))
             let lessons = ["crane", "star", "frog", "turtle", "fullRabbit", "sittingDog", "fullFox", "elephant", "butterfly", "dart", "fox", "rabbit"]
             for lesson in lessons { XCTAssertTrue(app.buttons["library_\(lesson)"].exists) }
@@ -76,7 +76,7 @@ final class TabletLayoutUITests: XCTestCase {
         for (lesson, step, total) in [("crane",22,28),("frog",22,22),("elephant",33,40),("fullFox",24,24)] {
             orient(false)
             if lesson != "crane" {
-                app.buttons["chooseLesson"].tap()
+                app.openOrigamiLibrary()
                 XCTAssertTrue(app.buttons["library_\(lesson)"].waitForExistence(timeout: 5))
                 reveal(app.buttons["library_\(lesson)"])
                 app.buttons["library_\(lesson)"].tap()
@@ -85,12 +85,12 @@ final class TabletLayoutUITests: XCTestCase {
             app.buttons["startLesson"].tap()
             jump(to: step)
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF \(total)")
-            app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: lesson == "crane" ? 0.45 : 0.25)
+            app.scrubFold(to: lesson == "crane" ? 0.45 : 0.25)
             XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
             capture("iPad_Portrait_\(lesson)_Long_instruction_controls")
             assertLessonControls()
 
-            app.buttons["foldNotes"].tap()
+            app.tapFoldTool("foldNotes")
             XCTAssertTrue(app.buttons["closeNotes"].waitForExistence(timeout: 5))
             capture("iPad_Portrait_\(lesson)_Notes")
             assertVisible(["closeNotes"])
@@ -100,9 +100,9 @@ final class TabletLayoutUITests: XCTestCase {
             app.buttons["closeNotes"].tap()
             capture("iPad_Landscape_\(lesson)_Long_instruction_controls")
             assertLessonControls()
-            app.buttons["topView"].tap()
+            app.tapViewOption("topView")
             capture("iPad_Landscape_\(lesson)_Top_view")
-            app.buttons["angleView"].tap()
+            app.tapViewOption("angleView")
             app.buttons["nextStep"].tap()
             ready(app.buttons["nextStep"])
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF \(total)",
@@ -114,7 +114,7 @@ final class TabletLayoutUITests: XCTestCase {
 
     func testTabletStepRowCenterSelectsFreeLessonStep() {
         // A free lesson isolates hit testing from store-server availability.
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         reveal(app.buttons["library_fox"])
         app.buttons["library_fox"].tap()
         let selected = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Start folding"),
@@ -123,7 +123,7 @@ final class TabletLayoutUITests: XCTestCase {
         app.buttons["startLesson"].tap()
         for (landscape, step) in [(false, 3), (true, 4)] {
             orient(landscape)
-            app.buttons["stepList"].tap()
+            app.tapFoldTool("stepList")
             let row = app.buttons["jumpStep_\(step)"]
             XCTAssertTrue(row.waitForExistence(timeout: 5))
             capture("iPad_\(direction)_Step_row_before_center_tap")
@@ -162,8 +162,8 @@ final class TabletLayoutUITests: XCTestCase {
     }
 
     private func jump(to step: Int) {
-        ready(app.buttons["stepList"])
-        app.buttons["stepList"].tap()
+        ready(app.buttons["foldHelp"])
+        app.tapFoldTool("stepList")
         let row = app.buttons["jumpStep_\(step)"]
         // SwiftUI List is exposed as a CollectionView on this iPad runtime.
         let scroll = app.collectionViews.firstMatch.exists ? app.collectionViews.firstMatch : app.tables.firstMatch
@@ -185,14 +185,14 @@ final class TabletLayoutUITests: XCTestCase {
     }
 
     private func ready(_ element: XCUIElement) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed)
     }
 
     private func assertLessonControls() {
-        assertVisible(["nextStep", "backStep", "replayStep", "foldNotes", "playPause", "playbackSpeed",
-                       "stepList", "topView", "angleView", "toggleHints"])
-        XCTAssertTrue(app.sliders["foldProgress"].isHittable)
+        assertVisible(["nextStep", "backStep", "foldHelp", "viewportOptions", "toggleHandsFree"])
+        for id in ["replayStep", "foldNotes", "stepList", "playbackSpeed"] { XCTAssertFalse(app.buttons[id].exists) }
+        XCTAssertTrue(app.progressIndicators["foldProgressValue"].exists)
         XCTAssertTrue(app.frame.contains(app.staticTexts["stepInstruction"].frame))
         XCTAssertTrue(app.frame.contains(app.staticTexts["stepTitle"].frame))
     }

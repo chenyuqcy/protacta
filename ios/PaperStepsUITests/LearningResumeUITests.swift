@@ -12,7 +12,7 @@ final class LearningResumeUITests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--reset-learning-progress"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
-        app.buttons["lesson_dart"].tap()
+        app.selectOrigamiLesson("dart")
         app.buttons["startLesson"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
     }
@@ -29,9 +29,9 @@ final class LearningResumeUITests: XCTestCase {
             waitForLabel(app.staticTexts["stepCounter"], containing: "STEP \(step) OF 10")
             waitUntilEnabled(app.buttons["nextStep"])
         }
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.4)
+        app.scrubFold(to: 0.4)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
-        let savedProgress = try XCTUnwrap(app.sliders["foldProgress"].value as? String)
+        let savedProgress = try XCTUnwrap(app.foldProgressValue)
         let savedTitle = app.staticTexts["stepTitle"].label
         capture("Saved_Dart_step_3_partial_fold")
 
@@ -42,7 +42,7 @@ final class LearningResumeUITests: XCTestCase {
         let continueButton = app.buttons["startLesson"]
         XCTAssertTrue(continueButton.waitForExistence(timeout: 15))
         XCTAssertTrue(continueButton.label.localizedCaseInsensitiveContains("continue"))
-        XCTAssertTrue(app.buttons["startOverLesson"].exists)
+        XCTAssertFalse(app.buttons["startOverLesson"].exists, "Restart is inside the options menu")
         XCTAssertFalse(app.staticTexts["stepCounter"].exists, "Opening the app must not begin the lesson automatically")
         XCTAssertTrue(app.buttons["openAR"].exists)
         XCTAssertFalse(app.buttons["closeAR"].exists, "Relaunch must not restore a camera session")
@@ -50,7 +50,7 @@ final class LearningResumeUITests: XCTestCase {
         continueButton.tap()
         assertRestoredDart(title: savedTitle, sliderValue: savedProgress)
 
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let fox = app.buttons["library_fox"]
         XCTAssertTrue(fox.waitForExistence(timeout: 5))
         reveal(fox)
@@ -61,7 +61,7 @@ final class LearningResumeUITests: XCTestCase {
         waitUntilEnabled(app.buttons["nextStep"])
         app.buttons["nextStep"].tap()
         waitUntilEnabled(app.buttons["nextStep"])
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.65)
+        app.scrubFold(to: 0.65)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
 
         chooseDart()
@@ -71,10 +71,7 @@ final class LearningResumeUITests: XCTestCase {
         capture("Dart_restored_after_switching_lessons")
 
         chooseDart()
-        let startOver = app.buttons["startOverLesson"]
-        XCTAssertTrue(startOver.waitForExistence(timeout: 5))
-        reveal(startOver)
-        startOver.tap()
+        app.tapViewOption("startOverLesson")
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "BEFORE YOU BEGIN")
         XCTAssertEqual(app.staticTexts["stepTitle"].label, "Start with a blank sheet")
@@ -84,7 +81,7 @@ final class LearningResumeUITests: XCTestCase {
     }
 
     private func chooseDart() {
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let dart = app.buttons["library_dart"]
         XCTAssertTrue(dart.waitForExistence(timeout: 5))
         reveal(dart)
@@ -97,8 +94,8 @@ final class LearningResumeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5), file: file, line: line)
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 3 OF 10", file: file, line: line)
         XCTAssertEqual(app.staticTexts["stepTitle"].label, title, file: file, line: line)
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, sliderValue, file: file, line: line)
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold", file: file, line: line)
+        XCTAssertEqual(app.foldProgressValue, sliderValue, file: file, line: line)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold", file: file, line: line)
         XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"), file: file, line: line)
         XCTAssertTrue(app.buttons["openAR"].exists, file: file, line: line)
         XCTAssertFalse(app.buttons["closeAR"].exists, file: file, line: line)
@@ -117,7 +114,7 @@ final class LearningResumeUITests: XCTestCase {
     }
 
     private func waitUntilEnabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed, file: file, line: line)
     }
 

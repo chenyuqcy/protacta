@@ -7,8 +7,8 @@ final class PracticeValidationUITests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--paper-guide-fixture", "--practice-validation"]
         app.launch()
         defer { app.terminate() }
-        XCTAssertTrue(app.buttons["openDartPractice"].waitForExistence(timeout: 15))
-        app.buttons["openDartPractice"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
+        app.openPaperTool("openDartPractice")
         let save = app.buttons["saveValidationSample"]
         XCTAssertTrue(save.waitForExistence(timeout: 5))
         XCTAssertFalse(save.isEnabled)

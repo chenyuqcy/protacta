@@ -1,20 +1,49 @@
 import SwiftUI
 
+enum FoldHelpAction {
+    case replay, play, notes, steps, practice, paperGuide, setup
+}
+
+/// Secondary actions stay here so the object and the current move can lead.
 struct FoldHelpPanel: View {
     @ObservedObject var controller: LessonController
     @ObservedObject var voice: VoiceGuide
-    let onReplay: () -> Void
+    let onAction: (FoldHelpAction) -> Void
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Let's take it one fold at a time.")
-                        .font(.system(size: 28, weight: .regular, design: .serif))
-                    Text(controller.currentStep.title).font(.headline)
+                VStack(alignment: .leading, spacing: 24) {
+                    Text(controller.currentStep.title)
+                        .font(.system(size: 25, weight: .medium)).tracking(-0.5)
+                    HStack(spacing: 12) {
+                        Button { onAction(.replay) } label: {
+                            Label("Replay", systemImage: "arrow.counterclockwise")
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                        }.accessibilityIdentifier("replayFromHelp")
+                            .disabled(controller.stepIndex == 0 || !controller.canAnimate)
+                        Button { controller.toggleSlowMotion() } label: {
+                            Label(controller.slowMotion ? "½× speed" : "Slow down", systemImage: "tortoise")
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                        }.accessibilityIdentifier("playbackSpeed")
+                            .accessibilityValue(controller.slowMotion ? "Half speed" : "Normal speed")
+                            .disabled(!controller.canAnimate)
+                    }.buttonStyle(.bordered).tint(TutorialColors.ink)
+                    if controller.stepIndex > 0 && !controller.completed {
+                        HStack(spacing: 12) {
+                            Button { onAction(.play) } label: {
+                                Image(systemName: "play.fill").frame(width: 44, height: 44)
+                            }.accessibilityLabel("Play fold").accessibilityIdentifier("playPause")
+                            Slider(value: Binding(get: { controller.progress }, set: { controller.scrub(to: $0) }), in: 0...1,
+                                   onEditingChanged: { editing in if editing { voice.stop() } })
+                                .tint(TutorialColors.orange).accessibilityLabel("Fold progress")
+                                .accessibilityIdentifier("foldProgress")
+                        }.disabled(!controller.canAnimate)
+                    }
                     if let help = FoldHelp.forStep(lesson: controller.lesson, stepIndex: controller.stepIndex) {
-                        section("Try this", help.simplerInstruction, identifier: "simplerInstruction")
+                        Text(help.simplerInstruction).font(.body).lineSpacing(4)
+                            .accessibilityIdentifier("simplerInstruction")
                         section("Check your fold", help.checkpoint, identifier: "foldCheckpoint")
                         section("Watch out", help.commonMistake, identifier: "foldMistake")
                         Button {
@@ -25,38 +54,57 @@ struct FoldHelpPanel: View {
                             }
                         } label: {
                             Label(voice.isSpeaking ? "Stop reading" : "Read aloud", systemImage: voice.isSpeaking ? "stop.fill" : "speaker.wave.2")
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                        }.buttonStyle(.bordered).accessibilityIdentifier("readFoldHelp")
+                                .frame(minHeight: 44)
+                        }.accessibilityIdentifier("readFoldHelp")
                             .disabled(!controller.canUseVoiceGuide && !voice.isSpeaking)
                         if voice.status != "Voice commands are off." {
                             Text(voice.status).font(.caption).foregroundStyle(.secondary)
                                 .accessibilityIdentifier("helpVoiceStatus")
                         }
                     }
-                    Button(action: onReplay) {
-                        Label("Replay this fold", systemImage: "arrow.counterclockwise")
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                    }.buttonStyle(.borderedProminent).tint(Color(red: 0.16, green: 0.22, blue: 0.20))
-                        .disabled(!controller.canUseVoiceGuide || controller.stepIndex == 0 || !controller.canAnimate)
-                        .accessibilityIdentifier("replayFromHelp")
-                    Text("Written guidance for this step. Compare with your own paper; the camera does not check whether your fold is correct.")
+                    VStack(spacing: 0) {
+                        link("Why this fold?", symbol: "book.closed", id: "foldNotes", action: .notes)
+                        Divider()
+                        link("All steps", symbol: "list.bullet", id: "stepList", action: .steps)
+                        Divider()
+                        link("Set up your phone", symbol: "iphone", id: "helpPhoneSetup", action: .setup)
+                        if controller.lesson == .dart {
+                            Divider()
+                            link(controller.practiceReferenceActive ? "Return to my practice" : "Practice with paper",
+                                 symbol: "hand.draw", id: "openDartPractice", action: .practice)
+                            Divider()
+                            link("Align a flat A4 sheet", symbol: "viewfinder", id: "openPaperGuide", action: .paperGuide)
+                        }
+                    }
+                    Text("Compare the guide with your paper. The 3D animation does not check your fold.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }.padding(24)
-            }.background(Color(red: 0.96, green: 0.96, blue: 0.93))
-                .navigationTitle("I'm stuck").navigationBarTitleDisplayMode(.inline)
+            }.background(TutorialColors.paper)
+                .navigationTitle("Help").navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("Done") { dismiss() }.accessibilityIdentifier("closeFoldHelp")
                     }
                 }
-        }.presentationDetents([.large])
+        }.foregroundStyle(TutorialColors.ink)
+            .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
     }
 
     private func section(_ title: String, _ content: String, identifier: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.headline)
-            Text(content).font(.subheadline).lineSpacing(4).accessibilityIdentifier(identifier)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(16)
-            .background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 14))
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title).font(.subheadline.weight(.semibold))
+            Text(content).font(.subheadline).lineSpacing(4).foregroundStyle(.secondary)
+                .accessibilityIdentifier(identifier)
+        }
+    }
+
+    private func link(_ title: String, symbol: String, id: String, action: FoldHelpAction) -> some View {
+        Button { onAction(action) } label: {
+            HStack {
+                Label(title, systemImage: symbol)
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            }.font(.subheadline).frame(minHeight: 52).contentShape(Rectangle())
+        }.buttonStyle(.plain).accessibilityIdentifier(id)
     }
 }

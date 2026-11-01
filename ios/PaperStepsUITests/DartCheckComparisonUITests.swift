@@ -11,8 +11,8 @@ final class DartCheckComparisonUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--paper-guide-fixture"]
         app.launch()
-        XCTAssertTrue(app.buttons["openDartPractice"].waitForExistence(timeout: 15))
-        app.buttons["openDartPractice"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
+        app.openPaperTool("openDartPractice")
     }
     override func tearDownWithError() throws { app?.terminate(); app = nil }
 
@@ -28,7 +28,7 @@ final class DartCheckComparisonUITests: XCTestCase {
         app.buttons["comparisonReplay"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 3 OF 10")
-        app.buttons["openDartPractice"].tap()
+        app.openPaperTool("openDartPractice")
         XCTAssertEqual(app.staticTexts["practiceCounter"].label, "ACTION 3 OF 10")
         XCTAssertFalse(app.buttons["reviewPracticeComparison"].exists)
         // A partly folded source is asymmetric: visual QA can detect an image

@@ -71,7 +71,7 @@ final class TutorialHubUITests: XCTestCase {
 
     func testOrigamiAndAerisAreReachableWithReleaseTabGate() {
         tapHome("hubOrigami")
-        XCTAssertTrue(app.buttons["openDartPractice"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
         app.buttons["returnTutorialHub"].tap()
         tapHome("hubProductManual")
         let next = app.buttons["nextStep"]

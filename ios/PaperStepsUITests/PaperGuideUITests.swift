@@ -11,8 +11,8 @@ final class PaperGuideUITests: XCTestCase {
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--reset-learning-progress", "--paper-guide-fixture"]
         app.launch()
-        XCTAssertTrue(app.buttons["openPaperGuide"].waitForExistence(timeout: 15))
-        app.buttons["openPaperGuide"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
+        app.openPaperTool("openPaperGuide")
         XCTAssertTrue(app.staticTexts["paperGuideFixtureLabel"].waitForExistence(timeout: 5))
     }
 
@@ -47,7 +47,7 @@ final class PaperGuideUITests: XCTestCase {
         app.buttons["paperGuideReference"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepTitle"].label, "Make the center crease")
-        XCTAssertTrue(app.buttons["playPause"].exists)
+        XCTAssertTrue(app.buttons["foldHelp"].exists)
     }
 
     func testBackgroundRequiresFreshDirectionAfterExplicitRecovery() {

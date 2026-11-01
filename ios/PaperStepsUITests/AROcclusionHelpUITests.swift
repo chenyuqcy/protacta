@@ -11,7 +11,7 @@ final class AROcclusionHelpUITests: XCTestCase {
         app.launchArguments = ["--ui-testing"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
-        app.buttons["lesson_dart"].tap()
+        app.selectOrigamiLesson("dart")
         app.buttons["startLesson"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
     }
@@ -25,13 +25,13 @@ final class AROcclusionHelpUITests: XCTestCase {
         app.buttons["nextStep"].tap()
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10")
         waitUntilEnabled(app.buttons["nextStep"])
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.4)
+        app.scrubFold(to: 0.4)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
-        let beforeProgress = try XCTUnwrap(app.sliders["foldProgress"].value as? String)
+        let beforeProgress = try XCTUnwrap(app.foldProgressValue)
         let beforeTitle = app.staticTexts["stepTitle"].label
         let beforeCounter = app.staticTexts["stepCounter"].label
 
-        app.buttons["aboutLesson"].tap()
+        app.tapViewOption("aboutLesson")
         let openHelp = app.buttons["openARHelp"]
         XCTAssertTrue(openHelp.waitForExistence(timeout: 5))
         reveal(openHelp)
@@ -63,8 +63,8 @@ final class AROcclusionHelpUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts["stepCounter"].label, beforeCounter)
         XCTAssertEqual(app.staticTexts["stepTitle"].label, beforeTitle)
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, beforeProgress)
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
+        XCTAssertEqual(app.foldProgressValue, beforeProgress)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
         XCTAssertTrue(app.buttons["openAR"].exists, "Help must return to the existing 3D lesson without opening AR")
         capture("AR_help_keeps_paused_fold")
@@ -82,7 +82,7 @@ final class AROcclusionHelpUITests: XCTestCase {
     }
 
     private func waitUntilEnabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed, file: file, line: line)
     }
 

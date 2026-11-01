@@ -12,7 +12,7 @@ final class VoiceHelpUITests: XCTestCase {
         app.launchArguments = ["--ui-testing"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
-        app.buttons["lesson_dart"].tap()
+        app.selectOrigamiLesson("dart")
         app.buttons["startLesson"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
     }
@@ -66,7 +66,7 @@ final class VoiceHelpUITests: XCTestCase {
         waitUntilEnabled(app.buttons["nextStep"])
 
         // Start from a deliberately partial fold so replay has real work to do.
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.35)
+        app.scrubFold(to: 0.35)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
         openVoiceGuide()
         command("replay", feedback: "Replaying this fold.")
@@ -78,7 +78,7 @@ final class VoiceHelpUITests: XCTestCase {
         capture("VoiceHelpPanel")
         closeVoiceGuide()
         assertStep(1, title: "Make the center crease")
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold", "Explaining the step should pause the fold")
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold", "Explaining the step should pause the fold")
 
         openVoiceGuide()
         command("back", feedback: "Previous step.")
@@ -124,9 +124,9 @@ final class VoiceHelpUITests: XCTestCase {
         throw XCTSkip("This checks Simulator fallback; physical AR and microphone behavior require device testing.")
         #endif
         advanceToFirstFold()
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.4)
+        app.scrubFold(to: 0.4)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
-        let progress = try XCTUnwrap(app.sliders["foldProgress"].value as? String)
+        let progress = try XCTUnwrap(app.foldProgressValue)
 
         app.buttons["openAR"].tap()
         XCTAssertTrue(app.buttons["returnTo3D"].waitForExistence(timeout: 8))
@@ -184,8 +184,8 @@ final class VoiceHelpUITests: XCTestCase {
 
     private func assertPausedFirstFold(progress: String, file: StaticString = #filePath, line: UInt = #line) {
         assertStep(1, title: "Make the center crease", file: file, line: line)
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, progress, file: file, line: line)
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold", file: file, line: line)
+        XCTAssertEqual(app.foldProgressValue, progress, file: file, line: line)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold", file: file, line: line)
         XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"), file: file, line: line)
         XCTAssertTrue(app.buttons["openAR"].exists, file: file, line: line)
         XCTAssertFalse(app.buttons["closeAR"].exists, file: file, line: line)
@@ -213,7 +213,7 @@ final class VoiceHelpUITests: XCTestCase {
     }
 
     private func waitUntilEnabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed, file: file, line: line)
     }
 

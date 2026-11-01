@@ -81,6 +81,8 @@ struct PaperStepsView: View {
     @State private var showARHelp = false
     @State private var showVoiceGuide = false
     @State private var showFoldHelp = false
+    @State private var showPhoneSetup = false
+    @State private var pendingHelpAction: FoldHelpAction?
     @State private var practiceToolsPresented = false
     @State private var voiceFeedback = ""
     @State private var voiceFeedbackRevision = 0
@@ -122,11 +124,24 @@ struct PaperStepsView: View {
                 voice.onCommand?(command)
             }
         }
-        .sheet(isPresented: $showFoldHelp, onDismiss: { voice.stop() }) {
-            FoldHelpPanel(controller: controller, voice: voice) {
-                voice.stop()
-                controller.replay()
-                showFoldHelp = false
+        .sheet(isPresented: $showPhoneSetup) { PhoneSetupView() }
+        .sheet(isPresented: $showFoldHelp, onDismiss: {
+            voice.stop()
+            guard let action = pendingHelpAction else { return }
+            pendingHelpAction = nil
+            guard scenePhase == .active else { return }
+            switch action {
+            case .replay: controller.replay()
+            case .play: controller.togglePlayback()
+            case .notes: showNotes = true
+            case .steps: showStepList = true
+            case .practice: controller.enterDartPractice()
+            case .paperGuide: controller.enterPaperGuide()
+            case .setup: showPhoneSetup = true
+            }
+        }) {
+            FoldHelpPanel(controller: controller, voice: voice) { action in
+                voice.stop(); pendingHelpAction = action; showFoldHelp = false
             }
         }
         .sheet(isPresented: $showStepList, onDismiss: {
@@ -191,26 +206,12 @@ struct PaperStepsView: View {
             else if !controller.started { introduction }
             else if controller.isAR && (!controller.placed || controller.cameraError != nil) { placementCard }
             else { lessonCard }
-            if controller.lesson == .dart && !controller.isAR {
-                Button { voice.stop(); controller.enterDartPractice() } label: {
-                    Label(controller.practiceReferenceActive ? "Return to my practice" : "Practice the complete Dart", systemImage: "hand.draw")
-                        .font(.system(size: 14, weight: .semibold)).frame(maxWidth: .infinity, minHeight: 44)
-                }.buttonStyle(.borderedProminent).tint(Palette.ink).foregroundStyle(.white)
-                    .padding(.horizontal, 22).padding(.top, 6)
-                    .accessibilityIdentifier("openDartPractice")
-                Button { voice.stop(); controller.enterPaperGuide() } label: {
-                    Label("Guide on my paper", systemImage: "viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }.buttonStyle(.bordered).tint(Palette.ink)
-                    .padding(.horizontal, 22).padding(.bottom, 10)
-                    .accessibilityIdentifier("openPaperGuide")
-            }
+
         }
     }
 
     private var blockingSheetPresented: Bool {
-        showNotes || showAbout || showLibrary || showStepList || showUnlock || showPrivacy || showARHelp || showFoldHelp || practiceToolsPresented
+        showNotes || showAbout || showLibrary || showStepList || showUnlock || showPrivacy || showARHelp || showFoldHelp || showPhoneSetup || practiceToolsPresented
     }
 
     private func closeVoiceTools() {
@@ -252,7 +253,7 @@ struct PaperStepsView: View {
     private var voiceControlButton: some View {
         HStack(spacing: 4) {
             Button(action: toggleHandsFree) {
-                Label(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Hands-free",
+                Label(voice.isEnabled ? "Stop voice" : voice.isSpeaking ? "Stop reading" : "Voice",
                       systemImage: voice.isEnabled ? "mic.slash" : voice.isSpeaking ? "speaker.slash" : "mic")
                     .frame(minHeight: 44)
             }.accessibilityIdentifier("toggleHandsFree").accessibilityValue(voice.status)
@@ -283,9 +284,6 @@ struct PaperStepsView: View {
                 Text(controller.lesson.title).font(.system(size: 17, weight: .medium))
             }
             Spacer(minLength: 4)
-            Button { controller.pauseAndSave(); showLibrary = true } label: {
-                Image(systemName: "square.grid.2x2").font(.system(size: 17)).frame(width: 44, height: 44)
-            }.accessibilityLabel("Choose a lesson").accessibilityIdentifier("chooseLesson")
             if controller.isAR {
                 Button { controller.leaveAR() } label: {
                     Label("3D", systemImage: "xmark").font(.system(size: 12, weight: .semibold))
@@ -371,15 +369,8 @@ struct PaperStepsView: View {
     private var standardViewportControls: some View {
         VStack {
             HStack {
-                if !controller.isAR {
-                    Spacer()
-                    HStack(spacing: 0) {
-                        Button("Top") { controller.setTopView() }.accessibilityIdentifier("topView")
-                        Divider().frame(height: 12).padding(.horizontal, 10)
-                        Button("Angle") { controller.setAngleView() }.accessibilityIdentifier("angleView")
-                    }.font(.system(size: 11, weight: .medium)).padding(.horizontal, 13).padding(.vertical, 9)
-                        .background(.regularMaterial, in: Capsule())
-                } else if controller.placed && !controller.isPaperGuide {
+                if !controller.isAR { Spacer() }
+                else if controller.placed && !controller.isPaperGuide {
                     Label(controller.trackingReady ? "Placed" : "Recovering tracking", systemImage: "circle.fill")
                         .font(.system(size: 9, weight: .semibold)).tracking(1)
                         .padding(10).background(.regularMaterial, in: Capsule())
@@ -405,12 +396,45 @@ struct PaperStepsView: View {
                             .accessibilityHint("Choose touch controls or voice-only full screen.")
                             .accessibilityIdentifier("enterARFullScreen")
                     }
-                    Button { showARHelp = true } label: {
-                        Label("AR help", systemImage: "hand.raised")
-                            .font(.system(size: 10, weight: .medium)).padding(10)
-                            .background(.regularMaterial, in: Capsule())
-                    }.accessibilityIdentifier("openARHelp")
                 }
+                Menu {
+                    if !controller.isAR {
+                        Button("Top view", systemImage: "square") { controller.setTopView() }.accessibilityIdentifier("topView")
+                        Button("Angle view", systemImage: "cube") { controller.setAngleView() }.accessibilityIdentifier("angleView")
+                    }
+                    Button("Origami library", systemImage: "square.grid.2x2") { showLibrary = true }.accessibilityIdentifier("chooseLesson")
+                    if !controller.started {
+                        if controller.lesson == .dart {
+                            Button("Practice with paper", systemImage: "hand.draw") { voice.stop(); controller.enterDartPractice() }.accessibilityIdentifier("openDartPractice")
+                            Button("Align a flat A4 sheet", systemImage: "viewfinder") { voice.stop(); controller.enterPaperGuide() }.accessibilityIdentifier("openPaperGuide")
+                        }
+                    }
+                    if controller.practiceReferenceActive {
+                        Button("Return to my practice", systemImage: "hand.draw") { voice.stop(); controller.enterDartPractice() }.accessibilityIdentifier("returnToPractice")
+                    }
+                    if controller.savedProgress(for: controller.lesson) != nil && !controller.isAR {
+                        Button("Start over", systemImage: "arrow.counterclockwise") { controller.begin() }.accessibilityIdentifier("startOverLesson")
+                    }
+                    Button("About this lesson", systemImage: "info.circle") { showAbout = true }.accessibilityIdentifier("aboutLesson")
+                    Button("Set up your phone", systemImage: "iphone.gen3.radiowaves.left.and.right") { showPhoneSetup = true }
+                        .accessibilityIdentifier("openPhoneSetup")
+                    Button(controller.hintsVisible ? "Hide fold hints" : "Show fold hints", systemImage: "arrow.turn.up.right") { controller.toggleHints() }
+                        .accessibilityIdentifier("toggleHints")
+                    if controller.isAR {
+                        if controller.placed {
+                            Button("Place again", systemImage: "viewfinder") { controller.placeAgain() }
+                                .accessibilityIdentifier("placeAgain")
+                            Button(controller.positionLocked ? "Move reference" : "Lock reference", systemImage: controller.positionLocked ? "lock.open" : "lock") { controller.togglePositionLock() }
+                                .accessibilityIdentifier("togglePositionLock")
+                                .disabled(!controller.trackingReady || controller.needsRescan || controller.cameraError != nil)
+                        }
+                        Button("AR help", systemImage: "hand.raised") { showARHelp = true }
+                            .accessibilityIdentifier("openARHelp")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44).background(.regularMaterial, in: Circle())
+                }.accessibilityLabel("View options").accessibilityIdentifier("viewportOptions")
             }.padding(.horizontal, 22).padding(.top, 14)
             Spacer()
             if voice.isEnabled || voice.isSpeaking {
@@ -442,38 +466,16 @@ struct PaperStepsView: View {
                 }.padding(10).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 22)
             }
-            if controller.isAR && !controller.isPaperGuide && controller.placed {
-                HStack {
-                    Button { controller.togglePositionLock() } label: {
-                        Label(controller.positionLocked ? "Move paper" : "Lock position",
-                              systemImage: controller.positionLocked ? "lock.fill" : "lock.open")
-                            .font(.system(size: 12, weight: .semibold))
-                            .padding(.horizontal, 15).frame(minHeight: 44)
-                            .background(.regularMaterial, in: Capsule())
-                    }.accessibilityIdentifier("togglePositionLock")
-                        .accessibilityValue(controller.positionLocked ? "Locked" : "Movable")
-                        .disabled(!controller.trackingReady || controller.needsRescan || controller.cameraError != nil)
-                    Spacer()
-                }.padding(.horizontal, 22).padding(.bottom, 8)
-            }
             if controller.started && (!controller.isAR || controller.placed) {
                 HStack {
-                    if controller.isAR {
-                        Button { controller.placeAgain() } label: { Label("Place again", systemImage: "viewfinder") }
-                            .accessibilityIdentifier("placeAgain")
-                    } else {
-                        Label("Pinch to zoom", systemImage: "hand.pinch")
-                    }
                     Spacer()
                     voiceControlButton
-                    Spacer()
-                    Button { controller.toggleHints() } label: {
-                        Label(controller.hintsVisible ? "Hints on" : "Hints off", systemImage: controller.hintsVisible ? "arrow.turn.up.right" : "eye.slash")
-                    }.accessibilityIdentifier("toggleHints")
-                }.font(.system(size: 10, weight: .medium))
-                    .padding(.horizontal, 13).padding(.vertical, 10).background(.regularMaterial, in: Capsule())
-                    .padding(.horizontal, 22).padding(.bottom, 12)
+                        .font(.system(size: 11, weight: .medium))
+                        .padding(.horizontal, 13)
+                        .background(.regularMaterial, in: Capsule())
+                }.padding(.horizontal, 22).padding(.bottom, 14)
             }
+
         }
     }
 
@@ -550,126 +552,76 @@ struct PaperStepsView: View {
     }
 
     private var introduction: some View {
-        VStack(alignment: .leading, spacing: 13) {
-            ScrollViewReader { reader in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(OrigamiLesson.allCases) { lesson in
-                            Button { controller.selectLesson(lesson) } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: lesson.symbol)
-                                    Text(lesson.shortTitle).lineLimit(1)
-                                    if !lesson.isFree && !purchases.isUnlocked { Image(systemName: "lock.fill").font(.system(size: 8)) }
-                                }.font(.system(size: 12, weight: .semibold))
-                                    .padding(.horizontal, 14).frame(minHeight: 44)
-                                    .background(controller.lesson == lesson ? Palette.ink : Palette.line.opacity(0.55), in: RoundedRectangle(cornerRadius: 10))
-                                    .foregroundStyle(controller.lesson == lesson ? .white : Palette.ink)
-                            }.buttonStyle(.plain).id(lesson)
-                                .accessibilityIdentifier("lesson_\(lesson.rawValue)")
-                                .accessibilityAddTraits(controller.lesson == lesson ? [.isSelected] : [])
-                        }
-                    }
-                }
-                .onChange(of: controller.lesson) { _, lesson in reader.scrollTo(lesson, anchor: .center) }
-                .onAppear { reader.scrollTo(controller.lesson, anchor: .center) }
-            }
-            HStack {
-                Text(controller.lesson.level).font(.system(size: 10, weight: .semibold)).tracking(1.6).foregroundStyle(Palette.accent)
-                Spacer()
-                Button { showAbout = true } label: { Image(systemName: "info.circle").font(.system(size: 17)) }.accessibilityIdentifier("aboutLesson")
-            }
+        VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 18) {
                 Label(controller.lesson.paperLabel, systemImage: "rectangle.portrait")
                 Label("\(controller.lastStep) steps", systemImage: "square.stack.3d.up")
-            }.font(.system(size: 11, weight: .medium)).padding(.vertical, 2)
+            }.font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.muted)
             primaryButton(controller.startTitle, symbol: controller.hasLessonAccess ? "arrow.right" : "lock.open", id: "startLesson") {
                 withLessonAccess { controller.continueLearning() }
-            }
-            if controller.hasLessonAccess, controller.savedProgress(for: controller.lesson) != nil {
-                Button("Start over with a new sheet") { controller.begin() }
-                    .font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, minHeight: 44)
-                    .accessibilityIdentifier("startOverLesson")
             }
         }.padding(24).frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
     }
 
     private var lessonCard: some View {
-        VStack(alignment: .leading, spacing: 11) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(controller.completed ? "LESSON COMPLETE" : controller.stepIndex == 0 ? "BEFORE YOU BEGIN" : "STEP \(controller.stepIndex) OF \(controller.lastStep)")
                     .font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
                     .accessibilityIdentifier("stepCounter")
                 Spacer()
-                Button { showStepList = true } label: {
-                    Label("Steps", systemImage: "list.bullet").font(.system(size: 11, weight: .medium))
-                }.accessibilityIdentifier("stepList").disabled(!controller.canAnimate)
-                Spacer().frame(width: 10)
-                Button { showAbout = true } label: { Image(systemName: "info.circle").font(.system(size: 16)) }
-                    .accessibilityIdentifier("aboutLesson")
+                if controller.slowMotion { Text("½×").font(.caption.monospacedDigit()).foregroundStyle(Palette.muted) }
             }
             Text(controller.completed ? "Made by you." : controller.currentStep.title)
-                .font(.system(size: 23, weight: .medium)).accessibilityIdentifier("stepTitle")
+                .font(.system(size: 25, weight: .medium)).tracking(-0.5)
+                .accessibilityIdentifier("stepTitle")
             Text(controller.completed ? controller.lesson.completion : controller.currentStep.instruction)
-                .font(.system(size: 13)).lineSpacing(3).foregroundStyle(Palette.muted)
+                .font(.system(size: 14)).lineSpacing(3).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("stepInstruction")
-            if !controller.completed {
-                HStack(spacing: 12) {
-                    Label(controller.currentStep.cue, systemImage: "arrow.turn.up.right")
-                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(Palette.accent)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Spacer(minLength: 0)
-                    Button { showFoldHelp = true } label: {
-                        Label("I'm stuck", systemImage: "lifepreserver")
-                            .font(.system(size: 11, weight: .medium)).fixedSize()
-                            .frame(minHeight: 32)
-                    }.accessibilityIdentifier("foldHelp")
-                }
-                if controller.stepIndex > 0 {
-                    HStack(spacing: 12) {
-                        Button { voice.contextDidChange(); controller.togglePlayback() } label: {
-                            Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
-                                .font(.system(size: 12)).frame(width: 30, height: 32)
-                        }.accessibilityLabel(controller.isPlaying ? "Pause fold" : "Play fold").accessibilityIdentifier("playPause")
-                        Slider(value: Binding(get: { controller.progress }, set: { controller.scrub(to: $0) }), in: 0...1,
-                               onEditingChanged: { editing in if editing { voice.stop() } })
-                            .tint(Palette.accent).accessibilityLabel("Fold progress").accessibilityIdentifier("foldProgress")
-                        Button { controller.toggleSlowMotion() } label: {
-                            Text(controller.slowMotion ? "0.5×" : "1×").font(.system(size: 12, weight: .semibold, design: .monospaced)).frame(width: 34, height: 32)
-                        }.accessibilityLabel("Playback speed").accessibilityIdentifier("playbackSpeed")
-                    }.disabled(!controller.canAnimate)
-                }
+            if controller.stepIndex > 0 && !controller.completed {
+                ProgressView(value: Double(controller.progress))
+                    .tint(Palette.accent).accessibilityLabel("Fold progress")
+                    .accessibilityIdentifier("foldProgressValue")
+                    .accessibilityValue("\(Int((controller.progress * 100).rounded()))%")
             }
             if controller.isAR && !controller.trackingReady {
-                Text(controller.status).font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.accent)
+                Text(controller.status).font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.accent)
                 if controller.needsRescan { Button("Scan table again") { controller.placeAgain() }.accessibilityIdentifier("rescanTable") }
             }
-            primaryButton(controller.isPlaying ? "Folding…" : controller.nextTitle, symbol: controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") { voice.contextDidChange(); controller.next() }
-                .disabled(controller.isPlaying || !controller.canAnimate)
-            HStack {
-                Button { voice.contextDidChange(); controller.back() } label: { Label("Back", systemImage: "arrow.left") }
-                    .disabled(controller.stepIndex == 0 || !controller.canAnimate).accessibilityIdentifier("backStep")
-                Spacer()
-                Button { voice.contextDidChange(); controller.replay() } label: { Label("Replay", systemImage: "arrow.counterclockwise") }
-                    .disabled(controller.stepIndex == 0 || !controller.canAnimate).accessibilityIdentifier("replayStep")
-                Spacer()
-                Button { showNotes = true } label: { Label("Why this fold?", systemImage: "questionmark.circle") }
-                    .accessibilityIdentifier("foldNotes")
-            }.font(.system(size: 11, weight: .medium)).padding(.top, 2)
-        }.padding(.horizontal, 24).padding(.top, 19).padding(.bottom, 18)
+            HStack(spacing: 12) {
+                Button { voice.contextDidChange(); controller.back() } label: {
+                    Image(systemName: "arrow.left").font(.system(size: 18, weight: .medium))
+                        .frame(width: 50, height: 50).background(Palette.line.opacity(0.55), in: Circle())
+                }.accessibilityLabel("Back").accessibilityIdentifier("backStep")
+                    .disabled(controller.stepIndex == 0 || !controller.canAnimate)
+                primaryButton(controller.isPlaying ? "Pause fold" : controller.nextTitle,
+                              symbol: controller.isPlaying ? "pause.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
+                    voice.contextDidChange()
+                    if controller.isPlaying { controller.togglePlayback() }
+                    else { controller.next() }
+                }.disabled(!controller.canAnimate)
+                Button { showFoldHelp = true } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "questionmark").font(.system(size: 16, weight: .semibold))
+                        Text("Help").font(.system(size: 10, weight: .medium))
+                    }.frame(width: 50, height: 50).background(Palette.line.opacity(0.55), in: Circle())
+                }.accessibilityLabel("Help").accessibilityIdentifier("foldHelp")
+            }.buttonStyle(.plain).padding(.top, 6)
+        }.padding(.horizontal, 24).padding(.top, 22).padding(.bottom, 20)
             .frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
     }
 
     private var placementCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("YOUR REAL WORKSPACE").font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
-            Text("Put the paper on your table.").font(.system(size: 25, weight: .regular, design: .serif))
+            Text("TABLETOP AR").font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
+            Text("Place a 3D reference.").font(.system(size: 25, weight: .regular, design: .serif))
             Text(controller.cameraError ?? controller.status).font(.system(size: 14)).lineSpacing(3).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("arStatus")
             if LessonController.supportsAR && controller.cameraError == nil {
                 if controller.needsRescan {
                     primaryButton("Scan table again", symbol: "viewfinder", id: "rescanTable") { controller.placeAgain() }
                 } else {
-                    primaryButton("Place paper", symbol: "plus.viewfinder", id: "placePaper") { controller.place() }
+                    primaryButton("Place reference", symbol: "plus.viewfinder", id: "placePaper") { controller.place() }
                         .disabled(!controller.canPlace)
                 }
             } else if controller.cameraError != nil {
@@ -678,8 +630,14 @@ struct PaperStepsView: View {
                 }.buttonStyle(.bordered).tint(Palette.ink)
                 Button("Try camera again") { controller.enterAR() }.accessibilityIdentifier("retryCamera")
             }
-            Text("Place it beside your real sheet. Each fold stays in AR, including pause, replay and the next step.")
-                .font(.system(size: 12)).lineSpacing(3).foregroundStyle(Palette.muted)
+            HStack(alignment: .top) {
+                Text("Watch the reference beside your real sheet.")
+                    .font(.system(size: 12)).foregroundStyle(Palette.muted)
+                Spacer()
+                Button("Phone setup") { showPhoneSetup = true }
+                    .font(.system(size: 12, weight: .semibold)).frame(minHeight: 44)
+                    .accessibilityIdentifier("placementPhoneSetup")
+            }
         }.padding(24).frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
     }
 
@@ -778,6 +736,7 @@ struct PaperStepsView: View {
                             }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
                                 .background(.white.opacity(0.75), in: RoundedRectangle(cornerRadius: 18))
                         }.buttonStyle(.plain).accessibilityIdentifier("library_\(lesson.rawValue)")
+                            .accessibilityAddTraits(controller.lesson == lesson ? [.isSelected] : [])
                     }
                 }.padding(24)
             }.accessibilityIdentifier("lessonLibraryScroll")

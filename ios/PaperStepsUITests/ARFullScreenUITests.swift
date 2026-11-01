@@ -22,7 +22,7 @@ final class ARFullScreenUITests: XCTestCase {
         app.launchArguments = ["--ui-testing", "--tabletop-layout-fixture"] + extraArguments
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
-        app.buttons["lesson_dart"].tap()
+        app.selectOrigamiLesson("dart")
         app.buttons["startLesson"].tap()
         XCTAssertTrue(app.staticTexts["stepCounter"].waitForExistence(timeout: 5))
     }
@@ -42,7 +42,7 @@ final class ARFullScreenUITests: XCTestCase {
         capture("Voice_only_AR_recovery_no_navigation_buttons")
         app.buttons["voiceOnlyShowControls"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, partial)
+        XCTAssertEqual(app.foldProgressValue, partial)
         XCTAssertFalse(app.buttons["exitVoiceOnlyAR"].exists)
     }
 
@@ -64,7 +64,7 @@ final class ARFullScreenUITests: XCTestCase {
         capture("Voice_only_AR_clean_layout_MIC_OFF_NO_LIVE_CAMERA")
         app.buttons["exitVoiceOnlyAR"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, partial)
+        XCTAssertEqual(app.foldProgressValue, partial)
     }
 
     override func tearDownWithError() throws {
@@ -89,8 +89,8 @@ final class ARFullScreenUITests: XCTestCase {
         app.buttons["exitARFullScreen"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10")
-        XCTAssertEqual(app.sliders["foldProgress"].value as? String, partialProgress)
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
+        XCTAssertEqual(app.foldProgressValue, partialProgress)
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
 
         enterFullScreen()
@@ -114,7 +114,7 @@ final class ARFullScreenUITests: XCTestCase {
         app.buttons["exitARFullScreen"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 2 OF 10")
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         XCTAssertTrue(app.buttons["closeAR"].isHittable)
         capture("Tabletop_layout_preview_restored_lesson_controls")
 
@@ -131,7 +131,7 @@ final class ARFullScreenUITests: XCTestCase {
 
     func testIPadFullScreenControlsStayReachableAcrossRotation() throws {
         guard UIDevice.current.userInterfaceIdiom == .pad else { throw XCTSkip("Tablet rotation layout check") }
-        _ = try openPartialFoldInTabletopPreview()
+        let partial = try openPartialFoldInTabletopPreview()
         enterFullScreen()
         for landscape in [false, true, false] {
             orient(landscape)
@@ -144,7 +144,11 @@ final class ARFullScreenUITests: XCTestCase {
         app.buttons["exitARFullScreen"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10")
+        XCTAssertTrue(app.progressIndicators["foldProgressValue"].exists)
+        XCTAssertEqual(app.foldProgressValue, partial)
+        app.openLessonHelp()
         XCTAssertTrue(app.sliders["foldProgress"].isHittable)
+        app.closeLessonHelp()
     }
 
     private var viewport: XCUIElement {
@@ -156,9 +160,9 @@ final class ARFullScreenUITests: XCTestCase {
         app.buttons["nextStep"].tap()
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10", file: file, line: line)
         waitUntilEnabled(app.buttons["nextStep"], file: file, line: line)
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.4)
+        app.scrubFold(to: 0.4)
         waitForLabel(app.buttons["nextStep"], containing: "Finish this fold", file: file, line: line)
-        let progress = try XCTUnwrap(app.sliders["foldProgress"].value as? String, file: file, line: line)
+        let progress = try XCTUnwrap(app.foldProgressValue, file: file, line: line)
         app.buttons["openAR"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5), file: file, line: line)
         XCTAssertTrue(viewport.waitForExistence(timeout: 5), file: file, line: line)
@@ -216,7 +220,7 @@ final class ARFullScreenUITests: XCTestCase {
     }
 
     private func waitUntilEnabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 15), .completed, file: file, line: line)
     }
 

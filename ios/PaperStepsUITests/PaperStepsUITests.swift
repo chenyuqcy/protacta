@@ -11,7 +11,7 @@ final class PaperStepsUITests: XCTestCase {
         app.launchArguments = ["--ui-testing"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
-        app.buttons["lesson_dart"].tap()
+        app.selectOrigamiLesson("dart")
     }
 
     override func tearDownWithError() throws {
@@ -25,11 +25,13 @@ final class PaperStepsUITests: XCTestCase {
         startLesson()
         assertStep(0, title: "Start with a blank sheet")
         XCTAssertFalse(app.buttons["backStep"].isEnabled)
-        XCTAssertFalse(app.buttons["replayStep"].isEnabled)
+        app.openLessonHelp()
+        XCTAssertFalse(app.buttons["replayFromHelp"].isEnabled)
+        app.closeLessonHelp()
         capture("01_Blank_sheet_angle")
-        app.buttons["topView"].tap()
+        app.tapViewOption("topView")
         capture("02_Blank_sheet_top")
-        app.buttons["angleView"].tap()
+        app.tapViewOption("angleView")
 
         let titles = [
             "Make the center crease",
@@ -51,12 +53,12 @@ final class PaperStepsUITests: XCTestCase {
             capture(String(format: "%02d_Step_%02d", step + 2, step))
 
             if [3, 6, 8, 10].contains(step) {
-                app.buttons["topView"].tap()
+                app.tapViewOption("topView")
                 capture(String(format: "%02d_Step_%02d_top", step + 2, step))
-                app.buttons["angleView"].tap()
+                app.tapViewOption("angleView")
             }
             if step == 3 {
-                app.buttons["foldNotes"].tap()
+                app.tapFoldTool("foldNotes")
                 XCTAssertTrue(app.buttons["closeNotes"].waitForExistence(timeout: 5))
                 XCTAssertTrue(app.staticTexts["A little understanding."].exists)
                 XCTAssertTrue(app.staticTexts["Written fold notes"].exists)
@@ -88,11 +90,9 @@ final class PaperStepsUITests: XCTestCase {
         advanceAndWait()
         assertStep(1, title: "Make the center crease")
 
-        let progress = app.sliders["foldProgress"]
-        XCTAssertTrue(progress.exists)
-        progress.adjust(toNormalizedSliderPosition: 0.40)
+        app.scrubFold(to: 0.40)
         waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         assertStep(1, title: "Make the center crease")
         capture("Partial_center_fold_paused")
 
@@ -103,15 +103,15 @@ final class PaperStepsUITests: XCTestCase {
         assertStep(1, title: "Make the center crease")
 
         // The transport control can resume another deliberately paused pose.
-        progress.adjust(toNormalizedSliderPosition: 0.65)
+        app.scrubFold(to: 0.65)
         waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
-        XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
-        app.buttons["playPause"].tap()
+        XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
+        app.tapFoldTool("playPause")
         waitForLabel(app.buttons["nextStep"], contains: "Next fold")
         waitUntilEnabled(app.buttons["nextStep"])
         assertStep(1, title: "Make the center crease")
 
-        app.buttons["replayStep"].tap()
+        app.tapFoldTool("replayStep")
         waitUntilEnabled(app.buttons["nextStep"])
         waitForLabel(app.buttons["nextStep"], contains: "Next fold")
         assertStep(1, title: "Make the center crease")
@@ -133,7 +133,7 @@ final class PaperStepsUITests: XCTestCase {
         advanceAndWait()
         advanceAndWait()
         assertStep(3, title: "Fold the left corner")
-        app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.45)
+        app.scrubFold(to: 0.45)
         waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
 
         for visit in 1...2 {
@@ -147,7 +147,7 @@ final class PaperStepsUITests: XCTestCase {
             XCTAssertTrue(app.buttons["openAR"].waitForExistence(timeout: 5))
             assertStep(3, title: "Fold the left corner")
             XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
-            XCTAssertEqual(app.buttons["playPause"].label, "Play fold")
+            XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
             capture("Preserved_partial_fold_after_AR_\(visit)")
         }
         app.buttons["nextStep"].tap()
@@ -175,7 +175,7 @@ final class PaperStepsUITests: XCTestCase {
     }
 
     private func waitUntilEnabled(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
-        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 10), .completed, "Control did not become enabled: \(element.identifier)", file: file, line: line)
     }
 

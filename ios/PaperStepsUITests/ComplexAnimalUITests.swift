@@ -39,7 +39,7 @@ final class ComplexAnimalUITests: XCTestCase {
     }
 
     private func walkNewAnimal(id:String,last:Int,first:String,midpoints:Set<Int>) {
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let library=app.scrollViews["lessonLibraryScroll"],row=app.buttons["library_\(id)"]
         for _ in 0..<8 where !row.isHittable {library.swipeUp()}
         XCTAssertTrue(row.isHittable);row.tap()
@@ -54,14 +54,14 @@ final class ComplexAnimalUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP \(step) OF \(last)")
             if midpoints.contains(step) {
                 capture("\(id)_\(step)_Endpoint")
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition:0.5)
+                app.scrubFold(to: 0.5)
                 capture("\(id)_\(step)_Midpoint")
                 app.buttons["nextStep"].tap();waitForNext()
             }
         }
-        app.buttons["topView"].tap();capture("\(id)_Final_Top")
-        app.buttons["angleView"].tap();capture("\(id)_Final_Angle");assertVisibleModelInterior()
-        app.buttons["replayStep"].tap();waitForNext()
+        app.tapViewOption("topView");capture("\(id)_Final_Top")
+        app.tapViewOption("angleView");capture("\(id)_Final_Angle");assertVisibleModelInterior()
+        app.tapFoldTool("replayStep");waitForNext()
         XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP \(last) OF \(last)")
         app.buttons["nextStep"].tap();waitForNext()
         XCTAssertEqual(app.staticTexts["stepCounter"].label,"LESSON COMPLETE")
@@ -87,7 +87,7 @@ final class ComplexAnimalUITests: XCTestCase {
         XCTAssertGreaterThan(high-low,18,"Native model viewport is blank: interior red-channel range \(high-low)")
     }
     func testSittingDogTwentyEightActions() {
-        XCTAssertTrue(app.buttons["chooseLesson"].waitForExistence(timeout:15));app.buttons["chooseLesson"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout:15));app.openOrigamiLibrary()
         let library=app.scrollViews["lessonLibraryScroll"],entry=app.buttons["library_sittingDog"]
         for _ in 0..<6 where !entry.isHittable {library.swipeUp()}
         XCTAssertTrue(entry.isHittable);entry.tap()
@@ -102,15 +102,15 @@ final class ComplexAnimalUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP \(step) OF 28")
             capture(String(format:"SittingDog_Catalog_%02d_Complete",step))
             if [3,7,12,14,19,20,21,22,24,28].contains(step) {
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition:0.5)
+                app.scrubFold(to: 0.5)
                 capture(String(format:"SittingDog_Catalog_%02d_Midfold_Angle",step))
-                if step == 28 {app.buttons["topView"].tap();capture("SittingDog_Catalog_28_Opening_Midpoint_Top");app.buttons["angleView"].tap()}
+                if step == 28 {app.tapViewOption("topView");capture("SittingDog_Catalog_28_Opening_Midpoint_Top");app.tapViewOption("angleView")}
                 app.buttons["nextStep"].tap();waitForNext()
             }
         }
-        app.buttons["topView"].tap();capture("SittingDog_Catalog_28_Final_Top")
-        app.buttons["angleView"].tap();capture("SittingDog_Catalog_28_Final_Angle")
-        app.buttons["replayStep"].tap();waitForNext()
+        app.tapViewOption("topView");capture("SittingDog_Catalog_28_Final_Top")
+        app.tapViewOption("angleView");capture("SittingDog_Catalog_28_Final_Angle")
+        app.tapFoldTool("replayStep");waitForNext()
         XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP 28 OF 28")
         capture("SittingDog_Catalog_28_Replayed_Opening")
         app.buttons["nextStep"].tap();waitForNext()
@@ -119,7 +119,7 @@ final class ComplexAnimalUITests: XCTestCase {
     }
 
     func testStandingRabbitTwentyFiveActions() {
-        XCTAssertTrue(app.buttons["chooseLesson"].waitForExistence(timeout:15));app.buttons["chooseLesson"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout:15));app.openOrigamiLibrary()
         let library=app.scrollViews["lessonLibraryScroll"],entry=app.buttons["library_fullRabbit"]
         for _ in 0..<6 where !entry.isHittable {library.swipeUp()}
         XCTAssertTrue(entry.isHittable);entry.tap()
@@ -134,15 +134,15 @@ final class ComplexAnimalUITests: XCTestCase {
             XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP \(step) OF 25")
             capture(String(format:"StandingRabbit_Catalog_%02d_Complete",step))
             if [7,13,15,24,25].contains(step) {
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition:0.5)
+                app.scrubFold(to: 0.5)
                 capture(String(format:"StandingRabbit_Catalog_%02d_Midfold_Angle",step))
-                if step == 25 {app.buttons["topView"].tap();capture("StandingRabbit_Catalog_25_Opening_Midpoint_Top");app.buttons["angleView"].tap()}
+                if step == 25 {app.tapViewOption("topView");capture("StandingRabbit_Catalog_25_Opening_Midpoint_Top");app.tapViewOption("angleView")}
                 app.buttons["nextStep"].tap();waitForNext()
             }
         }
-        app.buttons["topView"].tap();capture("StandingRabbit_Catalog_25_Final_Top")
-        app.buttons["angleView"].tap();capture("StandingRabbit_Catalog_25_Final_Angle")
-        app.buttons["replayStep"].tap();waitForNext()
+        app.tapViewOption("topView");capture("StandingRabbit_Catalog_25_Final_Top")
+        app.tapViewOption("angleView");capture("StandingRabbit_Catalog_25_Final_Angle")
+        app.tapFoldTool("replayStep");waitForNext()
         XCTAssertEqual(app.staticTexts["stepCounter"].label,"STEP 25 OF 25")
         capture("StandingRabbit_Catalog_25_Replayed_Opening")
         app.buttons["nextStep"].tap();waitForNext()
@@ -151,7 +151,7 @@ final class ComplexAnimalUITests: XCTestCase {
     }
 
     func testFullBodyFrogAllTwentyTwoActionsAndPocketReplay() {
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let row = app.buttons["library_frog"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         for _ in 0..<5 {
@@ -172,21 +172,21 @@ final class ComplexAnimalUITests: XCTestCase {
             capture(String(format: "Frog_%02d_Complete", step))
             if [5, 12, 13, 14, 15, 20, 21, 22].contains(step) {
                 if [12, 13, 22].contains(step) {
-                    app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.25)
+                    app.scrubFold(to: 0.25)
                     capture(String(format: "Frog_%02d_Quarter_motion_angle", step))
                 }
                 // The precrease arrow must reverse with the reopening flap.
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: [12, 13].contains(step) ? 0.75 : 0.5)
+                app.scrubFold(to: [12, 13].contains(step) ? 0.75 : 0.5)
                 XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
                 capture(String(format: "Frog_%02d_Midfold_angle", step))
-                app.buttons["topView"].tap()
+                app.tapViewOption("topView")
                 capture(String(format: "Frog_%02d_Midfold_top", step))
-                app.buttons["angleView"].tap()
+                app.tapViewOption("angleView")
                 next()
                 XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 22")
             }
             if step == 15 {
-                app.buttons["foldNotes"].tap()
+                app.tapFoldTool("foldNotes")
                 XCTAssertTrue(app.buttons["closeNotes"].waitForExistence(timeout: 5))
                 capture("Frog_Pocket_explanation")
                 app.buttons["closeNotes"].tap()
@@ -199,15 +199,15 @@ final class ComplexAnimalUITests: XCTestCase {
             }
         }
         XCTAssertEqual(app.staticTexts["stepTitle"].label, "Turn over and release the legs")
-        app.buttons["topView"].tap(); capture("Frog_Finished_top")
-        app.buttons["angleView"].tap(); capture("Frog_Finished_angle")
+        app.tapViewOption("topView"); capture("Frog_Finished_top")
+        app.tapViewOption("angleView"); capture("Frog_Finished_angle")
         next()
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "LESSON COMPLETE")
         capture("Frog_Lesson_complete")
     }
 
     func testTurtleAllTwentyThreeActionsAndShellReplay() {
-        app.buttons["chooseLesson"].tap()
+        app.openOrigamiLibrary()
         let row = app.buttons["library_turtle"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         for _ in 0..<6 {
@@ -225,24 +225,24 @@ final class ComplexAnimalUITests: XCTestCase {
             next()
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 23")
             XCTAssertFalse(app.staticTexts["stepInstruction"].label.isEmpty)
-            for identifier in ["nextStep", "backStep", "replayStep", "foldNotes"] {
+            for identifier in ["nextStep", "backStep", "foldHelp"] {
                 let control = app.buttons[identifier]
                 XCTAssertTrue(control.isHittable, "Step \(step): \(identifier)")
                 XCTAssertTrue(app.frame.insetBy(dx: -1, dy: -1).contains(control.frame), "Step \(step) clips \(identifier): \(control.frame)")
             }
             capture(String(format: "Turtle_%02d_Complete", step))
             if [13, 15, 16, 19, 20, 23].contains(step) {
-                app.sliders["foldProgress"].adjust(toNormalizedSliderPosition: 0.5)
+                app.scrubFold(to: 0.5)
                 XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
                 capture(String(format: "Turtle_%02d_Midfold_angle", step))
-                app.buttons["topView"].tap()
+                app.tapViewOption("topView")
                 capture(String(format: "Turtle_%02d_Midfold_top", step))
-                app.buttons["angleView"].tap()
+                app.tapViewOption("angleView")
                 next()
                 XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF 23")
             }
             if step == 16 {
-                app.buttons["foldNotes"].tap()
+                app.tapFoldTool("foldNotes")
                 XCTAssertTrue(app.buttons["closeNotes"].waitForExistence(timeout: 5))
                 capture("Turtle_Shell_explanation")
                 app.buttons["closeNotes"].tap()
@@ -255,8 +255,8 @@ final class ComplexAnimalUITests: XCTestCase {
             }
         }
         XCTAssertEqual(app.staticTexts["stepTitle"].label, "Finish the matching rear foot")
-        app.buttons["topView"].tap(); capture("Turtle_Finished_top")
-        app.buttons["angleView"].tap(); capture("Turtle_Finished_angle")
+        app.tapViewOption("topView"); capture("Turtle_Finished_top")
+        app.tapViewOption("angleView"); capture("Turtle_Finished_angle")
         next()
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "LESSON COMPLETE")
         capture("Turtle_Lesson_complete")
@@ -264,7 +264,7 @@ final class ComplexAnimalUITests: XCTestCase {
 
     func testTurtlePreviewAndGuideCanSwitchRepeatedly() {
         for id in ["turtle", "star", "turtle", "crane", "turtle"] {
-            app.buttons["chooseLesson"].tap()
+            app.openOrigamiLibrary()
             let row = app.buttons["library_\(id)"]
             XCTAssertTrue(row.waitForExistence(timeout: 5))
             for _ in 0..<6 {
@@ -284,14 +284,14 @@ final class ComplexAnimalUITests: XCTestCase {
     private func next(file: StaticString = #filePath, line: UInt = #line) {
         let button = app.buttons["nextStep"]
         func ready() {
-            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: button)
+            let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: button)
             XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 15), .completed, file: file, line: line)
         }
         ready(); button.tap(); ready()
     }
 
     private func waitForNext() {
-        let e = expectation(for: NSPredicate(format: "exists == true AND enabled == true"), evaluatedWith: app.buttons["nextStep"])
+        let e = expectation(for: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), evaluatedWith: app.buttons["nextStep"])
         wait(for: [e], timeout: 20)
     }
 

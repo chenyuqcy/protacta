@@ -1,12 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Protacta 0.1.0 (7) has replaced Build 5 on the iPhone 17 Pro Max.
-USB installation, an independent version query, activated launch and a later
-process query succeeded. The user confirmed entry to complete Dart practice.
-The full MVP
-remains incomplete: real-paper review, device feature acceptance, independent
-samples and beginner outcomes remain unproved.
+Current work: Build 20 simplifies the origami entry and lesson controls in response to teammate feedback and the user’s screenshot. It is installed and independently version-queried on the iPhone 17 Pro Max; foreground launch was blocked by the device lock. See TEAM_FEEDBACK_BUILD20.md for current validation and deployment. Historical build sections below retain their original evidence. Real-paper review, independent samples and beginner outcomes remain open.
 
 ## Build 7: USB phone update and basic course entry
 

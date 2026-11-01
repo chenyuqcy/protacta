@@ -145,7 +145,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
             selectLesson(target.0)
             beginCurrentLesson()
             jump(to: target.1, total: target.1)
-            app.buttons["angleView"].tap()
+            app.tapViewOption("angleView")
             capture("09_\(target.0)_FINAL_\(target.1)", lesson: target.0, step: target.1, progress: 1)
         }
 
@@ -153,7 +153,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
         midpoint()
         capture("10_Elephant_33_MIDPOINT", lesson: "elephant", step: 33, progress: 0.5)
         let title = app.staticTexts["stepTitle"].label
-        app.buttons["foldNotes"].tap()
+        app.tapFoldTool("foldNotes")
         XCTAssertTrue(app.buttons["closeNotes"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts[title].exists)
         XCTAssertTrue(app.staticTexts["Written fold notes"].exists)
@@ -163,8 +163,8 @@ final class ReleaseScreenshotUITests: XCTestCase {
     }
 
     private func openLibrary() {
-        ready(app.buttons["chooseLesson"])
-        app.buttons["chooseLesson"].tap()
+        ready(app.buttons["viewportOptions"])
+        app.openOrigamiLibrary()
         XCTAssertTrue(app.buttons["closeLibrary"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.scrollViews["lessonLibraryScroll"].exists)
     }
@@ -198,8 +198,8 @@ final class ReleaseScreenshotUITests: XCTestCase {
     }
 
     private func jump(to step: Int, total: Int) {
-        ready(app.buttons["stepList"])
-        app.buttons["stepList"].tap()
+        ready(app.buttons["foldHelp"])
+        app.tapFoldTool("stepList")
         XCTAssertTrue(app.buttons["closeSteps"].waitForExistence(timeout: 5))
         let target = app.buttons["jumpStep_\(step)"]
         for _ in 0..<12 {
@@ -220,10 +220,8 @@ final class ReleaseScreenshotUITests: XCTestCase {
     }
 
     private func midpoint() {
-        app.buttons["angleView"].tap()
-        let slider = app.sliders["foldProgress"]
-        XCTAssertTrue(slider.isHittable)
-        slider.adjust(toNormalizedSliderPosition: 0.5)
+        app.tapViewOption("angleView")
+        app.scrubFold(to: 0.5)
         waitLabel(app.buttons["nextStep"], contains: "Finish this fold")
     }
 
@@ -242,7 +240,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
     }
 
     private func ready(_ element: XCUIElement, timeout: TimeInterval = 12) {
-        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true"), object: element)
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == true AND enabled == true AND NOT (identifier == %@ AND label CONTAINS %@)", "nextStep", "Pause fold"), object: element)
         XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: timeout), .completed)
     }
     private func absent(_ element: XCUIElement) {
