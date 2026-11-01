@@ -45,6 +45,13 @@ final class AROcclusionHelpUITests: XCTestCase {
         XCTAssertTrue(availability.label.localizedCaseInsensitiveContains("unavailable"))
         #endif
 
+        let handsFirst = app.buttons["modeHandsFirst"]
+        XCTAssertTrue(handsFirst.exists, "The folding contact mode should be discoverable in AR help")
+        reveal(handsFirst)
+        if handsFirst.isEnabled {
+            handsFirst.tap()
+            XCTAssertTrue(handsFirst.isSelected)
+        }
         for identifier in ["modePeopleOnly", "modeAutomatic"] {
             let mode = app.buttons[identifier]
             XCTAssertTrue(mode.exists)

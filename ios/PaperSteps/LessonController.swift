@@ -97,13 +97,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var cameraError: String?
     @Published private(set) var positionLocked = true
     @Published private(set) var savedProgressRevision = 0
-    @Published private(set) var occlusionMode: AROcclusionMode = .automatic
+    @Published private(set) var occlusionMode: AROcclusionMode = AROcclusionConfiguration.recommendedMode(capabilities: .current)
     @Published private(set) var occlusionSummary = "Open Tabletop AR to check hand and object occlusion."
     @Published private(set) var occlusionDetails: [String: String] = [:]
-    let occlusionCapabilities = AROcclusionCapabilities.current
+    @Published private(set) var occlusionHealthNotice: String?
+    let occlusionCapabilities: AROcclusionCapabilities
     private(set) var arView: ARView?
     private let paper = PaperModel()
     private let depthOcclusion = SceneDepthOcclusion(profile: .stablePaper)
+    private var depthHealth = OrigamiARDepthHealth()
     private let progressStore: LearningProgressStore
     private var lastProgressSave: TimeInterval = 0
     private var hasFullLibrary = false
@@ -112,6 +114,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private var anchorID: UUID?
     private var placementRoot: ModelEntity?
     private var supportPlaneY: Float?
+    private var placementFrameTimestamp: TimeInterval?
     private var installedGestures: [UIGestureRecognizer] = []
     private let camera = PerspectiveCamera()
     private var yaw: Float = 0.32
@@ -136,12 +139,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private var lastViewportSize: CGSize = .zero
     private let screenAwake = HandsOnScreenAwakeLease.system()
 
-    init(progressStore: LearningProgressStore? = nil, practiceStore: PracticeProgressStore? = nil) {
+    init(progressStore: LearningProgressStore? = nil, practiceStore: PracticeProgressStore? = nil,
+         occlusionCapabilities: AROcclusionCapabilities = .current) {
+        self.occlusionCapabilities = occlusionCapabilities
         self.progressStore = progressStore ?? Self.makeProgressStore()
         let practiceStore = practiceStore ?? PracticeProgressStore.appDefault()
         self.practiceProgressStore = practiceStore
         self.dartPractice = practiceStore.load() ?? DartPracticeSession()
         super.init()
+        occlusionMode = AROcclusionConfiguration.recommendedMode(capabilities: occlusionCapabilities)
         lesson = self.progressStore.latestLesson ?? .dart
     }
 
@@ -264,6 +270,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
 
     private func clearScene() {
         guard let view = arView else { return }
+        depthHealth.reset(); occlusionHealthNotice = nil
         depthOcclusion.reset()
         view.session.pause()
         view.session.delegate = nil
@@ -273,7 +280,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         for gesture in view.gestureRecognizers ?? [] { view.removeGestureRecognizer(gesture) }
         installedGestures.removeAll()
         positionLocked = true
-        worldAnchor = nil; placementRoot = nil; anchorID = nil; supportPlaneY = nil
+        worldAnchor = nil; placementRoot = nil; anchorID = nil; supportPlaneY = nil; placementFrameTimestamp = nil
     }
 
     private func configureStudio() {
@@ -425,11 +432,24 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         // SwiftUI can resize the renderer after a lesson card changes height or
         // iPad multitasking changes width, even while playback is paused.
         if !isAR || isTabletopLayoutFixture, let size = arView?.bounds.size, size != lastViewportSize { updateCamera() }
+        if isAR, !isPaperGuide, !isTabletopLayoutFixture, placed, !needsRescan {
+            let frame = arView?.session.currentFrame
+            let normal: Bool
+            if let frame, case .normal = frame.camera.trackingState { normal = true } else { normal = false }
+            // Placement is requested using the previous camera exposure. Allow
+            // that one exposure to precede ARKit's acknowledgement of the new
+            // anchor; a later frame must carry the committed identifier.
+            let anchorPresent = frame.map { frame in
+                frame.anchors.contains { $0.identifier == anchorID } || frame.timestamp == placementFrameTimestamp
+            } ?? false
+            checkTabletopFrameHealth(timestamp: frame?.timestamp, now: CACurrentMediaTime(),
+                                      normal: normal, anchorPresent: anchorPresent)
+        }
         guard isPlaying else { lastTick = 0; return }
         if isAR && !isTabletopLayoutFixture {
             guard canAnimate, let frame = arView?.session.currentFrame,
                   case .normal = frame.camera.trackingState,
-                  CACurrentMediaTime() - frame.timestamp < 1,
+                  OrigamiARFrameHealth.isFresh(timestamp: frame.timestamp, now: CACurrentMediaTime()),
                   frame.anchors.contains(where: { $0.identifier == anchorID }) else {
                 pauseForTracking("Move slowly. The paper returns when tracking recovers.")
                 recordDiagnostic(force: true)
@@ -476,6 +496,33 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         for gesture in installedGestures { gesture.isEnabled = false }
         status = message
         saveLearningProgress()
+    }
+
+    /// Internal pure-input boundary lets tests cover a stalled paused camera
+    /// without fabricating an ARFrame or claiming physical tracking evidence.
+    func checkTabletopFrameHealth(timestamp: TimeInterval?, now: TimeInterval,
+                                  normal: Bool, anchorPresent: Bool) {
+        guard isAR, !isPaperGuide, !isTabletopLayoutFixture, placed, !needsRescan,
+              !OrigamiARFrameHealth.isUsable(timestamp: timestamp, now: now,
+                                              normal: normal, anchorPresent: anchorPresent) else { return }
+        // Avoid saving the same paused state on every display tick.
+        guard trackingReady || canPlace || isPlaying || worldAnchor?.isEnabled == true else { return }
+        pauseForTracking("Move slowly. The paper returns when tracking recovers.")
+        depthHealth.reset()
+        recordDiagnostic(force: true)
+    }
+
+    func checkObjectDepthHealth(now: TimeInterval, frameTimestamp: TimeInterval,
+                                normal: Bool, appliedTimestamp: TimeInterval?) {
+        guard isAR, !isPaperGuide, placed, !needsRescan, cameraError == nil,
+              AROcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) else { return }
+        guard depthHealth.shouldFallback(now: now, frameTimestamp: frameTimestamp, normal: normal,
+                                         appliedTimestamp: appliedTimestamp) else { return }
+        setOcclusionMode(occlusionCapabilities.personMask ? .handsFirst : .peopleOnly)
+        occlusionHealthNotice = occlusionCapabilities.personMask
+            ? "Object depth is paused. Hands first is active."
+            : occlusionCapabilities.personDepth ? "Object depth is paused. Native hands is active." : "Object depth is paused."
+        recordDiagnostic(force: true)
     }
 
     func setTopView() { followsAnglePreset = false; yaw = 0; pitch = 1.49; zoomMultiplier = 1; updateCamera() }
@@ -680,6 +727,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard hasLessonAccess else { return }
         if !started { continueLearning() }
         pauseAndSave(); isAR = true
+        depthHealth.reset(); occlusionHealthNotice = nil
         positionLocked = true
         cameraError = nil; placed = false; canPlace = false; trackingReady = false; needsRescan = false
         sessionGeneration += 1
@@ -741,6 +789,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         paper.setGroundingShadowsEnabled(false)
         view.environment.sceneUnderstanding.options = isPaperGuide ? [] : AROcclusionConfiguration.sceneOptions(mode: occlusionMode, capabilities: occlusionCapabilities)
         depthOcclusion.reset()
+        depthHealth.reset(); occlusionHealthNotice = nil
         view.environment.background = .cameraFeed()
         view.session.run(config, options: resetTracking ? [.resetTracking, .removeExistingAnchors] : [])
         // Attach only after resetting the AR session. A mode change keeps the
@@ -756,8 +805,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     func setOcclusionMode(_ mode: AROcclusionMode) {
-        guard mode != occlusionMode else { return }
-        occlusionMode = mode
+        let selected = AROcclusionConfiguration.effectiveMode(mode, capabilities: occlusionCapabilities)
+        guard selected != occlusionMode else { return }
+        occlusionMode = selected
+        depthHealth.reset(); occlusionHealthNotice = nil
         // Changing a help preference never starts a camera session, revives a
         // suspended one or grants access to a paid lesson.
         if isAR, hasLessonAccess, !needsRescan, cameraError == nil,
@@ -805,6 +856,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         paper.root.scale = .one
         movable.addChild(paper.root); root.addChild(movable)
         worldAnchor = root; placementRoot = movable; anchorID = anchor.identifier
+        placementFrameTimestamp = frame.timestamp
+        depthHealth.reset()
         supportPlaneY = transform.columns.3.y
         lastCollisionUpdate = 0
         updateInteractionBounds()
@@ -825,6 +878,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
     func placeAgain() {
         pauseAndSave(); positionLocked = true
+        depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         cameraError = nil
         paper.root.removeFromParent()
         worldAnchor?.removeFromParent(); worldAnchor = nil; placementRoot = nil
@@ -838,6 +892,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         runSession()
     }
     func leaveAR() {
+        depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         cameraStartRevision = nil
         paperGuide.invalidate()
         isPaperGuide = false
@@ -851,6 +906,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         configureStudio(); recordDiagnostic(force: true)
     }
     func background() {
+        depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         suspendScreenAwake()
         sessionGeneration += 1
         cameraStartRevision = nil
@@ -865,6 +921,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         }
     }
     func shutdown() {
+        depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         sessionGeneration += 1
         cameraStartRevision = nil
         paperGuide.invalidate()
@@ -885,10 +942,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         if AROcclusionConfiguration.usesObjectDepth(mode: occlusionMode, capabilities: occlusionCapabilities) {
             depthOcclusion.update(frame: frame, supportPlaneY: placed ? supportPlaneY : nil,
                                   target: placed ? paper.root : nil, localBounds: paper.bounds)
+            let normal: Bool
+            if case .normal = frame.camera.trackingState { normal = true } else { normal = false }
+            checkObjectDepthHealth(now: CACurrentMediaTime(), frameTimestamp: frame.timestamp, normal: normal,
+                                    appliedTimestamp: depthOcclusion.lastAppliedDepthTimestamp)
         }
         guard frame.timestamp - lastAssessment > 0.12 else { return }
         lastAssessment = frame.timestamp
-        guard case .normal = frame.camera.trackingState else {
+        guard case .normal = frame.camera.trackingState,
+              OrigamiARFrameHealth.isFresh(timestamp: frame.timestamp, now: CACurrentMediaTime()) else {
             pauseForTracking("Move slowly. The paper returns when tracking recovers.")
             recordDiagnostic(); return
         }
@@ -935,6 +997,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         }
     }
     func handleCameraFailure(_ message: String) {
+        depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         sessionGeneration += 1
         cameraStartRevision = nil
         paperGuide.invalidate()
@@ -951,10 +1014,12 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         let frame = arView?.session.currentFrame
         let depth = depthOcclusion.diagnostics
         let running = arView?.session.configuration as? ARWorldTrackingConfiguration
-        let personRequested = running?.frameSemantics.contains(.personSegmentationWithDepth) == true
+        let maskRequested = running?.frameSemantics.contains(.personSegmentation) == true
+        let personDepthRequested = running?.frameSemantics.contains(.personSegmentationWithDepth) == true
         let rawRequested = running?.frameSemantics.contains(.sceneDepth) == true
-        let personReceived = frame?.segmentationBuffer != nil && frame?.estimatedDepthData != nil
-        let personRenderingEnabled = personRequested && arView?.renderOptions.contains(.disablePersonOcclusion) == false
+        let maskReceived = frame?.segmentationBuffer != nil
+        let personReceived = maskReceived && frame?.estimatedDepthData != nil
+        let personRenderingEnabled = (maskRequested || personDepthRequested) && arView?.renderOptions.contains(.disablePersonOcclusion) == false
         #if targetEnvironment(simulator)
         occlusionSummary = "Camera AR is unavailable in the Simulator. Test occlusion on a supported iPhone or iPad."
         #else
@@ -964,6 +1029,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             occlusionSummary = "Open Tabletop AR to check hand and object occlusion."
         } else if needsRescan || cameraError != nil {
             occlusionSummary = "AR is paused. Return to the guide and scan the table again."
+        } else if occlusionMode == .handsFirst && personRenderingEnabled {
+            occlusionSummary = maskReceived
+                ? "Hands stay in front of the paper, including when they cross it."
+                : "Waiting for the hand outline. Keep your hand visible in a well-lit room."
         } else if occlusionMode == .automatic && depth.isActive && depth.triangleCount > 0 {
             occlusionSummary = personRenderingEnabled
                 ? "Apple's refined hand outline and separate object depth are active. Test a hand pass and removal."
@@ -987,12 +1056,17 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "Paper mesh builds": String(paper.diagnostics.meshGenerationCalls),
             "Paper mesh reuses": String(paper.diagnostics.meshReuses),
             "Native hands supported": flag(occlusionCapabilities.personDepth),
+            "Native person mask supported": flag(occlusionCapabilities.personMask),
             "Live object depth supported": flag(occlusionCapabilities.sceneDepth),
             "Native hand rendering enabled": flag(personRenderingEnabled),
+            "Hand ordering": occlusionMode == .handsFirst ? "Foreground mask" : "Depth ordered",
+            "Occlusion health notice": occlusionHealthNotice ?? "None",
             "Contact shadows disabled": flag(arView?.renderOptions.contains(.disableGroundingShadows) == true),
             "Real surfaces receive virtual shadows": flag(arView?.environment.sceneUnderstanding.options.contains(.receivesLighting) == true),
             "Person mask received": flag(frame?.segmentationBuffer != nil),
             "Person depth received": flag(frame?.estimatedDepthData != nil),
+            "Person mask requested": flag(maskRequested || personDepthRequested),
+            "Person depth requested": flag(personDepthRequested),
             "Raw depth requested": flag(rawRequested),
             "Raw depth received": flag(frame?.sceneDepth != nil),
             "Object depth status": depth.status,
@@ -1030,11 +1104,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             "isPlaying": isPlaying, "completed": completed, "status": status,
             "cameraImageWidth": frame.map { CVPixelBufferGetWidth($0.capturedImage) } ?? 0,
             "hasPersonDepth": frame?.estimatedDepthData != nil,
+            "hasPersonMask": maskReceived,
+            "personMaskRequested": maskRequested || personDepthRequested,
+            "personDepthRequested": personDepthRequested,
             "hasSceneDepth": frame?.sceneDepth != nil,
             "hasSmoothedSceneDepth": frame?.smoothedSceneDepth != nil,
             "hasRawSceneDepth": frame?.sceneDepth != nil,
             "occlusionMode": occlusionMode.rawValue,
             "occlusionSummary": occlusionSummary,
+            "occlusionHealthNotice": occlusionHealthNotice ?? "",
             "occlusionDetails": occlusionDetails,
             "liveOcclusionStatus": depthOcclusion.status,
             "liveOcclusionDepthSource": depth.depthSource,

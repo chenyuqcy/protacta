@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 22 refines AR hand/object edge ownership and reprojects depth history using camera pose/calibration. The final signed app is installed and independently version/container-queried on iPhone 17 Pro Max. Automatic launch was blocked by lock state; a later process query confirms the final installed executable running. 87 native depth tests passed. The user reports the stationary hand edge is more stable and essentially no longer flickers; slow movement and withdrawal/ghosting remain pending. Build 21's continuous 3D movements and tabletop AR for all five everyday courses remain integrated. See AR_EDGE_REFINEMENT_BUILD22.md and EVERYDAY_3D_AR_BUILD21.md for scoped evidence and remaining physical/landscape checks. Historical build sections retain their original evidence.
+Current work: The user prioritised origami. Build 23 defaults supported devices to Hands first, removing depth ordering at hand/paper intersections, and adds paused-camera/depth-health recovery. 71 native tests and three focused Simulator UI cases passed. The signed app is installed and independently version/container-queried on iPhone 17 Pro Max; remote launch failed after device disconnection. The user was asked to open it and compare the exact hand-through-paper symptom. Build 23 physical improvement is pending. See ORIGAMI_CONTACT_BUILD23.md. Build 22 depth refinements and Build 21's other 3D/AR courses remain integrated; their historical evidence and open checks retain their original scope.
 
 ## Build 7: USB phone update and basic course entry
 

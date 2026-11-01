@@ -24,10 +24,11 @@ struct AROcclusionHelpView: View {
                             }.padding(15).frame(maxWidth: .infinity, alignment: .leading)
                                 .background(.white.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
                         }.buttonStyle(.plain)
-                            .accessibilityIdentifier(mode == .automatic ? "modeAutomatic" : "modePeopleOnly")
+                            .accessibilityIdentifier(mode.accessibilityIdentifier)
                             .accessibilityAddTraits(controller.occlusionMode == mode ? [.isSelected] : [])
+                            .disabled(mode == .handsFirst && !controller.occlusionCapabilities.personMask)
                     }
-                    Text("Compare both modes with your hand still, then move it away. Your fold and placement stay in place.")
+                    Text("Hold your hand still, move it through the paper, then move it away. Switching modes keeps your fold and placement.")
                         .font(.footnote).foregroundStyle(.secondary)
                     DisclosureGroup("Device details") {
                         VStack(spacing: 10) {

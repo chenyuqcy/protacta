@@ -7,6 +7,53 @@ import XCTest
 /// not run a camera session or establish physical hand/object occlusion quality.
 final class AROcclusionConfigurationTests: XCTestCase {
     @MainActor
+    func testHandsFirstUsesAMatteWithoutAnyCompetingDepthOrderingOrSceneMesh() {
+        let supported = AROcclusionCapabilities(personDepth: true, sceneDepth: true, sceneMesh: true,
+                                               smoothedDepth: true, personMask: true)
+        let config = AROcclusionConfiguration.make(mode: .handsFirst, capabilities: supported)
+        XCTAssertEqual(config.frameSemantics, [.personSegmentation],
+                       "At contact, hand visibility must not alternate on an estimated-depth comparison")
+        XCTAssertEqual(config.sceneReconstruction, [])
+        XCTAssertFalse(AROcclusionConfiguration.usesObjectDepth(mode: .handsFirst, capabilities: supported))
+        XCTAssertTrue(AROcclusionConfiguration.usesNativeHands(mode: .handsFirst, capabilities: supported))
+        XCTAssertEqual(AROcclusionConfiguration.sceneOptions(mode: .handsFirst, capabilities: supported), [])
+        let render = AROcclusionConfiguration.renderOptions(isAR: true, mode: .handsFirst, capabilities: supported)
+        XCTAssertFalse(render.contains(.disablePersonOcclusion))
+        XCTAssertTrue(render.contains(.disableGroundingShadows))
+    }
+
+    @MainActor
+    func testHandsFirstWorksOnAPersonMaskOnlyDeviceWithoutRequestingPersonDepth() {
+        let maskOnly = AROcclusionCapabilities(personDepth: false, sceneDepth: false, sceneMesh: false, personMask: true)
+        XCTAssertEqual(AROcclusionConfiguration.recommendedMode(capabilities: maskOnly), .handsFirst)
+        XCTAssertEqual(AROcclusionConfiguration.make(mode: .handsFirst, capabilities: maskOnly).frameSemantics,
+                       [.personSegmentation])
+        XCTAssertTrue(AROcclusionConfiguration.usesNativeHands(mode: .handsFirst, capabilities: maskOnly))
+    }
+
+    @MainActor
+    func testUnsupportedHandsFirstFallsBackWithoutRequestingUnsupportedSegmentation() {
+        for depth in [false, true] {
+            for scene in [false, true] {
+                let unsupported = AROcclusionCapabilities(personDepth: depth, sceneDepth: scene,
+                                                          sceneMesh: true, personMask: false)
+                let expected: AROcclusionMode = depth ? .peopleOnly : .automatic
+                XCTAssertEqual(AROcclusionConfiguration.effectiveMode(.handsFirst, capabilities: unsupported), expected)
+                XCTAssertEqual(AROcclusionConfiguration.recommendedMode(capabilities: unsupported), .automatic)
+                let config = AROcclusionConfiguration.make(mode: .handsFirst, capabilities: unsupported)
+                // personSegmentationWithDepth includes the segmentation bit;
+                // compare the exact request rather than treating them as
+                // independent flags on synthetic capability combinations.
+                let expectedSemantics: ARConfiguration.FrameSemantics = depth ? [.personSegmentationWithDepth]
+                    : scene ? [.sceneDepth] : []
+                XCTAssertEqual(config.frameSemantics, expectedSemantics)
+                XCTAssertEqual(config.frameSemantics.contains(.personSegmentationWithDepth), depth)
+                XCTAssertEqual(config.frameSemantics.contains(.sceneDepth), !depth && scene)
+            }
+        }
+    }
+
+    @MainActor
     func testAutomaticModeEnablesOnlySupportedOcclusionFeatures() {
         for personDepth in [false, true] {
             for sceneDepth in [false, true] {
@@ -73,7 +120,7 @@ final class AROcclusionConfigurationTests: XCTestCase {
         XCTAssertFalse(AROcclusionCapabilities(personDepth: false, sceneDepth: true, sceneMesh: false).combinedPersonAndSceneDepth)
         XCTAssertEqual(AROcclusionMode.automatic.rawValue, "automatic")
         XCTAssertEqual(AROcclusionMode.peopleOnly.rawValue, "peopleOnly")
-        XCTAssertEqual(AROcclusionMode.automatic.title, "Refined edges")
+        XCTAssertEqual(AROcclusionMode.automatic.title, "Refined depth")
     }
 
     @MainActor
@@ -157,7 +204,7 @@ final class AROcclusionConfigurationTests: XCTestCase {
         controller.placed = true
         controller.trackingReady = true
 
-        for mode in [AROcclusionMode.peopleOnly, .automatic] {
+        for mode in [AROcclusionMode.peopleOnly, .automatic, .handsFirst] {
             controller.setOcclusionMode(mode)
             XCTAssertEqual(controller.lesson, .dart)
             XCTAssertTrue(controller.started)
@@ -184,7 +231,7 @@ final class AROcclusionConfigurationTests: XCTestCase {
         controller.placed = true
         controller.trackingReady = true
 
-        for mode in [AROcclusionMode.peopleOnly, .automatic] {
+        for mode in [AROcclusionMode.peopleOnly, .automatic, .handsFirst] {
             controller.setOcclusionMode(mode)
             XCTAssertEqual(controller.lesson, .dart)
             XCTAssertTrue(controller.started)
