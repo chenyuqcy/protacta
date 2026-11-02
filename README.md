@@ -1,169 +1,123 @@
-# Protacta native development app
+# Protacta
 
-An isolated startup app derived from Foliafold 1.0.1 Build 11. The original
-`/Users/adrian/Desktop/QCRI/origami_ar_demo` project is not modified.
-The source snapshot and SHA-256 hashes are in `docs/FOLIAFOLD_BASELINE.json`.
+An iPhone and iPad learning app that demonstrates practical tasks with animated
+3D lessons, tabletop AR and hands-free English voice controls.
 
-Current local prototype identity: **Protacta 0.1.0 (7)**,
-`org.realitycore.protacta.prototype`, iPhone and iPad, iOS 17 minimum.
-This is a local development identity, not an App Store listing or migrated
-Foliafold purchase entitlement.
+**Current prototype: 0.1.0 (24)** · iOS / iPadOS 17+ · SwiftUI, SceneKit,
+RealityKit, ARKit, Vision, Speech and AVFoundation.
 
-Build 7 repairs the Dart completion voice boundary and is now independently
-verified as installed on the iPhone 17 Pro Max. It uses the **PTC2 revision-2** practice sheet introduced
-in Build 6 to fix markers covered by later folds. Update the app and printed
-sheet together before physical testing. See `docs/DART_VOICE_COMPLETION.md` for
-the repair, `docs/DEVICE_UPDATE_BUILD_7.md` for phone installation and testing,
-`docs/VALIDATION_PHYSICAL_READINESS.md` for the paper checks and
-`docs/physical-review/README.md` for the unexecuted review packet.
+Build 24 is available to the existing external TestFlight group. See the
+[release record](docs/TESTFLIGHT_BUILD_24.md) for the verified distribution state.
 
-## Unified tutorial app
+## Current experience
 
-The normal launch now opens a tutorial hub with paper/craft, five everyday skill
-courses and the integrated AERIS product manual. The original source projects
-remain separate and unchanged.
+- **Origami first:** a leading home card, a 3D course library and a ten-action
+  Classic Dart practice course with local progress, replay and step-specific help.
+- **Tabletop AR:** manually place a virtual reference, then use Adjust / Done to
+  move, resize, rotate and lock it. Retry scan preserves the current lesson step.
+- **Hands-free practice:** on-device English narration and commands, compact AR
+  controls and an optional voice-only fullscreen layout.
+- **Everyday skills:** T-shirt, towel, flat bedsheet, square knot and four-in-hand
+  tie courses, with animated movements and tabletop AR references.
+- **3D equipment:** gearmotor and educational turbofan module animations with
+  studio and tabletop AR views; an integrated AERIS concept-product manual.
 
-| Content | Available guidance | Camera scope |
-| --- | --- | --- |
-| Origami library | Existing 12-course 3D library; Classic Dart and Little Fox are free | Existing tabletop models; Dart's experimental real-paper modes below |
-| T-shirt | 6 authored actions, animated folds, manual comparison/help | Illustrated reference only |
-| Rectangular towel | 3 actions, width thirds then half, animated folds | Illustrated reference only |
-| Flat bedsheet | 4 actions, explicit paired edges/corners; excludes fitted sheets | Illustrated reference only |
-| Square knot | 5 actions, named ends and over/under diagrams; loose practice | Illustrated reference only |
-| Four-in-hand tie | 7 actions, named wide/narrow ends, wrap/threading diagrams | Illustrated reference only |
-| AERIS One | Filter replacement, setup and cleaning; actual interactive release tab, exploded 3D and Quick Look | Virtual concept-product tabletop placement, not real-appliance registration |
+The current origami AR default, **Hands first**, keeps recognised person pixels
+in front of the virtual paper on supported devices. It favours hand visibility
+over depth ordering; it does not simulate physical contact. Optional depth modes
+remain available. See [origami hand contact](docs/ORIGAMI_CONTACT_BUILD23.md).
 
-Everyday skill courses share a player with play/pause, a movement slider, slow
-playback, step-specific help and optional on-device narration/commands. Only the
-learner's explicit confirmation advances the declared practice record. Saves are
-per course and versioned. AERIS retains its own session-local task progress.
-New illustrations and procedures remain draft pending real follow-through review.
-The user chose to defer cloud AI chat; no API, key, fake chatbot or network
-dependency is introduced in this build.
+## Camera guidance scope
 
-On Debug Simulator, older focused tests use `--ui-testing` for direct origami
-entry. `--ui-testing --tutorial-hub` exercises the normal hub; adding
-`--reset-everyday-progress` clears only the isolated UI-test skill saves once on
-launch. Normal physical-device launches and Release builds use the normal hub.
+Tabletop AR is a manually placed virtual reference. Its world tracking does not
+automatically align a model with a real sheet, garment or machine.
 
-## Complete-course practice prototype
+The separate experimental **Guide on my paper** mode supports a flat A4 sheet
+and the Classic Dart centre crease. A separate printed **PTC2 revision-2** sheet
+supports selected planar cues and outline comparisons during Dart practice.
+Uncertain or stale observations hide the cues. These modes do not grade hidden
+folds, track arbitrary paper deformation or automatically confirm completed work.
+Learners explicitly confirm their own actions.
 
-**Practice the complete Dart** provides ten actions, local progress, comparison
-notes, help and a 3D reference that returns to the same practice action. Only
-the learner's explicit confirmation advances this session. Voice can read the
-current action/help or open its 3D reference; saying Next step does not certify
-or confirm the physical action.
+Camera analysis and available speech recognition run on device. Cloud AI chat
+is deferred; the app does not require an API key. Physical paper registration,
+hand-edge quality and independent learner outcomes still need real-device review.
 
-The printed-paper Plan B uses four PTC2 QR codes on the paper itself to establish
-position and direction. The practice sheet is bundled with a print/share entry;
-see `docs/DART_PRACTICE_SHEET.md`. All four codes must be visible, with white
-A4 paper on a plain dark mat. The known flat region supports planar cues before
-actions 1 and 3-7. When paper lifts, markers disappear, tracking becomes limited,
-or observations become stale, cues hide. Other actions retain their 3D/manual
-path. A marker on the table is not treated as a paper anchor.
+## Open and build
 
-**Check my step** compares the visible silhouette after actions 2-6. Outcomes
-are scoped visible match, compare/adjust the outline, or cannot judge. State 2
-has the same silhouette as a new sheet and cannot establish a center crease.
-Hidden layers, crease pressure, arbitrary objects and nonplanar wings are not
-evaluated. Progress saves bounded text summaries, not photos, live pose or camera
-coordinates. Both teaching content and thresholds await physical-paper review.
-
-Build 4 adds **See this comparison** after an accepted camera check. A temporary
-grayscale image, reference outline and softly highlighted comparison areas come
-from the same checked frame. The learner can inspect the frozen view, read the
-action's draft comparison notes or replay that same action in 3D. It does not
-advance the course or identify which hidden fold caused a difference. Returning
-to the camera clears the image and starts fresh registration; action changes,
-rescan, tracking loss, camera failure, backgrounding and exit also clear it.
-Normal use keeps only the bounded image in memory and never saves a photo.
-
-## First-fold natural-boundary prototype
-
-The free Classic Dart lesson has a **Guide on my paper** entry. On a supported
-device it uses a single ARKit camera session, bounded on-device Vision work,
-paper-boundary candidates and a projective mapping to draw the center crease,
-the target edge and an arrow on a visible flat sheet.
-
-The person confirms the guide's direction because a blank rectangle cannot
-establish semantic orientation. Subsequent nearby detections preserve corner
-identities. Lost, stale, cropped, ambiguous or discontinuous observations hide
-the folding cues and require a fresh direction check. Recognized hands near
-the sheet conservatively reject the observation; this does not guarantee
-detection of every occluder. Backgrounding and camera failure invalidate the
-registration and pending authorization work.
-
-This first milestone does **not** grade a fold, identify a real A4 sheet with
-certainty, track arbitrary deformation, or support later folded shapes. A
-rectangle candidate can also be a book or screen. Use one whole A4 sheet on a
-clear table and verify the highlighted TOP edge. The learner explicitly
-confirms completing the center crease and continues in the existing 3D lesson.
-Animation progress and camera registration remain separate.
-
-Existing 3D lessons, tabletop model placement, local learning progress and
-English voice controls remain in the fork. Product identifiers and test
-fixtures are isolated from Foliafold.
-
-## Build and test
-
-Build 3 fixes shadow ambiguity and pixel-center sampling in the outline checker.
-It also adds opt-in Debug local camera sampling and a separate offline evaluator.
-Normal practice and Release builds do not expose photo recording. See
-`docs/LOCAL_VALIDATION_CAPTURE.md` and `docs/VALIDATION_DATA_FORMAT.md` before
-collecting real samples; synthetic fixtures are never physical acceptance.
-Build 4's frozen comparison, lifecycle checks, final visual review and unsigned
-Debug/Release builds are recorded in `docs/VALIDATION_VISUAL_FEEDBACK.md`.
-
-Source folders retain the historical PaperSteps names. Regenerate after adding
-Swift files or resources:
+Requirements: macOS, Xcode with an iOS 17+ SDK, and Python 3 for the project
+generator. The bundled app assets do not require downloading authoring tools.
 
 ```sh
 python3 scripts/generate_xcode_project.py
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project ios/Protacta.xcodeproj -scheme Protacta -destination 'generic/platform=iOS Simulator' -derivedDataPath output/DerivedData build
+open ios/Protacta.xcodeproj
 ```
 
-For the focused automated checks, choose an available simulator UDID:
+Select the **Protacta** scheme and an iPhone or iPad Simulator. For a command-line
+Simulator build:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+  -project ios/Protacta.xcodeproj \
+  -scheme Protacta \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath output/DerivedData \
+  CODE_SIGNING_ALLOWED=NO build
+```
+
+For installation on a physical device, select an authorised signing team in
+Xcode and allow camera, microphone and speech permissions when requested.
+Real AR, paper alignment and voice behaviour require a supported physical device.
+Regenerate the project after adding Swift files or bundled resources.
+
+## Verification
+
+Build 24's focused validation passed **32 native tests and six Simulator UI
+cases**. The signed archive, device installation and external TestFlight
+availability were verified separately. Details are in
+[Build 24](docs/ORIGAMI_FIRST_BUILD24.md) and the
+[development record](docs/PROGRESS.md).
+
+List available Simulators with `xcrun simctl list devices available`, then run:
 
 ```sh
 scripts/test_first_fold.sh SIMULATOR_UDID
 scripts/test_dart_practice.sh SIMULATOR_UDID logic
-scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID phone
-scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID tablet
-scripts/test_dart_practice.sh IPHONE_SIMULATOR_UDID hub
-scripts/test_dart_practice.sh IPAD_SIMULATOR_UDID hub-tablet
+scripts/test_dart_practice.sh SIMULATOR_UDID phone
+scripts/test_dart_practice.sh SIMULATOR_UDID hub
 python3 -m unittest discover -s scripts/tests -p 'test_evaluate_practice_validation.py' -v
+node --test tools/validation_annotator/tests/core.test.js
 ```
 
-The `Protacta-StoreKit` scheme uses a local, prototype-namespaced test fixture.
-The ordinary scheme does not use that fixture. Simulator-only synthetic UI
-fixtures require a Debug build and both `--ui-testing` and
-`--paper-guide-fixture`. They visibly say **NOT A LIVE CAMERA**; the argument
-cannot enable the fixture in a Release build or on a physical device.
+`Protacta-StoreKit` uses the local prototype purchase fixture. The ordinary
+scheme does not. Debug Simulator camera fixtures are explicitly labelled as
+synthetic; passing them does not establish real camera, speech or learning results.
 
-## Physical acceptance
+## Repository layout
 
-Open Classic Dart and Guide on my paper. Allow camera access, keep a whole flat
-sheet visible, confirm the highlighted TOP direction and try movement,
-rotation, changing distance, partial occlusion and removal. Check that cues
-disappear on uncertainty, that a new direction is requested after loss, and
-that returning from Settings/background can restart the camera. Repeat on
-iPhone portrait and iPad portrait/landscape. Confirm that the opaque tabletop
-model never appears in real-paper mode.
+| Path | Contents |
+| --- | --- |
+| `ios/PaperSteps/` | App source and bundled assets; historical source-folder name |
+| `ios/PaperStepsTests/` | Native logic, geometry, tracking and lifecycle tests |
+| `ios/PaperStepsUITests/` | Simulator navigation and interaction checks |
+| `ios/Protacta.xcodeproj/` | Generated Xcode project and shared schemes |
+| `scripts/` | Project generation, validation and offline asset tools |
+| `tools/` | Local annotation and demo-video tools |
+| `docs/` | Plans, release notes, scope and validation records |
 
-No camera frames, detected hands or microphone audio are uploaded. The
-current alignment thresholds and 350 ms observation lifetime require device
-latency and accuracy measurements. Synthetic-image tests and simulator
-screenshots do not establish physical acceptance.
+Build products, signing credentials, local environment files and device/test
+receipts in `output/` are excluded from Git. Historical documents describe the
+builds named in them; use the Build 24 notes for the current prototype.
 
-## Next stages
+## Provenance and assets
 
-The engineering objective is the single complete-course MVP in
-`docs/BUILD_PLAN_2026-10-25.md`. Complete-course code and synthetic checks are
-prototype evidence. Real-paper registration, actual tutorial review, independent
-correct/incorrect/unclear samples and the beginner pilot remain acceptance gates.
-The user chose to continue local development and defer physical testing on
-25 October 2026; Build 7 follows that choice. Screen-awake and voice lifecycle
-repairs, the revised paper layout and offline independent-label tooling are
-locally verified; real-paper follow-through, calibration and beginner outcomes
-remain untested.
-Progress and evidence are maintained in `docs/PROGRESS.md`.
+This isolated project was derived from Foliafold 1.0.1 Build 11. The original
+checkout remains unchanged; [baseline hashes](docs/FOLIAFOLD_BASELINE.json) record
+the source snapshot. Prototype bundle identifier:
+`org.realitycore.protacta.prototype`.
+
+Bundled third-party models retain their
+[source and licence notices](ios/PaperSteps/Resources/ThirdPartyModelNotices.txt):
+the Innerscene gearmotor is CC0 and the turbofan source is MIT. The engine is an
+educational interpretation, not manufacturer CAD or an approved repair procedure.
+Source and conversion records are in [model sources](docs/assets/model_sources.json).

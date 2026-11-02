@@ -7,3 +7,17 @@ build/
 __pycache__/
 .env
 .env.*
+
+# Local signing material and packaged build products
+*.p8
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+*.provisionprofile
+*.keychain
+*.keychain-db
+*.ipa
+*.xcarchive/
+*.dSYM/
+*.xcresult/
