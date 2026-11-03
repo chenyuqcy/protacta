@@ -600,9 +600,15 @@ struct PaperStepsView: View {
                 .font(.system(size: 14)).lineSpacing(3).foregroundStyle(Palette.muted)
                 .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("stepInstruction")
             if controller.stepIndex > 0 && !controller.completed {
-                ProgressView(value: Double(controller.progress))
-                    .tint(Palette.accent).accessibilityLabel("Fold progress")
-                    .accessibilityIdentifier("foldProgressValue")
+                Slider(value: Binding(get: { controller.progress }, set: { value in
+                    voice.stop()
+                    controller.scrub(to: value)
+                }), in: 0...1)
+                    .tint(Palette.accent).frame(minHeight: 44)
+                    .disabled(!controller.canAnimate)
+                    .accessibilityLabel("Fold progress")
+                    .accessibilityHint("Drag back or forward to inspect this fold. Use Next when your paper is ready.")
+                    .accessibilityIdentifier("foldTimeline")
                     .accessibilityValue("\(Int((controller.progress * 100).rounded()))%")
             }
             if controller.isAR && !controller.trackingReady {

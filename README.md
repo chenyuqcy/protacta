@@ -3,7 +3,7 @@
 An iPhone and iPad learning app that demonstrates practical tasks with animated
 3D lessons, tabletop AR and hands-free English voice controls.
 
-**Current prototype: 0.1.0 (24)** · iOS / iPadOS 17+ · SwiftUI, SceneKit,
+**Current development build: 0.1.0 (25)** · iOS / iPadOS 17+ · SwiftUI,
 RealityKit, ARKit, Vision, Speech and AVFoundation.
 
 Build 24 is available to the existing external TestFlight group. See the
@@ -13,6 +13,12 @@ Build 24 is available to the existing external TestFlight group. See the
 
 - **Origami first:** a leading home card, a 3D course library and a ten-action
   Classic Dart practice course with local progress, replay and step-specific help.
+- **Visible fold timeline:** drag forward or backward through the current fold
+  directly in the normal 3D or placed-tabletop AR lesson. Voice-only fullscreen
+  keeps its existing clean layout.
+- **Quick tour:** a skippable, three-step introduction with red arrow cues and an
+  interactive fold preview. It appears once and can be replayed from About.
+- **Branding:** the supplied ProTacta mark is used for the app icon and home header.
 - **Tabletop AR:** manually place a virtual reference, then use Adjust / Done to
   move, resize, rotate and lock it. Retry scan preserves the current lesson step.
 - **Hands-free practice:** on-device English narration and commands, compact AR
@@ -72,6 +78,9 @@ Regenerate the project after adding Swift files or bundled resources.
 
 ## Verification
 
+Build 25's timeline and introduction checks are recorded in
+[Build 25](docs/INTRODUCTION_TIMELINE_BUILD25.md).
+
 Build 24's focused validation passed **32 native tests and six Simulator UI
 cases**. The signed archive, device installation and external TestFlight
 availability were verified separately. Details are in
@@ -107,7 +116,7 @@ synthetic; passing them does not establish real camera, speech or learning resul
 
 Build products, signing credentials, local environment files and device/test
 receipts in `output/` are excluded from Git. Historical documents describe the
-builds named in them; use the Build 24 notes for the current prototype.
+builds named in them; Build 24 remains the verified external beta release.
 
 ## Provenance and assets
 

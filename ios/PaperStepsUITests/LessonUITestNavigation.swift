@@ -57,7 +57,7 @@ extension XCUIApplication {
         closeLessonHelp(file: file, line: line)
     }
 
-    var foldProgressValue: String? { progressIndicators["foldProgressValue"].value as? String }
+    var foldProgressValue: String? { sliders["foldTimeline"].value as? String }
     var foldPlaybackLabel: String { buttons["nextStep"].label.contains("Pause fold") ? "Pause fold" : "Play fold" }
 
     func tapFoldTool(_ id: String, file: StaticString = #filePath, line: UInt = #line) {

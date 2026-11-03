@@ -36,7 +36,9 @@ final class TeamFeedbackUITests: XCTestCase {
         begin()
         app.buttons["nextStep"].tap()
         XCTAssertTrue(app.buttons["nextStep"].label.contains("Pause fold"))
-        app.buttons["nextStep"].tap()
+        // The Simulator fixture accelerates folds. Pause deterministically by
+        // inspecting a partial pose rather than racing a second tap against it.
+        app.sliders["foldTimeline"].adjust(toNormalizedSliderPosition: 0.4)
         XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
         for id in ["replayStep", "foldNotes", "stepList", "playbackSpeed", "playPause", "openDartPractice", "openPaperGuide"] {
             XCTAssertFalse(app.buttons[id].exists, id)
@@ -71,6 +73,43 @@ final class TeamFeedbackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["closeSteps"].waitForExistence(timeout: 5))
         app.buttons["closeSteps"].tap()
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 10")
+    }
+
+    func testMainTimelineScrubsBothWaysAndResumesTheSameFold() throws {
+        begin(); advance()
+        let timeline = app.sliders["foldTimeline"]
+        XCTAssertTrue(timeline.isHittable, "Scrubbing must be available without opening Help")
+        // UIKit reports the native slider's 31-point AX frame inside the
+        // 44-point SwiftUI row. Check the actual control is fully reachable.
+        XCTAssertTrue(app.frame.contains(timeline.frame))
+        XCTAssertFalse(app.buttons["closeFoldHelp"].exists)
+        timeline.adjust(toNormalizedSliderPosition: 0.75)
+        let forward = try percent(timeline)
+        XCTAssertTrue((60...90).contains(forward))
+        timeline.adjust(toNormalizedSliderPosition: 0.25)
+        let backward = try percent(timeline)
+        XCTAssertTrue((10...40).contains(backward))
+        XCTAssertLessThan(backward, forward)
+        XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 10")
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+        capture("Build25_Visible_fold_timeline")
+        app.buttons["openAR"].tap()
+        XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
+        XCTAssertTrue(timeline.isHittable)
+        XCTAssertEqual(try percent(timeline), backward, "Entering tabletop AR preserves the inspected pose")
+        timeline.adjust(toNormalizedSliderPosition: 0.6)
+        let arProgress = try percent(timeline)
+        XCTAssertTrue((45...75).contains(arProgress))
+        app.buttons["closeAR"].tap()
+        XCTAssertEqual(try percent(timeline), arProgress)
+        app.buttons["nextStep"].tap(); waitReady()
+        XCTAssertEqual(app.foldProgressValue, "100%")
+        XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 10", "Animation completion is not physical fold confirmation")
+    }
+
+    private func percent(_ element: XCUIElement) throws -> Int {
+        let value = try XCTUnwrap(element.value as? String)
+        return try XCTUnwrap(Int(value.replacingOccurrences(of: "%", with: "")))
     }
 
     func testPhoneSetupDoesNotStartSensorsAndARRemainsAvailable() {

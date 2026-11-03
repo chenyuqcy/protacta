@@ -219,6 +219,7 @@ final class ARFullScreenUITests: XCTestCase {
             XCTAssertFalse(app.buttons[identifier].exists, "Expanded lesson controls must not cover the full-screen viewport: \(identifier)", file: file, line: line)
         }
         XCTAssertFalse(app.sliders["foldProgress"].exists, file: file, line: line)
+        XCTAssertFalse(app.sliders["foldTimeline"].exists, file: file, line: line)
         assertFixtureLabel(file: file, line: line)
     }
 

@@ -54,6 +54,10 @@ struct ProtactaHomeView: View {
     @State private var filter: CatalogFilter = .all
     @State private var progressRevision = 0
     @State private var showAbout = false
+    @State private var showIntroduction = false
+    @State private var replayIntroductionAfterAbout = false
+    @State private var consideredIntroduction = false
+    private let introductionPreferences = FirstRunIntroductionPreferences.appDefault()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let progressStore = EverydayTutorialProgressStore.appDefault()
     private let choices: [TutorialDestination] = [
@@ -75,7 +79,11 @@ struct ProtactaHomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     HStack {
-                        Text("Protacta").font(.system(size: 27, weight: .semibold)).tracking(-0.7)
+                        HStack(spacing: 10) {
+                            Image("ProtactaMark").resizable().scaledToFit()
+                                .frame(width: 44, height: 44).accessibilityHidden(true)
+                            Text("Protacta").font(.system(size: 27, weight: .semibold)).tracking(-0.7)
+                        }
                         Spacer()
                         Button { showAbout = true } label: {
                             Image(systemName: "info.circle").font(.system(size: 21)).frame(width: 44, height: 44)
@@ -104,7 +112,23 @@ struct ProtactaHomeView: View {
             case .equipment(let id): EquipmentTutorialEntry(id: id, onExit: { destination = nil })
             }
         }
-        .sheet(isPresented: $showAbout) { about }
+        .sheet(isPresented: $showAbout, onDismiss: {
+            if replayIntroductionAfterAbout {
+                replayIntroductionAfterAbout = false
+                showIntroduction = true
+            }
+        }) { about }
+        .sheet(isPresented: $showIntroduction) {
+            FirstRunIntroductionView {
+                introductionPreferences.complete()
+                showIntroduction = false
+            }
+        }
+        .onAppear {
+            guard !consideredIntroduction else { return }
+            consideredIntroduction = true
+            showIntroduction = introductionPreferences.shouldPresent
+        }
     }
 
     private var featuredOrigami: some View {
@@ -193,6 +217,13 @@ struct ProtactaHomeView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
+                    Button {
+                        replayIntroductionAfterAbout = true
+                        showAbout = false
+                    } label: {
+                        Label("Quick tour", systemImage: "arrow.up.forward.app")
+                            .frame(minHeight: 44)
+                    }.accessibilityIdentifier("replayIntroduction")
                     Text("Choose a tutorial, watch the movement, then try it yourself.").font(.title3)
                     Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use continuous 3D movement and optional tabletop AR.")
                         .accessibilityIdentifier("hubCapabilityScope")
