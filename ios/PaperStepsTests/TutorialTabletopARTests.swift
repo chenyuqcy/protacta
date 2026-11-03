@@ -1,8 +1,61 @@
 import XCTest
 import RealityKit
+import UIKit
 @testable import Protacta
 
 final class TutorialTabletopARTests: XCTestCase {
+    @MainActor
+    func testPlacementStartsLockedAndCannotBeUnlockedBeforeItIsReady() {
+        let controller = TutorialTabletopARController()
+        XCTAssertTrue(controller.positionLocked)
+        XCTAssertFalse(controller.placementGesturesEnabled)
+        controller.togglePositionLock()
+        XCTAssertTrue(controller.positionLocked)
+        XCTAssertFalse(controller.placed)
+        XCTAssertNil(controller.view, "A lock request must not start an AR session")
+        controller.resetPlacement()
+        XCTAssertTrue(controller.positionLocked)
+        XCTAssertFalse(controller.placementGesturesEnabled)
+        controller.stop()
+    }
+
+    func testTransformChangesRequireTheirOwnFreshGestureBegin() {
+        var gate = TutorialPlacementGestureGate()
+        for kind in [TutorialPlacementGestureGate.Kind.pan, .pinch, .rotation] {
+            XCTAssertFalse(gate.allows(kind, phase: .changed, enabled: true))
+            XCTAssertTrue(gate.allows(kind, phase: .began, enabled: true))
+            XCTAssertTrue(gate.allows(kind, phase: .changed, enabled: true))
+            XCTAssertFalse(gate.allows(kind, phase: .ended, enabled: true))
+            XCTAssertFalse(gate.allows(kind, phase: .changed, enabled: true))
+        }
+    }
+
+    func testLockOrTrackingLossRequiresNewBeginsAfterRecovery() {
+        var gate = TutorialPlacementGestureGate()
+        for kind in [TutorialPlacementGestureGate.Kind.pan, .pinch, .rotation] {
+            XCTAssertTrue(gate.allows(kind, phase: .began, enabled: true))
+            XCTAssertFalse(gate.allows(kind, phase: .changed, enabled: false))
+            XCTAssertFalse(gate.allows(kind, phase: .changed, enabled: true), "Cached transforms cannot resume after invalidation")
+            XCTAssertTrue(gate.allows(kind, phase: .began, enabled: true))
+        }
+        gate.cancelAll()
+        for kind in [TutorialPlacementGestureGate.Kind.pan, .pinch, .rotation] {
+            XCTAssertFalse(gate.allows(kind, phase: .changed, enabled: true))
+        }
+    }
+
+    func testSimultaneousPinchAndRotationKeepIndependentBeginState() {
+        var gate = TutorialPlacementGestureGate()
+        XCTAssertTrue(gate.allows(.pinch, phase: .began, enabled: true))
+        XCTAssertTrue(gate.allows(.rotation, phase: .began, enabled: true))
+        gate.cancel(.pinch)
+        XCTAssertFalse(gate.allows(.pinch, phase: .changed, enabled: true))
+        XCTAssertTrue(gate.allows(.rotation, phase: .changed, enabled: true))
+        XCTAssertFalse(gate.allows(.rotation, phase: .cancelled, enabled: true))
+        XCTAssertFalse(gate.allows(.rotation, phase: .changed, enabled: true))
+        XCTAssertFalse(gate.allows(.rotation, phase: .began, enabled: false))
+    }
+
     func testTabletopSizingUsesWholeAnimationEnvelopeAndLeavesTableClear() throws {
         let minimum = SIMD3<Float>(-4, -2, -1)
         let maximum = SIMD3<Float>(4, 3, 1)

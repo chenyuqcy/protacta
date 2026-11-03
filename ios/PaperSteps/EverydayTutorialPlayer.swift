@@ -270,6 +270,17 @@ struct EverydayTutorialPlayer: View {
                             Label("3D", systemImage: "arrow.uturn.backward").font(.system(size: 13, weight: .semibold))
                                 .padding(.horizontal, 14).frame(minHeight: 44).background(.regularMaterial, in: Capsule())
                         }.accessibilityIdentifier("everydayExitAR")
+                        if scene.tabletop.placed {
+                            Button { scene.pause(); voice.stop(); scene.tabletop.togglePositionLock() } label: {
+                                Label(scene.tabletop.positionLocked ? "Adjust" : "Done",
+                                      systemImage: scene.tabletop.positionLocked ? "arrow.up.and.down.and.arrow.left.and.right" : "checkmark")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .padding(.horizontal, 12).frame(minHeight: 44)
+                                    .background(.regularMaterial, in: Capsule())
+                            }.accessibilityIdentifier("everydayARAdjust")
+                                .accessibilityHint(scene.tabletop.positionLocked ? "Unlock the reference to move and resize it." : "Lock the reference in place.")
+                                .disabled(!scene.tabletop.ready)
+                        }
                         Spacer()
                         Button { scene.pause(); voice.stop(); isVoiceOnlyAR = true } label: {
                             Image(systemName: "arrow.up.left.and.arrow.down.right").frame(width: 44, height: 44)
@@ -284,13 +295,19 @@ struct EverydayTutorialPlayer: View {
                             Text(scene.tabletop.error ?? scene.tabletop.status).font(.system(size: 13)).multilineTextAlignment(.center)
                                 .accessibilityIdentifier("everydayARStatus")
                             if !scene.tabletop.placed && scene.tabletop.error == nil {
-                                Button("Place here") { scene.tabletop.place() }.frame(minHeight: 44)
+                                Button("Place reference") { scene.tabletop.place() }.frame(minHeight: 44)
                                     .disabled(!scene.tabletop.canPlace).accessibilityIdentifier("everydayARPlace")
                             }
                             if scene.tabletop.error != nil {
                                 Button("Open Settings") { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
                             }
                         }.padding(14).frame(maxWidth: 600).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    }
+                    if scene.tabletop.ready && !scene.tabletop.positionLocked {
+                        Text("Drag to move · Pinch to resize · Twist to rotate")
+                            .font(.system(size: 12)).padding(.horizontal, 12).padding(.vertical, 8)
+                            .background(.regularMaterial, in: Capsule())
+                            .accessibilityIdentifier("everydayARAdjustHint")
                     }
                     Spacer(minLength: 8)
                     if !feedback.isEmpty { feedbackBadge }

@@ -19,10 +19,11 @@ final class TutorialHubUITests: XCTestCase {
         let origami = app.buttons["hubOrigami"]
         XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
         XCTAssertTrue(origami.isHittable, "Origami should open directly from the first screen")
-        let motor = app.buttons["hubEquipment_gearmotor"]
-        XCTAssertTrue(motor.waitForExistence(timeout: 5))
-        XCTAssertLessThan(origami.frame.minY, motor.frame.minY, "The origami hero precedes the remaining catalog")
-        capture("Build24_Origami_first_home")
+        let firstSection = app.staticTexts["catalogSection_clothes"]
+        XCTAssertTrue(firstSection.exists)
+        XCTAssertLessThan(origami.frame.minY, firstSection.frame.minY, "The origami hero precedes the grouped catalog")
+        XCTAssertTrue(app.buttons["hubPhoneSetup"].isHittable)
+        capture("Team_sections_Origami_first_home")
         origami.tap()
         XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
         app.buttons["returnTutorialHub"].tap()
@@ -44,9 +45,11 @@ final class TutorialHubUITests: XCTestCase {
         app.buttons["everydayClose"].tap()
         waitForDismissal(app.buttons["everydayClose"])
 
-        selectHomeFilter("3D & AR")
-        XCTAssertTrue(origami.waitForExistence(timeout: 5))
-        XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
+        selectHomeFilter("Equipment")
+        XCTAssertFalse(origami.exists)
+        XCTAssertFalse(app.buttons["hubCourse_towel"].exists)
+        XCTAssertFalse(app.staticTexts["catalogSection_clothes"].exists)
+        XCTAssertTrue(app.staticTexts["catalogSection_equipment"].exists)
         tapHome("hubEquipment_turbofan")
         XCTAssertTrue(app.buttons["assemblyNext"].waitForExistence(timeout: 30))
         XCTAssertTrue(app.staticTexts["assemblyCounter"].label.contains("1/6"))
@@ -57,6 +60,28 @@ final class TutorialHubUITests: XCTestCase {
         reveal(origami)
         XCTAssertTrue(origami.isHittable)
         XCTAssertFalse(app.alerts.firstMatch.exists)
+    }
+
+    func testOrigamiFilterShowsOnlyTheOrigamiEntryAndPhoneSetupReturnsToIt() {
+        selectHomeFilter("Origami")
+        XCTAssertTrue(app.buttons["hubOrigami"].isHittable)
+        XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
+        for id in ["hubCourse_towel", "hubCourse_t_shirt", "hubCourse_square_knot", "hubEquipment_gearmotor", "hubProductManual"] {
+            XCTAssertFalse(app.buttons[id].exists, "Origami must exclude other tutorial categories: \(id)")
+        }
+        for id in ["catalogSection_clothes", "catalogSection_knots", "catalogSection_equipment"] {
+            XCTAssertFalse(app.staticTexts[id].exists)
+        }
+        capture("Team_sections_Origami_filter")
+        app.buttons["hubPhoneSetup"].tap()
+        XCTAssertTrue(app.buttons["closePhoneSetup"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.alerts.firstMatch.exists, "Phone setup must not start sensors")
+        app.buttons["closePhoneSetup"].tap()
+        waitForDismissal(app.buttons["closePhoneSetup"])
+        XCTAssertTrue(app.buttons["hubOrigami"].isHittable)
+        XCTAssertTrue(app.segmentedControls["hubFilter"].buttons["Origami"].isSelected)
+        app.buttons["hubOrigami"].tap()
+        XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
     }
 
     func testAllFiveEverydayCoursesHaveCompleteConfirmedFlows() {

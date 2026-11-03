@@ -3,7 +3,7 @@
 An iPhone and iPad learning app that demonstrates practical tasks with animated
 3D lessons, tabletop AR and hands-free English voice controls.
 
-**Current development build: 0.1.0 (25)** · iOS / iPadOS 17+ · SwiftUI,
+**Current development build: 0.1.0 (26)** · iOS / iPadOS 17+ · SwiftUI,
 RealityKit, ARKit, Vision, Speech and AVFoundation.
 
 Build 24 is available to the existing external TestFlight group. See the
@@ -13,6 +13,8 @@ Build 24 is available to the existing external TestFlight group. See the
 
 - **Origami first:** a leading home card, a 3D course library and a ten-action
   Classic Dart practice course with local progress, replay and step-specific help.
+- **Home sections:** All, Origami, Everyday and Equipment filters, with clothes
+  and linens, knots and ties, and object/equipment groups.
 - **Visible fold timeline:** drag forward or backward through the current fold
   directly in the normal 3D or placed-tabletop AR lesson. Voice-only fullscreen
   keeps its existing clean layout.
@@ -20,7 +22,11 @@ Build 24 is available to the existing external TestFlight group. See the
   interactive fold preview. It appears once and can be replayed from About.
 - **Branding:** the supplied ProTacta mark is used for the app icon and home header.
 - **Tabletop AR:** manually place a virtual reference, then use Adjust / Done to
-  move, resize, rotate and lock it. Retry scan preserves the current lesson step.
+  move, resize, rotate and lock it. Origami, everyday and equipment references
+  start locked; interrupted transform gestures require a fresh begin. Retry scan
+  preserves the current lesson step.
+- **Setup and help:** open phone setup from home, compare tabletop and flat-paper
+  modes, or open About → Help & setup for playback, voice and AR recovery advice.
 - **Hands-free practice:** on-device English narration and commands, compact AR
   controls and an optional voice-only fullscreen layout.
 - **Everyday skills:** T-shirt, towel, flat bedsheet, square knot and four-in-hand
@@ -78,7 +84,8 @@ Regenerate the project after adding Swift files or bundled resources.
 
 ## Verification
 
-Build 25's timeline and introduction checks are recorded in
+Build 26's sections, setup and reference-lock changes are recorded in
+[Build 26](docs/TEAM_UPGRADE_BUILD26.md). Build 25's timeline and introduction checks are recorded in
 [Build 25](docs/INTRODUCTION_TIMELINE_BUILD25.md).
 
 Build 24's focused validation passed **32 native tests and six Simulator UI

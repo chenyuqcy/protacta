@@ -1,7 +1,7 @@
 # Protacta engineering progress
 
 Goal: implement the complete-course startup MVP in BUILD_PLAN_2026-10-25.md.
-Current work: Build 25 restores a visible origami fold timeline, adds the skippable first-run Quick tour with red arrow cues, and integrates the supplied ProTacta branding. Seven native checks and five distinct Simulator UI cases passed for timeline/lesson-state and introduction flows. Final branding delivery is recorded in INTRODUCTION_TIMELINE_BUILD25.md. Build 24 remains the verified external TestFlight release; Build 23's Hands first physical contact comparison remains pending. Historical presentation and release records below describe their named builds and dates.
+Current work: Build 26 follows the team whiteboard with home activity sections, a visible phone-setup entry and mode-specific setup diagram, global Help and locked everyday/equipment AR references with fresh-gesture recovery. 34 native checks and nine Simulator UI cases passed. The signed Release installed on iPhone 17 Pro Max; delivery evidence and physical limits are recorded in TEAM_UPGRADE_BUILD26.md. Build 25's logo, visible origami timeline and first-run introduction remain integrated. Build 24 remains the verified external TestFlight release; hand-edge quality still needs physical comparison. Historical presentation and release records below describe their named builds and dates.
 
 ## Build 7: USB phone update and basic course entry
 

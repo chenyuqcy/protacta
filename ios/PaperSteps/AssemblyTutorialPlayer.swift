@@ -147,6 +147,17 @@ struct AssemblyTutorialPlayer: View {
                     } label: { Label("3D", systemImage: "arrow.uturn.backward").padding(.horizontal, 14).frame(minHeight: 44) }
                         .background(.regularMaterial, in: Capsule())
                         .accessibilityLabel("Return to 3D view").accessibilityIdentifier("assemblyExitAR")
+                    if scene.tabletop.placed {
+                        Button { isPlaying = false; voice.stop(); scene.tabletop.togglePositionLock() } label: {
+                            Label(scene.tabletop.positionLocked ? "Adjust" : "Done",
+                                  systemImage: scene.tabletop.positionLocked ? "arrow.up.and.down.and.arrow.left.and.right" : "checkmark")
+                                .font(.system(size: 12, weight: .semibold))
+                                .padding(.horizontal, 12).frame(minHeight: 44)
+                                .background(.regularMaterial, in: Capsule())
+                        }.accessibilityIdentifier("assemblyARAdjust")
+                            .accessibilityHint(scene.tabletop.positionLocked ? "Unlock the reference to move and resize it." : "Lock the reference in place.")
+                            .disabled(!scene.tabletop.ready)
+                    }
                     Spacer(minLength: 8)
                     VStack(alignment: .trailing, spacing: 4) {
                         Text("\(scene.stepIndex + 1)/\(scene.tutorial.steps.count)").font(.system(size: 15, weight: .medium)).monospacedDigit()
@@ -172,12 +183,18 @@ struct AssemblyTutorialPlayer: View {
                         Text(scene.tabletop.status).font(.system(size: 13, weight: .medium))
                             .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("assemblyARStatus")
                         if !scene.tabletop.placed, scene.tabletop.error == nil {
-                            Button("Place here") { scene.tabletop.place() }
+                            Button("Place reference") { scene.tabletop.place() }
                                 .frame(minHeight: 44).disabled(!scene.tabletop.canPlace)
                                 .accessibilityIdentifier("assemblyARPlace")
                         }
                     }.padding(12).frame(maxWidth: 620).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                     }
+                }
+                if scene.tabletop.ready && !scene.tabletop.positionLocked {
+                    Text("Drag to move · Pinch to resize · Twist to rotate")
+                        .font(.system(size: 12)).padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(.regularMaterial, in: Capsule())
+                        .accessibilityIdentifier("assemblyARAdjustHint")
                 }
                 Spacer(minLength: 8)
                 if !showDetails, let feedback = voice.feedbackMessage {

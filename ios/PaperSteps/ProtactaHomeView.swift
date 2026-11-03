@@ -36,8 +36,27 @@ private enum TutorialDestination: Identifiable {
 }
 
 private enum CatalogFilter: String, CaseIterable, Identifiable {
-    case all = "All", everyday = "Everyday", spatial = "3D & AR"
+    case all = "All", origami = "Origami", everyday = "Everyday", equipment = "Equipment"
     var id: Self { self }
+}
+
+private enum CatalogSection: String, Identifiable {
+    case clothes, knots, equipment
+    var id: Self { self }
+    var title: String {
+        switch self {
+        case .clothes: return "Clothes & linens"
+        case .knots: return "Knots & ties"
+        case .equipment: return "Objects & equipment"
+        }
+    }
+    var tutorials: [TutorialDestination] {
+        switch self {
+        case .clothes: return [.everyday(.towel), .everyday(.tShirt), .everyday(.flatBedsheet)]
+        case .knots: return [.everyday(.squareKnot), .everyday(.fourInHand)]
+        case .equipment: return [.equipment(.gearmotor), .equipment(.turbofan), .product]
+        }
+    }
 }
 
 enum TutorialColors {
@@ -56,21 +75,20 @@ struct ProtactaHomeView: View {
     @State private var showAbout = false
     @State private var showIntroduction = false
     @State private var replayIntroductionAfterAbout = false
+    @State private var showPhoneSetup = false
+    @State private var showTutorialSupport = false
+    @State private var openSupportAfterAbout = false
+    @State private var replayIntroductionAfterSupport = false
     @State private var consideredIntroduction = false
     private let introductionPreferences = FirstRunIntroductionPreferences.appDefault()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     private let progressStore = EverydayTutorialProgressStore.appDefault()
-    private let choices: [TutorialDestination] = [
-        .origami, .equipment(.gearmotor), .everyday(.towel), .equipment(.turbofan),
-        .everyday(.tShirt), .product, .everyday(.squareKnot), .everyday(.fourInHand), .everyday(.flatBedsheet)
-    ]
-    private var visibleChoices: [TutorialDestination] {
-        choices.filter { choice in
-            switch (filter, choice) {
-            case (.all, _), (.everyday, .everyday): return true
-            case (.spatial, .origami), (.spatial, .product), (.spatial, .equipment), (.spatial, .everyday): return true
-            default: return false
-            }
+    private var visibleSections: [CatalogSection] {
+        switch filter {
+        case .all: return [.clothes, .knots, .equipment]
+        case .origami: return []
+        case .everyday: return [.clothes, .knots]
+        case .equipment: return [.equipment]
         }
     }
 
@@ -92,12 +110,19 @@ struct ProtactaHomeView: View {
                     Picker("Tutorial category", selection: $filter) {
                         ForEach(CatalogFilter.allCases) { item in Text(item.rawValue).tag(item) }
                     }.pickerStyle(.segmented).accessibilityIdentifier("hubFilter")
-                    if filter != .everyday {
+                    phoneSetupEntry
+                    if filter == .all || filter == .origami {
                         featuredOrigami
                     }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .regular ? 210 : 150, maximum: 300), spacing: 16)],
-                              alignment: .leading, spacing: 26) {
-                        ForEach(visibleChoices.filter { $0.id != "origami" }) { choice in tile(choice) }
+                    ForEach(visibleSections) { section in
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(section.title).font(.title3.weight(.semibold))
+                                .accessibilityIdentifier("catalogSection_\(section.rawValue)")
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: horizontalSizeClass == .regular ? 210 : 150, maximum: 300), spacing: 16)],
+                                      alignment: .leading, spacing: 26) {
+                                ForEach(section.tutorials) { choice in tile(choice) }
+                            }
+                        }
                     }
                 }.padding(22).frame(maxWidth: 900).frame(maxWidth: .infinity)
             }.background(TutorialColors.paper).foregroundStyle(TutorialColors.ink)
@@ -116,8 +141,23 @@ struct ProtactaHomeView: View {
             if replayIntroductionAfterAbout {
                 replayIntroductionAfterAbout = false
                 showIntroduction = true
+            } else if openSupportAfterAbout {
+                openSupportAfterAbout = false
+                showTutorialSupport = true
             }
         }) { about }
+        .sheet(isPresented: $showPhoneSetup) { PhoneSetupView() }
+        .sheet(isPresented: $showTutorialSupport, onDismiss: {
+            if replayIntroductionAfterSupport {
+                replayIntroductionAfterSupport = false
+                showIntroduction = true
+            }
+        }) {
+            TutorialSupportView {
+                replayIntroductionAfterSupport = true
+                showTutorialSupport = false
+            }
+        }
         .sheet(isPresented: $showIntroduction) {
             FirstRunIntroductionView {
                 introductionPreferences.complete()
@@ -129,6 +169,21 @@ struct ProtactaHomeView: View {
             consideredIntroduction = true
             showIntroduction = introductionPreferences.shouldPresent
         }
+    }
+
+    private var phoneSetupEntry: some View {
+        Button { showPhoneSetup = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "iphone").font(.system(size: 19))
+                Text("Set up your phone").font(.subheadline.weight(.medium))
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    .foregroundStyle(TutorialColors.muted)
+            }.padding(.horizontal, 16).frame(minHeight: 48)
+                .background(.white, in: RoundedRectangle(cornerRadius: 16))
+                .contentShape(RoundedRectangle(cornerRadius: 16))
+        }.buttonStyle(.plain).accessibilityIdentifier("hubPhoneSetup")
+            .accessibilityHint("Learn where to place your phone and paper.")
     }
 
     private var featuredOrigami: some View {
@@ -224,6 +279,13 @@ struct ProtactaHomeView: View {
                         Label("Quick tour", systemImage: "arrow.up.forward.app")
                             .frame(minHeight: 44)
                     }.accessibilityIdentifier("replayIntroduction")
+                    Button {
+                        openSupportAfterAbout = true
+                        showAbout = false
+                    } label: {
+                        Label("Help & setup", systemImage: "questionmark.circle")
+                            .frame(minHeight: 44)
+                    }.accessibilityIdentifier("openTutorialSupport")
                     Text("Choose a tutorial, watch the movement, then try it yourself.").font(.title3)
                     Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use continuous 3D movement and optional tabletop AR.")
                         .accessibilityIdentifier("hubCapabilityScope")

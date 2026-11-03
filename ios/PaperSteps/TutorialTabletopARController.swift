@@ -36,6 +36,24 @@ struct TutorialTabletopTracking {
     }
 }
 
+/// An interrupted drag cannot resume with offsets from an earlier gesture.
+/// Each manipulation must acquire its own fresh begin after tracking recovers.
+struct TutorialPlacementGestureGate {
+    enum Kind: Hashable { case pan, pinch, rotation }
+    private var active: Set<Kind> = []
+
+    mutating func allows(_ kind: Kind, phase: UIGestureRecognizer.State, enabled: Bool) -> Bool {
+        guard enabled else { cancel(kind); return false }
+        switch phase {
+        case .began: active.insert(kind); return true
+        case .changed: return active.contains(kind)
+        default: cancel(kind); return false
+        }
+    }
+    mutating func cancel(_ kind: Kind) { active.remove(kind) }
+    mutating func cancelAll() { active.removeAll() }
+}
+
 /// Borrows the existing studio ARView and model. Placement is a virtual tabletop
 /// reference, not registration with a real motor or aircraft engine.
 @MainActor
@@ -44,6 +62,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     @Published private(set) var canPlace = false
     @Published private(set) var placed = false
     @Published private(set) var trackingReady = false
+    @Published private(set) var positionLocked = true
     @Published private(set) var isRequestingCamera = false
     @Published private(set) var isLayoutPreview = false
     @Published private(set) var error: String?
@@ -74,8 +93,10 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     private var pinchStart: Float = 1
     private var rotationStart: Float = 0
     private var panOffset = SIMD3<Float>.zero
+    private var gestureGate = TutorialPlacementGestureGate()
     var onEntityTap: ((Entity?) -> Void)?
     var ready: Bool { placed && trackingReady && error == nil && !backgrounded }
+    var placementGesturesEnabled: Bool { ready && !positionLocked }
     var supportsStableEdges: Bool { occlusionCapabilities.stableDepth }
 
     override init() {
@@ -105,6 +126,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         #if DEBUG && targetEnvironment(simulator)
         guard Self.layoutPreviewRequested else { return }
         isLayoutPreview = true; placed = true; trackingReady = true
+        positionLocked = true; updatePlacementGestures()
         setStatus("AR LAYOUT PREVIEW · NO LIVE CAMERA")
         #endif
     }
@@ -130,6 +152,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         tap.require(toFail: pan)
         gestures = [tap, pan, pinch, rotate]
         for gesture in gestures { view.addGestureRecognizer(gesture) }
+        updatePlacementGestures()
         requestCamera()
     }
 
@@ -230,7 +253,30 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         view.session.add(anchor: realAnchor); view.scene.addAnchor(anchor)
         placementAnchor = anchor; worldAnchor = realAnchor; movable = container
         placed = true; setCanPlace(false)
-        setStatus("Drag to move · Pinch to resize · Twist to rotate")
+        positionLocked = true; updatePlacementGestures()
+        setStatus(placementInstruction)
+    }
+
+    func togglePositionLock() {
+        guard ready else { return }
+        positionLocked.toggle()
+        updatePlacementGestures()
+        setStatus(placementInstruction)
+    }
+
+    private var placementInstruction: String {
+        positionLocked ? "Reference locked. Tap Adjust to move or resize it."
+            : "Drag to move · Pinch to resize · Twist to rotate"
+    }
+
+    private func updatePlacementGestures() {
+        let enabled = placementGesturesEnabled
+        if !enabled { gestureGate.cancelAll() }
+        // Selection and initial placement still use taps while the reference
+        // is locked. Only the transform gestures require explicit adjustment.
+        for gesture in gestures where !(gesture is UITapGestureRecognizer) {
+            if gesture.isEnabled != enabled { gesture.isEnabled = enabled }
+        }
     }
 
     func resetPlacement() {
@@ -282,7 +328,8 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     private func removePlacement() {
         placementAnchor?.removeFromParent(); placementAnchor = nil
         if let worldAnchor, let view, view.session.delegate === self { view.session.remove(anchor: worldAnchor) }
-        worldAnchor = nil; movable = nil; placed = false
+        worldAnchor = nil; movable = nil; placed = false; positionLocked = true
+        updatePlacementGestures()
         content?.removeFromParent()
     }
 
@@ -298,7 +345,10 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             ?? view.raycast(from: point, allowing: .estimatedPlane, alignment: .horizontal).first
     }
     private func setStatus(_ value: String) { if status != value { status = value } }
-    private func setReady(_ value: Bool) { if trackingReady != value { trackingReady = value } }
+    private func setReady(_ value: Bool) {
+        if trackingReady != value { trackingReady = value }
+        updatePlacementGestures()
+    }
     private func setCanPlace(_ value: Bool) { if canPlace != value { canPlace = value } }
 
     @objc private func tap(_ gesture: UITapGestureRecognizer) {
@@ -308,20 +358,23 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         onEntityTap?(view.entity(at: gesture.location(in: view)))
     }
     @objc private func pan(_ gesture: UIPanGestureRecognizer) {
-        guard ready, freshFrame() != nil, let view, let movable,
-              let hit = surfaceHit(at: gesture.location(in: view)) else { return }
+        guard placementGesturesEnabled, freshFrame() != nil, let view, let movable,
+              let hit = surfaceHit(at: gesture.location(in: view)) else { gestureGate.cancel(.pan); return }
+        guard gestureGate.allows(.pan, phase: gesture.state, enabled: placementGesturesEnabled) else { return }
         let world = SIMD3<Float>(hit.worldTransform.columns.3.x, hit.worldTransform.columns.3.y, hit.worldTransform.columns.3.z)
         if gesture.state == .began { panOffset = movable.position(relativeTo: nil) - world }
         if gesture.state == .began || gesture.state == .changed { movable.setPosition(world + panOffset, relativeTo: nil) }
     }
     @objc private func pinch(_ gesture: UIPinchGestureRecognizer) {
-        guard ready, freshFrame() != nil, let movable, let layout else { return }
+        guard placementGesturesEnabled, freshFrame() != nil, let movable, let layout else { gestureGate.cancel(.pinch); return }
+        guard gestureGate.allows(.pinch, phase: gesture.state, enabled: placementGesturesEnabled) else { return }
         if gesture.state == .began { pinchStart = scaleFactor }
         scaleFactor = min(3, max(0.25, pinchStart * Float(gesture.scale)))
         movable.scale = SIMD3(repeating: layout.scale * scaleFactor)
     }
     @objc private func rotate(_ gesture: UIRotationGestureRecognizer) {
-        guard ready, freshFrame() != nil, let movable else { return }
+        guard placementGesturesEnabled, freshFrame() != nil, let movable else { gestureGate.cancel(.rotation); return }
+        guard gestureGate.allows(.rotation, phase: gesture.state, enabled: placementGesturesEnabled) else { return }
         if gesture.state == .began { rotationStart = movable.orientation.angle * (movable.orientation.axis.y < 0 ? -1 : 1) }
         movable.orientation = simd_quatf(angle: rotationStart - Float(gesture.rotation), axis: [0, 1, 0])
     }
@@ -359,11 +412,11 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         setReady(stable)
         if placed {
             placementAnchor?.isEnabled = stable; setCanPlace(false)
-            setStatus(stable ? "Drag to move · Pinch to resize · Twist to rotate" : "Tracking is recovering. Keep the same table in view, or scan again.")
+            setStatus(stable ? placementInstruction : "Tracking is recovering. Keep the same table in view, or scan again.")
         } else {
             let found = stable && view.map { surfaceHit(at: CGPoint(x: $0.bounds.midX, y: $0.bounds.midY)) != nil } == true
             setCanPlace(found)
-            setStatus(found ? "Surface found. Tap the table or choose Place here." : "Move slowly. Aim at a clear, well-lit table.")
+            setStatus(found ? "Surface found. Tap the table or choose Place reference." : "Move slowly. Aim at a clear, well-lit table.")
         }
     }
 
@@ -378,6 +431,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             "nativePersonOcclusionDisabled": view?.renderOptions.contains(.disablePersonOcclusion) ?? false,
             "groundingShadowsDisabled": view?.renderOptions.contains(.disableGroundingShadows) ?? false,
             "placed": placed, "trackingReady": trackingReady,
+            "positionLocked": positionLocked, "placementGesturesEnabled": placementGesturesEnabled,
             "depthSource": depth.depthSource, "depthStatus": depth.status,
             "nativePersonExclusion": depth.nativePersonExclusion,
             "excludedPersonPixels": depth.excludedPersonPixels,
