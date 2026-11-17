@@ -300,7 +300,7 @@ enum DartOutlineChecker {
         Double(b.x - a.x) * Double(c.y - a.y) - Double(b.y - a.y) * Double(c.x - a.x)
     }
 
-    private static func convexHull(_ points: [CGPoint]) -> [CGPoint]? {
+    static func convexHull(_ points: [CGPoint]) -> [CGPoint]? {
         let sorted = points.sorted { $0.x == $1.x ? $0.y < $1.y : $0.x < $1.x }
         var unique: [CGPoint] = []
         for point in sorted where unique.last.map({ hypot(Double($0.x - point.x), Double($0.y - point.y)) > 1e-6 }) ?? true {

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Scheme LastUpgradeVersion="2600" version="1.7">
+  <BuildAction parallelizeBuildables="YES" buildImplicitDependencies="YES"><BuildActionEntries><BuildActionEntry buildForTesting="NO" buildForRunning="YES" buildForProfiling="YES" buildForArchiving="NO" buildForAnalyzing="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="91C343EB441729C211F8E861" BuildableName="ProtactaClip.app" BlueprintName="ProtactaClip" ReferencedContainer="container:Protacta.xcodeproj"/></BuildActionEntry></BuildActionEntries></BuildAction>
+  <LaunchAction buildConfiguration="Debug" selectedDebuggerIdentifier="Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier="Xcode.IDEFoundation.Launcher.LLDB" launchStyle="0" useCustomWorkingDirectory="NO" ignoresPersistentStateOnLaunch="NO" debugDocumentVersioning="YES" debugServiceExtension="internal" allowLocationSimulation="YES">
+    <BuildableProductRunnable runnableDebuggingMode="0"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="91C343EB441729C211F8E861" BuildableName="ProtactaClip.app" BlueprintName="ProtactaClip" ReferencedContainer="container:Protacta.xcodeproj"/></BuildableProductRunnable>
+    <EnvironmentVariables><EnvironmentVariable key="_XCAppClipURL" value="https://appclip.apple.com/id?p=org.realitycore.protacta.prototype.Clip" isEnabled="YES"/></EnvironmentVariables>
+  </LaunchAction>
+  <ProfileAction buildConfiguration="Release" shouldUseLaunchSchemeArgsEnv="YES" savedToolIdentifier="" useCustomWorkingDirectory="NO" debugDocumentVersioning="YES"><BuildableProductRunnable runnableDebuggingMode="0"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="91C343EB441729C211F8E861" BuildableName="ProtactaClip.app" BlueprintName="ProtactaClip" ReferencedContainer="container:Protacta.xcodeproj"/></BuildableProductRunnable></ProfileAction>
+  <AnalyzeAction buildConfiguration="Debug"/>
+</Scheme>

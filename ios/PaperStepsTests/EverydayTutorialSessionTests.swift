@@ -168,10 +168,91 @@ final class EverydayTutorialSessionTests: XCTestCase {
             let records = try XCTUnwrap(object["records"] as? [String: [String: Any]])
             XCTAssertEqual(records.count, 5)
             for record in records.values {
-                XCTAssertEqual(Set(record.keys), Set(["courseID", "courseRevision", "currentAction", "completed", "confirmedActions"]))
+                XCTAssertEqual(Set(record.keys), Set(["courseID", "courseRevision", "currentAction", "completed", "confirmedActions", "updatedAt"]))
+                XCTAssertNotNil(record["updatedAt"] as? NSNumber)
                 XCTAssertLessThanOrEqual((record["confirmedActions"] as? [Int])?.count ?? 100, 7)
             }
         }
+    }
+
+    func testRecentPracticeOrdersByLatestSaveAndExcludesCompletedCourses() throws {
+        var timestamp = Date(timeIntervalSince1970: 1_000)
+        let store = EverydayTutorialProgressStore(defaults: nil, now: { timestamp })
+        var shirt = EverydayTutorialSession(courseID: .tShirt)
+        XCTAssertTrue(shirt.confirmCurrentAction())
+        XCTAssertTrue(store.save(shirt))
+        timestamp = Date(timeIntervalSince1970: 2_000)
+        XCTAssertTrue(store.save(EverydayTutorialSession(courseID: .towel)))
+        timestamp = Date(timeIntervalSince1970: 3_000)
+        XCTAssertTrue(store.save(completed(.flatBedsheet)))
+
+        XCTAssertEqual(store.inProgress(limit: 5).map(\.courseID), [.towel, .tShirt])
+        XCTAssertEqual(store.inProgress(limit: 1).map(\.courseID), [.towel])
+        let shirtBefore = try XCTUnwrap(store.inProgress(limit: 5).last)
+        XCTAssertEqual(shirtBefore.currentAction, 2)
+        XCTAssertEqual(shirtBefore.updatedAt, Date(timeIntervalSince1970: 1_000))
+
+        timestamp = Date(timeIntervalSince1970: 4_000)
+        XCTAssertTrue(store.save(shirt))
+        XCTAssertEqual(store.inProgress(limit: 5).map(\.courseID), [.tShirt, .towel])
+        XCTAssertEqual(store.inProgress(limit: 1).first?.updatedAt, timestamp)
+        XCTAssertEqual(try XCTUnwrap(store.load(courseID: .tShirt)).confirmedActions, [1],
+                       "Updating recency must not change the learner's confirmations")
+    }
+
+    func testLegacyRecordsWithoutDatesStillResumeAndSortBehindNewPractice() throws {
+        try withDefaults { defaults in
+            // This is the schema written before the homepage stored recency.
+            let records: [String: Any] = [
+                EverydayTutorialID.towel.rawValue: [
+                    "courseID": EverydayTutorialID.towel.rawValue,
+                    "courseRevision": EverydayTutorialCourse.course(.towel).revision,
+                    "currentAction": 2, "completed": false, "confirmedActions": [1]
+                ],
+                EverydayTutorialID.tShirt.rawValue: [
+                    "courseID": EverydayTutorialID.tShirt.rawValue,
+                    "courseRevision": EverydayTutorialCourse.course(.tShirt).revision,
+                    "currentAction": 3, "completed": false, "confirmedActions": [1, 2]
+                ]
+            ]
+            let archive: [String: Any] = ["schemaVersion": 1, "records": records]
+            defaults.set(try JSONSerialization.data(withJSONObject: archive),
+                         forKey: EverydayTutorialProgressStore.storageKey)
+            let store = EverydayTutorialProgressStore(defaults: defaults,
+                now: { Date(timeIntervalSince1970: 5_000) })
+            let shirt = try XCTUnwrap(store.load(courseID: .tShirt))
+            XCTAssertEqual(shirt.currentAction, 3)
+            XCTAssertEqual(shirt.confirmedActions, [1, 2])
+            XCTAssertEqual(try XCTUnwrap(store.load(courseID: .towel)).currentAction, 2)
+            XCTAssertEqual(store.inProgress(limit: 5).map(\.courseID), [.tShirt, .towel])
+            XCTAssertTrue(store.inProgress(limit: 5).allSatisfy { $0.updatedAt == .distantPast })
+
+            XCTAssertTrue(store.save(EverydayTutorialSession(courseID: .squareKnot)))
+            let relaunched = EverydayTutorialProgressStore(defaults: defaults)
+            XCTAssertEqual(relaunched.inProgress(limit: 5).map(\.courseID), [.squareKnot, .tShirt, .towel])
+            XCTAssertEqual(try XCTUnwrap(relaunched.load(courseID: .tShirt)).confirmedActions, [1, 2])
+        }
+    }
+
+    func testEqualRecencyHasStableOrderingIndependentOfSaveOrder() {
+        let expected: [EverydayTutorialID] = [.flatBedsheet, .fourInHand, .squareKnot, .tShirt, .towel]
+        for order in [expected, Array(expected.reversed())] {
+            let store = EverydayTutorialProgressStore(defaults: nil,
+                now: { Date(timeIntervalSince1970: 6_000) })
+            for id in order { XCTAssertTrue(store.save(EverydayTutorialSession(courseID: id))) }
+            XCTAssertEqual(store.inProgress(limit: 100).map(\.courseID), expected)
+            XCTAssertEqual(store.inProgress(limit: 2).map(\.courseID), Array(expected.prefix(2)))
+        }
+    }
+
+    func testNonpositiveRecentLimitReturnsNoCardsWithoutDeletingProgress() throws {
+        let store = EverydayTutorialProgressStore(defaults: nil)
+        var session = EverydayTutorialSession(courseID: .towel)
+        XCTAssertTrue(session.confirmCurrentAction())
+        XCTAssertTrue(store.save(session))
+        for limit in [Int.min, -1, 0] { XCTAssertTrue(store.inProgress(limit: limit).isEmpty) }
+        XCTAssertEqual(try XCTUnwrap(store.load(courseID: .towel)).currentAction, 2)
+        XCTAssertEqual(store.inProgress(limit: 1).map(\.courseID), [.towel])
     }
 
     private func completed(_ id: EverydayTutorialID) -> EverydayTutorialSession {

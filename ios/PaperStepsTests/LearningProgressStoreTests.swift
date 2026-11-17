@@ -5,6 +5,39 @@ import XCTest
 /// Uses isolated defaults suites or nil; never changes production learning
 /// history, purchases or spatial placement, and never creates an AR session.
 final class LearningProgressStoreTests: XCTestCase {
+    #if FOLIAFOLD_UPDATE
+    @MainActor
+    func testReadsExistingFoliafoldDartProgress() throws {
+        try withDefaults { defaults in
+            // This revision was generated from the original Foliafold Dart steps.
+            let archive = """
+            {
+              "schemaVersion": 1,
+              "records": {
+                "dart": {
+                  "lessonID": "dart",
+                  "contentRevision": "af0cf1a9bbbdf57fde43c832c01a7ccbdfd39c58c8aa8d51cd508ca4bca884ac",
+                  "stepIndex": 2,
+                  "progress": 0.625,
+                  "completed": false,
+                  "slowMotion": true,
+                  "hintsVisible": false,
+                  "updatedAt": 0
+                }
+              }
+            }
+            """
+            defaults.set(Data(archive.utf8), forKey: "org.realitycore.foliafold.learningProgress")
+            let store = LearningProgressStore(defaults: defaults)
+            let dart = try XCTUnwrap(store.record(for: .dart))
+            XCTAssertEqual(dart.stepIndex, 2)
+            XCTAssertEqual(dart.progress, 0.625)
+            XCTAssertTrue(dart.slowMotion)
+            XCTAssertFalse(dart.hintsVisible)
+        }
+    }
+    #endif
+
     @MainActor
     func testPartialFoldAndPreferencesSurviveAStoreReload() throws {
         try withDefaults { defaults in
@@ -174,9 +207,61 @@ final class LearningProgressStoreTests: XCTestCase {
             XCTAssertEqual(Set(archive.keys), ["schemaVersion", "records"])
             let records = try XCTUnwrap(archive["records"] as? [String: Any])
             let crane = try XCTUnwrap(records["crane"] as? [String: Any])
-            XCTAssertEqual(Set(crane.keys), ["lessonID", "contentRevision", "stepIndex", "progress", "completed", "slowMotion", "hintsVisible", "updatedAt"])
+            XCTAssertEqual(Set(crane.keys), ["lessonID", "contentRevision", "stepIndex", "progress", "completed", "slowMotion", "hintsVisible", "updatedAt", "playbackRate"])
             XCTAssertNotEqual(store.record(for: .crane)?.contentRevision, store.record(for: .dart)?.contentRevision)
         }
+    }
+
+    @MainActor
+    func testDoubleSpeedSurvivesReloadAndKeepsLegacySlowMotionConsistent() throws {
+        try withDefaults { defaults in
+            let store = LearningProgressStore(defaults: defaults)
+            XCTAssertTrue(store.save(lesson: .dart, stepIndex: 3, progress: 0.4,
+                                     completed: false, slowMotion: true, hintsVisible: true,
+                                     playbackRate: 2))
+            let restored = try XCTUnwrap(LearningProgressStore(defaults: defaults).record(for: .dart))
+            XCTAssertEqual(restored.effectivePlaybackRate, 2)
+            XCTAssertFalse(restored.slowMotion)
+            XCTAssertEqual(restored.progress, 0.4)
+        }
+    }
+
+    @MainActor
+    func testLegacyArchivesWithoutPlaybackRateRetainTheirOriginalSpeed() throws {
+        try withDefaults { defaults in
+            let store = LearningProgressStore(defaults: defaults)
+            for slow in [false, true] {
+                XCTAssertTrue(store.save(lesson: .dart, stepIndex: 2, progress: 0.6,
+                                         completed: false, slowMotion: slow, hintsVisible: false))
+                var archive = try readArchive(defaults)
+                var records = try XCTUnwrap(archive["records"] as? [String: Any])
+                var dart = try XCTUnwrap(records["dart"] as? [String: Any])
+                dart.removeValue(forKey: "playbackRate")
+                records["dart"] = dart; archive["records"] = records
+                try writeArchive(archive, to: defaults)
+                let restored = try XCTUnwrap(LearningProgressStore(defaults: defaults).record(for: .dart))
+                XCTAssertNil(restored.playbackRate)
+                XCTAssertEqual(restored.effectivePlaybackRate, slow ? 0.5 : 1)
+                XCTAssertEqual(restored.stepIndex, 2)
+                XCTAssertEqual(restored.progress, 0.6)
+            }
+        }
+    }
+
+    @MainActor
+    func testUnsupportedSpeedCannotOverwriteProgressAndResumeLimitIsBounded() throws {
+        let store = LearningProgressStore(defaults: nil)
+        XCTAssertTrue(save(.dart, into: store))
+        let original = try XCTUnwrap(store.record(for: .dart))
+        for rate in [Double.nan, .infinity, -.infinity, 0, -1, 0.75, 10] {
+            XCTAssertFalse(store.save(lesson: .dart, stepIndex: 3, progress: 0.2,
+                                      completed: false, slowMotion: false, hintsVisible: true,
+                                      playbackRate: rate))
+            XCTAssertEqual(store.record(for: .dart), original)
+        }
+        XCTAssertTrue(store.inProgress(limit: -1).isEmpty)
+        XCTAssertTrue(store.inProgress(limit: 0).isEmpty)
+        XCTAssertEqual(store.inProgress(limit: 1).count, 1)
     }
 
     @MainActor

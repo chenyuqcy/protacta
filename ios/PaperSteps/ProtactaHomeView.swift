@@ -1,11 +1,13 @@
 import SwiftUI
 
 private enum TutorialDestination: Identifiable {
-    case origami, origamiLesson(OrigamiLesson), everyday(EverydayTutorialID), product, equipment(EquipmentTutorialID)
+    case classicDart, origami, origamiLesson(OrigamiLesson), resumeOrigami(OrigamiLesson), everyday(EverydayTutorialID), product, equipment(EquipmentTutorialID)
     var id: String {
         switch self {
+        case .classicDart: return "classicDart"
         case .origami: return "origami"
         case .origamiLesson(let lesson): return "origami_\(lesson.rawValue)"
+        case .resumeOrigami(let lesson): return "resume_origami_\(lesson.rawValue)"
         case .everyday(let id): return id.rawValue
         case .product: return "aeris"
         case .equipment(let id): return "equipment_\(id.rawValue)"
@@ -13,8 +15,9 @@ private enum TutorialDestination: Identifiable {
     }
     var title: String {
         switch self {
+        case .classicDart: return OrigamiLesson.dart.title
         case .origami: return "Origami"
-        case .origamiLesson(let lesson): return lesson.title
+        case .origamiLesson(let lesson), .resumeOrigami(let lesson): return lesson.title
         case .everyday(let id):
             switch id {
             case .tShirt: return "T-shirt"
@@ -29,8 +32,10 @@ private enum TutorialDestination: Identifiable {
     }
     var accessibilityID: String {
         switch self {
+        case .classicDart: return "hubClassicDart"
         case .origami: return "hubOrigami"
         case .origamiLesson(let lesson): return "hubOrigamiLesson_\(lesson.rawValue)"
+        case .resumeOrigami(let lesson): return "hubResume_origami_\(lesson.rawValue)"
         case .everyday(let id): return "hubCourse_\(id.rawValue)"
         case .product: return "hubProductManual"
         case .equipment(let id): return "hubEquipment_\(id.rawValue)"
@@ -64,7 +69,7 @@ private enum CatalogSection: String, Identifiable {
 
 enum TutorialColors {
     static let ink = Color(red: 0.13, green: 0.16, blue: 0.15)
-    static let muted = Color(red: 0.45, green: 0.49, blue: 0.47)
+    static let muted = Color(red: 0.38, green: 0.43, blue: 0.41)
     static let paper = Color(red: 0.969, green: 0.945, blue: 0.890)
     static let line = Color(red: 0.90, green: 0.915, blue: 0.905)
     static let orange = Color(red: 0.14, green: 0.29, blue: 0.25)
@@ -97,9 +102,9 @@ enum HomeCard {
 /// A visual library. The object is the entry point; explanations live in context.
 struct ProtactaHomeView: View {
     @State private var destination: TutorialDestination?
-    @State private var resumeOrigamiLesson: OrigamiLesson?
     @State private var filter: CatalogFilter = .all
     @State private var progressRevision = 0
+    @State private var origamiProgressStore: LearningProgressStore?
     @State private var showAbout = false
     @State private var showIntroduction = false
     @State private var replayIntroductionAfterAbout = false
@@ -111,8 +116,8 @@ struct ProtactaHomeView: View {
     @State private var consideredIntroduction = false
     private let introductionPreferences = FirstRunIntroductionPreferences.appDefault()
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let progressStore = EverydayTutorialProgressStore.appDefault()
-    private let origamiProgressStore = LearningProgressStore()
     private var visibleSections: [CatalogSection] {
         switch filter {
         case .all: return [.clothes, .knots, .equipment]
@@ -156,7 +161,12 @@ struct ProtactaHomeView: View {
                             ForEach(resumes) { resumeCard($0) }
                         }
                     }
-                    if filter == .all { featuredOrigami }
+                    if filter == .all {
+                        VStack(alignment: .leading, spacing: 14) {
+                            featuredOrigami
+                            classicDartEntry
+                        }
+                    }
                     if filter == .origami { origamiGrid }
                     ForEach(visibleSections) { section in
                         VStack(alignment: .leading, spacing: 16) {
@@ -174,10 +184,16 @@ struct ProtactaHomeView: View {
                 .toolbar(.hidden, for: .navigationBar)
         }
         .accessibilityIdentifier("tutorialHub")
-        .fullScreenCover(item: $destination, onDismiss: { progressRevision += 1; resumeOrigamiLesson = nil }) { selected in
+        .fullScreenCover(item: $destination, onDismiss: { progressRevision += 1 }) { selected in
             switch selected {
-            case .origami: PaperStepsView(onExit: { destination = nil }, resumeLesson: resumeOrigamiLesson)
-            case .origamiLesson(let lesson): PaperStepsView(onExit: { destination = nil }, openLesson: lesson)
+            case .classicDart:
+                PaperStepsView(onExit: { destination = nil }, progressStore: origamiProgressStore, opensClassicDart: true)
+            case .origami:
+                PaperStepsView(onExit: { destination = nil }, progressStore: origamiProgressStore)
+            case .resumeOrigami(let lesson):
+                PaperStepsView(onExit: { destination = nil }, progressStore: origamiProgressStore, resumeLesson: lesson)
+            case .origamiLesson(let lesson):
+                PaperStepsView(onExit: { destination = nil }, progressStore: origamiProgressStore, openLesson: lesson)
             case .everyday(let id): EverydayTutorialPlayer(courseID: id, onExit: { destination = nil })
             case .product: AerisManualModuleView(onExit: { destination = nil })
             case .equipment(let id): EquipmentTutorialEntry(id: id, onExit: { destination = nil })
@@ -213,6 +229,7 @@ struct ProtactaHomeView: View {
         }
         .onAppear {
             guard !consideredIntroduction else { return }
+            origamiProgressStore = LessonController.makeProgressStore()
             consideredIntroduction = true
             showIntroduction = introductionPreferences.shouldPresent
         }
@@ -228,9 +245,37 @@ struct ProtactaHomeView: View {
                     .foregroundStyle(TutorialColors.muted)
             }.padding(.horizontal, 16).frame(minHeight: 48)
                 .background(.white, in: RoundedRectangle(cornerRadius: 16))
-                .contentShape(RoundedRectangle(cornerRadius: 16))
+                .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("hubPhoneSetup")
             .accessibilityHint("Learn where to place your phone and paper.")
+    }
+
+    private var classicDartEntry: some View {
+        let _ = progressRevision
+        let saved = origamiProgressStore?.record(for: .dart)
+        let title: String
+        if saved?.completed == true { title = "View finished fold" }
+        else if let saved, saved.stepIndex > 0 { title = "Continue · Step \(saved.stepIndex)" }
+        else if saved != nil { title = "Continue folding" }
+        else { title = "Try the first fold" }
+
+        return Button { destination = .classicDart } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "play.fill").font(.system(size: 15, weight: .semibold))
+                    .frame(width: 40, height: 40).background(.white, in: Circle())
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title).font(.subheadline.weight(.semibold))
+                    Text(OrigamiLesson.dart.title).font(.caption).foregroundStyle(TutorialColors.muted)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "arrow.right").font(.subheadline.weight(.semibold))
+            }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                .foregroundStyle(Brand.forest)
+                .background(.white.opacity(0.6), in: RoundedRectangle(cornerRadius: 16))
+        }.buttonStyle(.plain)
+            .accessibilityLabel("\(OrigamiLesson.dart.title), \(title)")
+            .accessibilityHint("A4 paper · 10 folds")
+            .accessibilityIdentifier(TutorialDestination.classicDart.accessibilityID)
     }
 
     private var featuredOrigami: some View {
@@ -275,7 +320,7 @@ struct ProtactaHomeView: View {
 
     private func origamiCard(_ lesson: OrigamiLesson) -> some View {
         let _ = progressRevision
-        let record = origamiProgressStore.record(for: lesson)
+        let record = origamiProgressStore?.record(for: lesson)
         return Button { destination = .origamiLesson(lesson) } label: {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear.aspectRatio(0.95, contentMode: .fit)
@@ -302,7 +347,7 @@ struct ProtactaHomeView: View {
 
     private func plate(for choice: TutorialDestination) -> LinearGradient {
         switch choice {
-        case .origami, .origamiLesson: return HomeCard.origamiPlate
+        case .classicDart, .origami, .origamiLesson, .resumeOrigami: return HomeCard.origamiPlate
         case .everyday: return HomeCard.everydayPlate
         case .equipment, .product: return HomeCard.equipmentPlate
         }
@@ -325,12 +370,12 @@ struct ProtactaHomeView: View {
     private func resumeLessons() -> [ResumeTarget] {
         let _ = progressRevision
         var targets: [ResumeTarget] = []
-        for point in origamiProgressStore.inProgress(limit: 3) {
+        for point in origamiProgressStore?.inProgress(limit: 3) ?? [] where filter == .all || filter == .origami {
             targets.append(ResumeTarget(kind: .origami(point.lesson), title: point.lesson.title,
                                         detail: point.stepIndex == 0 ? "Not started yet" : "Step \(point.stepIndex) of \(point.lesson.lastStep)",
                                         updatedAt: point.updatedAt))
         }
-        for point in progressStore.inProgress(limit: 3) {
+        for point in progressStore.inProgress(limit: 3) where filter == .all || filter == .everyday {
             let total = EverydayTutorialCourse.course(point.courseID).actions.count
             targets.append(ResumeTarget(kind: .everyday(point.courseID), title: TutorialDestination.everyday(point.courseID).title,
                                         detail: "Step \(point.currentAction) of \(total)", updatedAt: point.updatedAt))
@@ -340,7 +385,7 @@ struct ProtactaHomeView: View {
 
     private func startResume(_ target: ResumeTarget) {
         switch target.kind {
-        case .origami(let lesson): resumeOrigamiLesson = lesson; destination = .origami
+        case .origami(let lesson): destination = .resumeOrigami(lesson)
         case .everyday(let id): destination = .everyday(id)
         }
     }
@@ -370,6 +415,21 @@ struct ProtactaHomeView: View {
             if case .everyday(let id) = choice { return progressStore.load(courseID: id) }
             return nil
         }()
+        let actionCount: Int? = {
+            if case .everyday(let id) = choice { return EverydayTutorialCourse.course(id).actions.count }
+            return nil
+        }()
+        let detail: String? = actionCount.map { count in
+            if saved?.completed == true { return "Completed" }
+            if let saved { return "Continue · \(saved.currentAction)/\(count)" }
+            return "\(count) actions"
+        }
+        let accessibilityProgress: String = {
+            guard let count = actionCount else { return "" }
+            guard let saved else { return "\(count) actions" }
+            if saved.completed { return "Completed by your confirmation" }
+            return "Continue at action \(saved.currentAction) of \(count). \(saved.confirmedCount) actions confirmed by you."
+        }()
         return Button { destination = choice } label: {
             VStack(alignment: .leading, spacing: 12) {
                 Color.clear.aspectRatio(0.95, contentMode: .fit)
@@ -382,11 +442,21 @@ struct ProtactaHomeView: View {
                                 .padding(12).accessibilityHidden(true)
                         }
                     }.clipped().allowsHitTesting(false).accessibilityHidden(true)
-                Text(choice.title).font(.body.weight(.medium)).lineLimit(2)
-                    .padding(.horizontal, 2)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(choice.title).font(.body.weight(.medium)).lineLimit(2)
+                    if let detail {
+                        Text(detail).font(.caption).foregroundStyle(TutorialColors.muted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let saved, let actionCount, saved.confirmedCount > 0, !saved.completed {
+                        ProgressView(value: Double(saved.confirmedCount), total: Double(actionCount))
+                            .tint(TutorialColors.orange).padding(.top, 3)
+                            .accessibilityHidden(true)
+                    }
+                }.padding(.horizontal, 2)
             }.contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityLabel(choice.title)
-            .accessibilityValue(saved?.completed == true ? "Completed by your confirmation" : "")
+            .accessibilityValue(accessibilityProgress)
             .accessibilityIdentifier(choice.accessibilityID)
     }
 
@@ -394,17 +464,27 @@ struct ProtactaHomeView: View {
     private func thumbnail(_ choice: TutorialDestination) -> some View {
         switch choice {
         case .everyday(let id):
-            EverydayTutorialVisual(courseID: id.rawValue, stepIndex: 0, progress: 0, showsCaption: false, showsAnnotations: false, showsPartLabels: false)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .origami:
+            modelThumbnail(everydayThumbnail(id), symbol: "square.stack.3d.up")
+                .shadow(color: .black.opacity(0.12), radius: 7, y: 9)
+        case .classicDart, .origami:
             modelThumbnail("dart-preview", symbol: "paperplane")
                 .shadow(color: .black.opacity(0.15), radius: 9, y: 12)
-        case .origamiLesson(let lesson):
+        case .origamiLesson(let lesson), .resumeOrigami(let lesson):
             Image(systemName: lesson.symbol).font(.system(size: 44, weight: .light)).foregroundStyle(.white)
         case .equipment(let id):
             modelThumbnail(id == .gearmotor ? "gearmotor-preview" : "turbofan-preview", symbol: id.symbol)
         case .product:
             modelThumbnail("aeris-preview", symbol: "air.purifier")
+        }
+    }
+
+    private func everydayThumbnail(_ id: EverydayTutorialID) -> String {
+        switch id {
+        case .towel: return "everyday-towel-preview"
+        case .tShirt: return "everyday-t-shirt-preview"
+        case .flatBedsheet: return "everyday-bedsheet-preview"
+        case .squareKnot: return "everyday-square-knot-preview"
+        case .fourInHand: return "everyday-necktie-preview"
         }
     }
 
@@ -438,7 +518,7 @@ struct ProtactaHomeView: View {
                     Text("Choose a tutorial, watch the movement, then try it yourself.").font(.title3)
                     Text("Everyday skill confirmations save on this device. Camera checks are available in the Classic Dart practice; everyday skills use continuous 3D movement and optional tabletop AR.")
                         .accessibilityIdentifier("hubCapabilityScope")
-                    Text("Classic Dart's paper alignment and outline checks are experimental. Everyday AR places a virtual teaching reference beside your object; it does not inspect or align to your clothes or knots. Equipment AR places a virtual teaching model; it does not recognise or register to real equipment.")
+                    Text("Classic Dart's paper alignment and outline checks are experimental. Towel, T-shirt and bedsheet AR offer manual three-point alignment to a flat item. Knots and ties use a tabletop visual reference. Everyday guides do not track changing fabric or strands, or grade your work. Equipment AR places a virtual teaching model; it does not recognise or register to real equipment.")
                     Text("AERIS One is an original concept product. These walkthroughs are demonstrations, not manufacturer-approved maintenance instructions. Equipment and everyday courses still need independent learning review.")
                     Text("English narration and supported voice commands run on device. Cloud AI chat is not enabled. Normal use does not save or upload camera photos; progress stays on this device.")
                 }.font(.body).padding(24)
@@ -465,7 +545,7 @@ struct PlansView: View {
 
     private let plans: [Plan] = [
         Plan(name: "Free", price: "QAR 0", period: nil, note: "Try before you pay",
-             features: ["3 starter lessons (with AR guide)", "3D steps you can rotate", "Voice control"],
+             features: ["2 starter lessons (with AR guide)", "3D steps you can rotate", "Voice control"],
              recommended: false),
         Plan(name: "ProTacta Plus", price: "QAR 29", period: "month", note: "or QAR 218 / year",
              features: ["Full lesson library", "AR guide on your own object", "3D steps you can rotate",

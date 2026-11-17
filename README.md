@@ -3,11 +3,15 @@
 An iPhone and iPad learning app that demonstrates practical tasks with animated
 3D lessons, tabletop AR and hands-free English voice controls.
 
-**Current development build: 0.1.0 (26)** · iOS / iPadOS 17+ · SwiftUI,
+**Current development candidate: 1.0 (38)** · iOS / iPadOS 17+ · SwiftUI,
 RealityKit, ARKit, Vision, Speech and AVFoundation.
 
-Build 24 is available to the existing external TestFlight group. See the
-[release record](docs/TESTFLIGHT_BUILD_24.md) for the verified distribution state.
+Build 38 integrates Imron's latest home and playback UX with the latest local
+3D models, white fabric materials and lesson behavior. See the
+[integration record](docs/IMRON_UX_MODEL_INTEGRATION_2026-11-17.md) for validation
+and remaining device checks. Earlier TestFlight distribution is documented in
+the [Build 24 release record](docs/TESTFLIGHT_BUILD_24.md); it does not establish
+distribution of this candidate.
 
 ## Current experience
 
@@ -30,7 +34,11 @@ Build 24 is available to the existing external TestFlight group. See the
 - **Hands-free practice:** on-device English narration and commands, compact AR
   controls and an optional voice-only fullscreen layout.
 - **Everyday skills:** T-shirt, towel, flat bedsheet, square knot and four-in-hand
-  tie courses, with animated movements and tabletop AR references.
+  tie courses, with all 25 animated movements and tabletop AR references. The
+  draggable movement timeline is visible in both studio and AR.
+- **Manual cloth alignment:** fit a flat towel, short-sleeve T-shirt or flat
+  bedsheet with three learner-selected landmarks. A translucent starting guide
+  shows the real fabric beneath it. This does not track moving or deforming cloth.
 - **3D equipment:** gearmotor and educational turbofan module animations with
   studio and tabletop AR views; an integrated AERIS concept-product manual.
 
@@ -43,6 +51,12 @@ remain available. See [origami hand contact](docs/ORIGAMI_CONTACT_BUILD23.md).
 
 Tabletop AR is a manually placed virtual reference. Its world tracking does not
 automatically align a model with a real sheet, garment or machine.
+
+Everyday cloth lessons additionally offer **AR → More → Align with my item**.
+This explicitly calibrates the initial flat shape on a detected horizontal
+surface. Keep the item in place and re-align if it moves. Knots and ties use a
+tabletop reference, not on-body tracking. The [everyday development goal](docs/EVERYDAY_SPATIAL_GOAL_2026-11-16.md)
+records the five-course scope and separate local/physical acceptance gates.
 
 The separate experimental **Guide on my paper** mode supports a flat A4 sheet
 and the Classic Dart centre crease. A separate printed **PTC2 revision-2** sheet

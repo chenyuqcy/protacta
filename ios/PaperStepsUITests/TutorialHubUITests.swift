@@ -9,11 +9,96 @@ final class TutorialHubUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--ui-testing", "--tutorial-hub", "--reset-everyday-progress"]
+        app.launchEnvironment["PROTACTA_PROGRESS_TEST_SUITE"] = "org.realitycore.protacta.prototype.uitests.\(UUID().uuidString)"
+        app.launchArguments = ["--ui-testing", "--tutorial-hub", "--reset-everyday-progress", "--reset-learning-progress"]
         app.launch()
         XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 15))
     }
     override func tearDownWithError() throws { app?.terminate(); app = nil }
+
+    func testClassicDartCardStartsFirstFoldAndRestoresPausedProgressAfterRelaunch() throws {
+        let card = app.buttons["hubClassicDart"]
+        XCTAssertTrue(card.isHittable)
+        XCTAssertTrue(card.label.contains("Try the first fold"))
+        capture("Classic_Dart_first_fold_home_card")
+        card.tap()
+
+        let counter = app.staticTexts["stepCounter"]
+        let timeline = app.sliders["foldTimeline"]
+        XCTAssertTrue(counter.waitForExistence(timeout: 10))
+        XCTAssertEqual(counter.label, "STEP 1 OF 10")
+        XCTAssertEqual(app.staticTexts["stepTitle"].label, "Make the center crease")
+        XCTAssertTrue(timeline.isHittable)
+        XCTAssertEqual(app.foldProgressValue, "0%")
+        XCTAssertFalse(app.buttons["startLesson"].exists)
+
+        let next = app.buttons["nextStep"]
+        XCTAssertTrue(next.label.contains("Play"))
+        next.tap()
+        let firstFoldFinished = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", "Next"), object: next)
+        XCTAssertEqual(XCTWaiter.wait(for: [firstFoldFinished], timeout: 5), .completed)
+        XCTAssertEqual(app.foldProgressValue, "100%")
+        next.tap()
+        let stepTwo = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "STEP 2 OF 10"), object: counter)
+        XCTAssertEqual(XCTWaiter.wait(for: [stepTwo], timeout: 5), .completed)
+        timeline.adjust(toNormalizedSliderPosition: 0.4)
+        let pausedProgress = try XCTUnwrap(app.foldProgressValue)
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
+        app.buttons["returnTutorialHub"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+        XCTAssertTrue(card.label.contains("Continue · Step 2"))
+        capture("Classic_Dart_resume_home_card")
+        let resume = app.buttons["hubResume_origami_dart"]
+        XCTAssertTrue(resume.isHittable, "Imron's Resume card must read the same saved fold")
+        resume.tap()
+        XCTAssertTrue(counter.waitForExistence(timeout: 10))
+        XCTAssertEqual(counter.label, "STEP 2 OF 10")
+        XCTAssertEqual(app.foldProgressValue, pausedProgress)
+        app.buttons["returnTutorialHub"].tap()
+        XCTAssertTrue(card.waitForExistence(timeout: 5))
+
+        app.terminate()
+        app.launchArguments = ["--ui-testing", "--tutorial-hub"]
+        app.launch()
+        XCTAssertTrue(card.waitForExistence(timeout: 15))
+        XCTAssertTrue(card.label.contains("Continue · Step 2"))
+        card.tap()
+        XCTAssertTrue(counter.waitForExistence(timeout: 10))
+        XCTAssertEqual(counter.label, "STEP 2 OF 10")
+        XCTAssertEqual(app.foldProgressValue, pausedProgress)
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
+    }
+
+    func testImronPlansAndOrigamiGridKeepTheLatestPlayerReachable() {
+        app.buttons["hubPricing"].tap()
+        XCTAssertTrue(app.buttons["closePlans"].waitForExistence(timeout: 5))
+        capture("Build38_Imron_Plans_preview")
+        app.buttons["plansPlan_0"].tap()
+        let starterLessons = app.staticTexts["2 starter lessons (with AR guide)"]
+        reveal(starterLessons)
+        XCTAssertTrue(starterLessons.exists)
+        let disclaimer = app.staticTexts["The dart and fox lessons stay free. Prices in Qatari Riyal. Prototype preview - no charges are made."]
+        reveal(disclaimer)
+        XCTAssertTrue(disclaimer.isHittable)
+        app.buttons["closePlans"].tap()
+        XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 5))
+        app.buttons["hubOrigami"].tap()
+        let dart = app.buttons["hubOrigamiLesson_dart"]
+        XCTAssertTrue(dart.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["hubOrigamiLesson_fox"].exists)
+        capture("Build38_Imron_Origami_grid")
+        dart.tap()
+        XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 10))
+        app.buttons["startLesson"].tap()
+        XCTAssertTrue(app.buttons["autoPlayToggle"].waitForExistence(timeout: 5))
+        for id in ["speed_half", "speed_one", "speed_two"] {
+            XCTAssertTrue(app.buttons[id].isHittable)
+        }
+        app.buttons["nextStep"].tap()
+        XCTAssertTrue(app.sliders["foldTimeline"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.sliders["foldTimeline"].isHittable)
+        capture("Build38_Imron_player_with_latest_Dart")
+    }
 
     func testOrigamiLeadsTheCatalogAndFiltersKeepOtherTutorialsReachable() {
         let origami = app.buttons["hubOrigami"]
@@ -98,9 +183,12 @@ final class TutorialHubUITests: XCTestCase {
             for action in 1...count {
                 XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION \(action) OF \(count)")
                 let slider = app.sliders["everydayProgressSlider"]
-                reveal(slider); slider.adjust(toNormalizedSliderPosition: 1)
-                let checkpoints: [String: [Int]] = ["t_shirt": [1, 2], "square_knot": [2, 4], "four_in_hand": [2, 4, 5]]
-                if checkpoints[id]?.contains(action) == true { capture("\(id)_action\(action)_target") }
+                reveal(slider); slider.adjust(toNormalizedSliderPosition: 0.5)
+                capture("\(id)_action\(action)_middle")
+                XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION \(action) OF \(count)",
+                               "Viewing a movement must not confirm the learner's physical action")
+                slider.adjust(toNormalizedSliderPosition: 1)
+                capture("\(id)_action\(action)_target")
                 if action == count { capture("\(id)_final_visual") }
                 tapPlayer("everydayConfirm")
             }
@@ -108,12 +196,12 @@ final class TutorialHubUITests: XCTestCase {
             XCTAssertTrue(app.staticTexts["everydayCompletion"].label.contains("confirmed by you"))
             app.buttons["everydayClose"].tap()
             XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 5))
-            if id == "towel" {
-                tapHome("hubCourse_towel")
-                XCTAssertTrue(app.staticTexts["everydayCompletion"].waitForExistence(timeout: 5))
-                XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "everydayViewport").firstMatch.value as? String == "Action 3, movement 100 percent", "A restored completion must show the final visual")
-                app.buttons["everydayClose"].tap()
-            }
+            tapHome("hubCourse_\(id)")
+            XCTAssertTrue(app.staticTexts["everydayCompletion"].waitForExistence(timeout: 5))
+            XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "everydayViewport").firstMatch.value as? String,
+                           "Action \(count), movement 100 percent", "A restored completion must show the final visual")
+            capture("\(id)_restored_complete")
+            app.buttons["everydayClose"].tap()
         }
     }
 
@@ -182,6 +270,19 @@ final class TutorialHubUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION 4 OF 7")
         tapPlayer("everydayShowTarget")
         capture("Tie_neck_loop_after_band")
+        for action in 5...7 {
+            tapPlayer("everydayConfirm")
+            XCTAssertEqual(app.staticTexts["everydayCounter"].label, "ACTION \(action) OF 7")
+            let slider = app.sliders["everydayProgressSlider"]
+            reveal(slider)
+            slider.adjust(toNormalizedSliderPosition: 0.5)
+            capture("Tie_action\(action)_middle")
+            slider.adjust(toNormalizedSliderPosition: 1)
+            capture("Tie_action\(action)_target")
+        }
+        tapPlayer("everydayConfirm")
+        XCTAssertTrue(app.staticTexts["everydayCompletion"].waitForExistence(timeout: 5))
+        capture("Tie_complete_threaded_reference")
     }
 
     func testTabletLandscapeCanPlayAndConfirmAnEverydayAction() throws {

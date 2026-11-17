@@ -40,6 +40,46 @@ final class EverydayKnotGeometryTests: XCTestCase {
         }
     }
 
+    func testSmallTimelineChangesDoNotFlipUprightStrandsOrTheirKeeper() {
+        // In the old world-up framing, the fourth/fifth tie actions jumped by
+        // up to 47 mm when the timeline moved only 0.5%. Sampling endpoints or
+        // the midpoint never caught that visible twist.
+        for (course, count) in [(EverydayTutorialID.squareKnot, 5), (.fourInHand, 7)] {
+            for action in 0..<count {
+                var previous = EverydayKnotGeometry.parts(courseID: course, actionIndex: action, progress: 0)
+                for sample in 1...100 {
+                    let current = EverydayKnotGeometry.parts(courseID: course, actionIndex: action,
+                                                             progress: Double(sample) / 100)
+                    for (a, b) in zip(previous, current) {
+                        let displacement = zip(a.positions, b.positions).map { simd_distance($0, $1) }.max() ?? 0
+                        XCTAssertLessThan(displacement, 0.0075,
+                                          "\(course) action \(action), sample \(sample): \(a.id) must not flip")
+                    }
+                    previous = current
+                }
+            }
+        }
+    }
+
+    func testTieRibbonDoesNotReverseItsCrossSectionBetweenNeighbouringRings() {
+        // Temporal continuity alone misses a twist seam inside a single frame.
+        for action in 0..<7 {
+            for sample in 0...20 {
+                let parts = EverydayKnotGeometry.parts(courseID: .fourInHand, actionIndex: action,
+                                                         progress: Double(sample) / 20)
+                for part in parts where !part.id.hasPrefix("tie-collar") {
+                    let across = stride(from: 0, to: part.positions.count, by: 4).map { ring in
+                        simd_normalize(part.positions[ring + 1] - part.positions[ring])
+                    }
+                    for ring in 1..<across.count {
+                        XCTAssertGreaterThan(simd_dot(across[ring - 1], across[ring]), 0.5,
+                                             "Action \(action), sample \(sample), \(part.id): twist seam at \(ring)")
+                    }
+                }
+            }
+        }
+    }
+
     func testSampledFramesAreFiniteBoundedAndHaveNondegenerateFaces() {
         for (course, count) in [(EverydayTutorialID.squareKnot, 5), (.fourInHand, 7)] {
             for action in 0..<count {
@@ -108,7 +148,8 @@ final class EverydayKnotGeometryTests: XCTestCase {
             }
         }
         let keeper = try XCTUnwrap(parts.first { $0.id == "tie-rear-keeper" })
-        let rearBandCenter = centers(keeper)[40]
+        let keeperCenters = centers(keeper)
+        let rearBandCenter = keeperCenters[keeperCenters.count / 2]
         func nearest(to point: SIMD3<Float>, in part: EverydayMeshPart) -> SIMD3<Float> {
             centers(part).min {
                 simd_length_squared(SIMD2($0.x - point.x, $0.z - point.z)) <
@@ -120,6 +161,84 @@ final class EverydayKnotGeometryTests: XCTestCase {
         XCTAssertLessThan(simd_distance(SIMD2(narrow.x, narrow.z), SIMD2(rearBandCenter.x, rearBandCenter.z)), 0.004)
         XCTAssertGreaterThan(narrow.y, rearBandCenter.y + 0.002)
         XCTAssertLessThan(narrow.y, wide.y - 0.002)
+    }
+
+    func testThreadedBladePassesBehindTheFrontBandBeforeAndAfterDressing() throws {
+        // Ray intersections test rendered surfaces rather than just centreline
+        // coordinates. The last route segment is W descending through the band;
+        // the earlier crossing must cover it from the front (+Y).
+        for (action, diagramZ) in [(4, Float(275)), (5, Float(185)), (6, Float(185))] {
+            let wide = try XCTUnwrap(EverydayKnotGeometry.parts(courseID: .fourInHand, actionIndex: action, progress: 1)
+                .first { $0.id == "tie-wide-W" })
+            let hits = surfaceHits(wide, x: 0.0022, z: (diagramZ - 210) * 0.0022)
+            let lastRing = try XCTUnwrap(hits.map(\.ring).max())
+            let blade = try XCTUnwrap(hits.filter { $0.ring >= lastRing - 2 }.map(\.height).max())
+            let band = try XCTUnwrap(hits.filter { $0.ring < lastRing - 4 }.map(\.height).max())
+            XCTAssertGreaterThan(band, blade + 0.015, "Action \(action): W must pass behind the front band")
+        }
+    }
+
+    func testDressingTheKnotDoesNotRollTheFreeBladeEdgeOn() throws {
+        // Both endpoint silhouettes used to look broad while the interpolated
+        // blade turned sideways halfway through action 6. It is being pulled
+        // down, not twisted, so its lower straight section must stay readable.
+        for sample in 0...20 {
+            let wide = try XCTUnwrap(EverydayKnotGeometry.parts(courseID: .fourInHand, actionIndex: 5,
+                                                              progress: Double(sample) / 20)
+                .first { $0.id == "tie-wide-W" })
+            let ringCount = wide.positions.count / 4
+            for ring in Int(Float(ringCount) * 0.86)..<Int(Float(ringCount) * 0.96) {
+                let across = simd_normalize(wide.positions[ring * 4 + 1] - wide.positions[ring * 4])
+                XCTAssertLessThan(abs(across.y), 0.15, "The hanging blade must not roll edge-on")
+                XCTAssertLessThan(across.x, -0.90, "Keep a consistent width direction throughout dressing")
+            }
+        }
+    }
+
+    func testFinishedNarrowTailIsCoveredByTheWideBladeAcrossItsWidth() throws {
+        let parts = EverydayKnotGeometry.parts(courseID: .fourInHand, actionIndex: 6, progress: 1)
+        let wide = try XCTUnwrap(parts.first { $0.id == "tie-wide-W" })
+        let narrow = try XCTUnwrap(parts.first { $0.id == "tie-narrow-N" })
+        // The lower tail must be behind W at its edges too. Centreline-only
+        // checks missed the orange stripe from the previously twisted ribbon.
+        let tail = narrow.positions.filter { $0.z > (Float(245) - 210) * 0.0022 }
+        XCTAssertGreaterThan(tail.count, 10)
+        for point in tail {
+            let cover = try XCTUnwrap(surfaceHits(wide, x: point.x, z: point.z).map(\.height).max())
+            XCTAssertGreaterThan(cover, point.y + 0.003)
+        }
+    }
+
+    func testLoweredCollarActuallyCoversTheNeckBand() throws {
+        let parts = EverydayKnotGeometry.parts(courseID: .fourInHand, actionIndex: 6, progress: 1)
+        let neck = try XCTUnwrap(parts.first { $0.id == "tie-neck-loop" })
+        let collars = parts.filter { $0.id.hasPrefix("tie-collar") }
+        XCTAssertEqual(collars.count, 2)
+        // Exclude end caps where the band enters the knot; the collar must cover
+        // the rear and sides of the entire neck loop, not merely be present.
+        let ringCount = neck.positions.count / 4
+        for ring in stride(from: 2, to: ringCount - 2, by: 5) {
+            let center = neck.positions[(ring * 4)..<(ring * 4 + 4)].reduce(.zero, +) / 4
+            let cover = try XCTUnwrap(collars.flatMap { surfaceHits($0, x: center.x, z: center.z).map(\.height) }.max())
+            XCTAssertGreaterThan(cover, center.y + 0.015)
+        }
+    }
+
+    private func surfaceHits(_ part: EverydayMeshPart, x: Float, z: Float) -> [(ring: Int, height: Float)] {
+        var hits: [(ring: Int, height: Float)] = []
+        for offset in stride(from: 0, to: part.triangles.count, by: 3) {
+            let ids = part.triangles[offset..<(offset + 3)].map(Int.init)
+            let a = part.positions[ids[0]], b = part.positions[ids[1]], c = part.positions[ids[2]]
+            let determinant = (b.z - c.z) * (a.x - c.x) + (c.x - b.x) * (a.z - c.z)
+            guard abs(determinant) > 1e-10 else { continue }
+            let u = ((b.z - c.z) * (x - c.x) + (c.x - b.x) * (z - c.z)) / determinant
+            let v = ((c.z - a.z) * (x - c.x) + (a.x - c.x) * (z - c.z)) / determinant
+            let w = 1 - u - v
+            if min(u, min(v, w)) >= -0.0001 {
+                hits.append((ring: ids.min()! / 4, height: a.y * u + b.y * v + c.y * w))
+            }
+        }
+        return hits
     }
 
     func testMalformedInputsClampWithoutGeneratingInvalidMeshes() {

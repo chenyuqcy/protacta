@@ -69,13 +69,15 @@ struct PaperStepsView: View {
     let onExit: (() -> Void)?
     let resumeLesson: OrigamiLesson?
     let openLesson: OrigamiLesson?
-    init(onExit: (() -> Void)? = nil, resumeLesson: OrigamiLesson? = nil, openLesson: OrigamiLesson? = nil) {
+    init(onExit: (() -> Void)? = nil, progressStore: LearningProgressStore? = nil,
+         opensClassicDart: Bool = false, resumeLesson: OrigamiLesson? = nil, openLesson: OrigamiLesson? = nil) {
         self.onExit = onExit
         self.resumeLesson = resumeLesson
         self.openLesson = openLesson
+        _controller = StateObject(wrappedValue: LessonController(progressStore: progressStore, opensClassicDart: opensClassicDart))
     }
     @State private var didResume = false
-    @StateObject private var controller = LessonController()
+    @StateObject private var controller: LessonController
     @StateObject private var purchases = PurchaseStore()
     @StateObject private var voice = VoiceGuide()
     @Environment(\.scenePhase) private var scenePhase
@@ -602,7 +604,10 @@ struct PaperStepsView: View {
     }
 
     private var lessonCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let showsComparison = !controller.completed &&
+            DartFoldComparison(lesson: controller.lesson, stepIndex: controller.stepIndex) != nil
+        let showsFirstFoldPlay = controller.lesson == .dart && controller.stepIndex == 1 && controller.progress == 0
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(controller.completed ? "LESSON COMPLETE" : controller.stepIndex == 0 ? "BEFORE YOU BEGIN" : "STEP \(controller.stepIndex) OF \(controller.lastStep)")
                     .font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
@@ -650,7 +655,7 @@ struct PaperStepsView: View {
                                 .accessibilityIdentifier("speed_\(rate == 0.5 ? "half" : rate == 1.0 ? "one" : "two")")
                         }
                     }.padding(3).background(Palette.line.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-                        .accessibilityIdentifier("playbackSpeedControl")
+                        .accessibilityElement(children: .contain)
                     Spacer(minLength: 8)
                     Button { voice.stop(); controller.setAutoPlay(!controller.autoPlay) } label: {
                         Label(controller.autoPlay ? "Auto-play on" : "Auto-play",
@@ -671,18 +676,23 @@ struct PaperStepsView: View {
                 }.accessibilityLabel("Back").accessibilityIdentifier("backStep")
                     .disabled(controller.stepIndex == 0 || !controller.canAnimate)
                 primaryButton(controller.autoPlay ? "Next fold" : controller.isPlaying ? "Pause fold" : controller.nextTitle,
-                              symbol: controller.autoPlay ? "forward.fill" : controller.isPlaying ? "pause.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
+                              symbol: controller.autoPlay ? "forward.fill" : controller.isPlaying ? "pause.fill" : showsFirstFoldPlay ? "play.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
                     voice.contextDidChange()
                     if controller.autoPlay { controller.skipAhead() }
                     else if controller.isPlaying { controller.togglePlayback() }
                     else { controller.next() }
                 }.disabled(!controller.canAnimate)
-                Button { showFoldHelp = true } label: {
+                Button {
+                    if showsComparison { controller.pauseAndSave() }
+                    showFoldHelp = true
+                } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: "questionmark").font(.system(size: 16, weight: .semibold))
-                        Text("Help").font(.system(size: 10, weight: .medium))
+                        Image(systemName: showsComparison ? "rectangle.split.2x1" : "questionmark")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(showsComparison ? "Compare" : "Help").font(.system(size: 10, weight: .medium))
                     }.frame(width: 50, height: 50).background(Palette.line.opacity(0.55), in: Circle())
-                }.accessibilityLabel("Help").accessibilityIdentifier("foldHelp")
+                }.accessibilityLabel(showsComparison ? "Compare before and after" : "Help")
+                    .accessibilityIdentifier("foldHelp")
             }.buttonStyle(.plain).padding(.top, 6)
         }.padding(.horizontal, 24).padding(.top, 22).padding(.bottom, 20)
             .frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
@@ -885,7 +895,7 @@ struct PaperStepsView: View {
                     Text("Payment is charged to your Apple Account when you confirm. Subscriptions renew automatically unless canceled at least 24 hours before the current period ends. Manage or cancel in Settings → your name → Subscriptions.")
                         .font(.caption2).foregroundStyle(Palette.muted).lineSpacing(3)
                     HStack(spacing: 20) {
-                        Link("Privacy Policy", destination: URL(string: "https://realitycore.org/foliafold/privacy")!)
+                        Link("Privacy Policy", destination: URL(string: AppReleaseIdentity.privacyPolicyURL)!)
                             .accessibilityIdentifier("purchasePrivacy")
                         Link("Terms of Use (EULA)", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                             .accessibilityIdentifier("purchaseTerms")

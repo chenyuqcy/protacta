@@ -14,7 +14,7 @@ final class AnimalLessonUITests: XCTestCase {
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
-        _ = try await storeSession.buyProduct(identifier: "org.realitycore.protacta.prototype.complete")
+        _ = try await storeSession.buyProduct(identifier: AppReleaseIdentity.productPrefix + ".complete")
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()
@@ -166,7 +166,7 @@ final class LibraryPurchaseUITests: XCTestCase {
     private var storeSession: SKTestSession!
     private var expectedPrice: String!
     private var expectedPlanPrices = [String: String]()
-    private let productID = "org.realitycore.protacta.prototype.complete"
+    private let productID = AppReleaseIdentity.productPrefix + ".complete"
 
     override func setUp() async throws {
         continueAfterFailure = false
@@ -294,7 +294,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         assertPaywall()
         for (plan, term) in [("monthly", "/month"), ("annual", "/year")] {
             selectPlan(plan)
-            let id = "org.realitycore.protacta.prototype.\(plan)"
+            let id = AppReleaseIdentity.productPrefix + ".\(plan)"
             let price = expectedPlanPrices[id]!
             let choice = app.buttons["purchasePlan_\(plan)"]
             XCTAssertTrue(choice.label.contains(price))
@@ -320,7 +320,7 @@ final class LibraryPurchaseUITests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [unlocked], timeout: 15), .completed)
         absent(app.buttons["closeUnlock"])
         XCTAssertTrue(storeSession.allTransactions().contains {
-            $0.productIdentifier == "org.realitycore.protacta.prototype.monthly"
+            $0.productIdentifier == AppReleaseIdentity.productPrefix + ".monthly"
         }, "The selected monthly plan must be the product purchased through the real paywall")
         capture("Subscriptions_Monthly_LOCAL_PURCHASE_UNLOCKED")
     }

@@ -11,6 +11,18 @@ struct FoldHelp {
         let step = steps[stepIndex]
 
         switch (lesson, stepIndex) {
+        case (.dart, 7):
+            return FoldHelp(
+                simplerInstruction: "Lift the sheet with the nose pointing away. Bring the left half behind the right on the center crease.",
+                checkpoint: "The center crease is now the bottom edge. The pointed nose layers are visible on the outside.",
+                commonMistake: "If the nose layers disappear between the halves, reopen the sheet and swing the left half underneath."
+            )
+        case (.dart, 8):
+            return FoldHelp(
+                simplerInstruction: "Hold the body steady. Bring the highlighted outer flap down until its long edge meets the bottom edge.",
+                checkpoint: "The first wing lies against the body with its long edge aligned along the bottom. The other flap is still upright.",
+                commonMistake: "Move only the highlighted outer flap. Leave the other flap in place for the next step."
+            )
         case (.crane, 3):
             return FoldHelp(
                 simplerInstruction: "Lift the top flap. Open the pocket inside it, then flatten that pocket into a diamond.",

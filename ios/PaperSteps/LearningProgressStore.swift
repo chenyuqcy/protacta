@@ -14,9 +14,16 @@ final class LearningProgressStore {
         let slowMotion: Bool
         let hintsVisible: Bool
         let updatedAt: Date
+        // Optional keeps schema-1 archives from earlier app versions readable.
+        let playbackRate: Double?
+        var effectivePlaybackRate: Double { playbackRate ?? (slowMotion ? 0.5 : 1) }
     }
 
-    static let storageKey = "org.realitycore.protacta.prototype.learningProgress"
+    static func isSupportedPlaybackRate(_ rate: Double) -> Bool {
+        rate.isFinite && [0.5, 1.0, 2.0].contains(rate)
+    }
+
+    static let storageKey = AppReleaseIdentity.productPrefix + ".learningProgress"
     private static let schemaVersion = 1
     private let defaults: UserDefaults?
     private let now: () -> Date
@@ -54,16 +61,19 @@ final class LearningProgressStore {
             if left.updatedAt != right.updatedAt { return left.updatedAt > right.updatedAt }
             return left.lesson.rawValue < right.lesson.rawValue
         }
-        return Array(sorted.prefix(limit))
+        return Array(sorted.prefix(max(0, limit)))
     }
 
     @discardableResult
     func save(lesson: OrigamiLesson, stepIndex: Int, progress: Float, completed: Bool,
-              slowMotion: Bool, hintsVisible: Bool) -> Bool {
+              slowMotion: Bool, hintsVisible: Bool, playbackRate: Double? = nil) -> Bool {
+        let rate = playbackRate ?? (slowMotion ? 0.5 : 1)
+        guard Self.isSupportedPlaybackRate(rate) else { return false }
         let record = Record(lessonID: lesson.rawValue,
                             contentRevision: Self.contentRevisions[lesson.rawValue] ?? "",
                             stepIndex: stepIndex, progress: progress, completed: completed,
-                            slowMotion: slowMotion, hintsVisible: hintsVisible, updatedAt: now())
+                            slowMotion: rate < 1, hintsVisible: hintsVisible, updatedAt: now(),
+                            playbackRate: rate)
         guard Self.isValid(record, for: lesson) else { return false }
         var records = loadRecords()
         records[lesson.rawValue] = record
@@ -108,6 +118,7 @@ final class LearningProgressStore {
         guard record.lessonID == lesson.rawValue,
               record.contentRevision == contentRevisions[lesson.rawValue],
               record.updatedAt.timeIntervalSinceReferenceDate.isFinite,
+              Self.isSupportedPlaybackRate(record.effectivePlaybackRate),
               (0...lesson.lastStep).contains(record.stepIndex),
               record.progress.isFinite, (0...1).contains(record.progress),
               record.stepIndex != 0 || record.progress == 1 else { return false }
@@ -123,7 +134,7 @@ final class LearningProgressStore {
         "butterfly": 1, "dart": 1, "fox": 1, "rabbit": 1
     ]
     private static let contentRevisions: [String: String] = Dictionary(uniqueKeysWithValues: OrigamiLesson.allCases.map { lesson in
-        var fields = ["Protacta lesson content v1", lesson.rawValue,
+        var fields = [AppReleaseIdentity.origamiContentRevisionSeed, lesson.rawValue,
                       String(animationRevisions[lesson.rawValue] ?? 1)]
         for step in lesson.steps {
             fields.append(contentsOf: [String(step.id), step.title, step.instruction, step.cue, step.explanation])

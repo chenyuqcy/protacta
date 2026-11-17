@@ -107,6 +107,39 @@ final class TeamFeedbackUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 10", "Animation completion is not physical fold confirmation")
     }
 
+    func testDartComparisonUsesTheCurrentStepWithoutChangingTheTimeline() throws {
+        begin()
+        let timeline = app.sliders["foldTimeline"]
+        let compare = app.buttons["foldHelp"]
+        let before = app.descendants(matching: .any)["dartFoldBefore"].firstMatch
+        let after = app.descendants(matching: .any)["dartFoldAfter"].firstMatch
+
+        for step in [7, 8, 9] {
+            app.tapFoldTool("stepList")
+            let item = app.buttons["jumpStep_\(step)"]
+            app.revealLessonElement(item)
+            item.tap()
+            let counter = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "STEP \(step) OF 10"),
+                                                    object: app.staticTexts["stepCounter"])
+            XCTAssertEqual(XCTWaiter.wait(for: [counter], timeout: 5), .completed)
+            timeline.adjust(toNormalizedSliderPosition: 0.35)
+            let inspectedProgress = try percent(timeline)
+            XCTAssertTrue((20...50).contains(inspectedProgress))
+            XCTAssertEqual(compare.label, step == 9 ? "Help" : "Compare before and after")
+            app.openLessonHelp()
+            if step == 9 {
+                XCTAssertFalse(app.staticTexts["dartFoldComparison"].exists)
+            } else {
+                XCTAssertTrue(app.staticTexts["dartFoldComparison"].exists)
+                XCTAssertTrue(before.label.contains(step == 7 ? "left half" : "outer flap"))
+                XCTAssertTrue(after.label.contains(step == 7 ? "nose layers outside" : "opposite flap"))
+                capture("Classic_Dart_Step_\(step)_Comparison")
+            }
+            app.closeLessonHelp()
+            XCTAssertEqual(try percent(timeline), inspectedProgress)
+        }
+    }
+
     private func percent(_ element: XCUIElement) throws -> Int {
         let value = try XCTUnwrap(element.value as? String)
         return try XCTUnwrap(Int(value.replacingOccurrences(of: "%", with: "")))
