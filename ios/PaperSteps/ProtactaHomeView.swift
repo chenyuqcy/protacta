@@ -128,13 +128,9 @@ struct ProtactaHomeView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            HStack(spacing: 3) {
-                                Image("ProtactaMark").resizable().scaledToFit()
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                Text("roTacta").font(.system(size: 29, weight: .bold)).tracking(-0.5)
-                                    .foregroundStyle(Brand.ink)
-                            }.accessibilityElement(children: .ignore).accessibilityLabel("ProTacta")
+                            Image("ProTactaWordmark").resizable().scaledToFit()
+                                .frame(height: 25)
+                                .accessibilityLabel("ProTacta")
                             Spacer()
                             HStack(spacing: 6) {
                                 Button { showPricing = true } label: {
