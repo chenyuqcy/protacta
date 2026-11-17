@@ -31,10 +31,10 @@ struct EverydayTutorialPlayer: View {
     private var previewing: Bool { scene.motion.actionIndex != session.currentAction - 1 }
     private var modalPresented: Bool { showHelp || showSteps || showSetup }
     private var primaryTitle: String {
-        if session.completed { return "Start again" }
-        if scene.motion.isPlaying { return "Playing move…" }
+        if session.completed { return "Start over" }
+        if scene.motion.isPlaying { return "Playing…" }
         if previewing { return "Return to my practice" }
-        if scene.motion.progress < 0.999 { return scene.motion.progress == 0 ? "Watch move" : "Continue move" }
+        if scene.motion.progress < 0.999 { return scene.motion.progress == 0 ? "Play" : "Continue" }
         return session.currentAction == course.actions.count ? "I've done it · Finish" : "I've done it · Next"
     }
 
@@ -200,7 +200,7 @@ struct EverydayTutorialPlayer: View {
             if scene.isAR {
                 Button("Place again", systemImage: "viewfinder") { scene.pause(); voice.stop(); scene.tabletop.resetPlacement() }
                     .accessibilityIdentifier("everydayARResetPlacement")
-                Button("Start again", systemImage: "arrow.counterclockwise") { restart() }
+                Button("Start over", systemImage: "arrow.counterclockwise") { restart() }
             }
         } label: {
             Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))

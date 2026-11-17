@@ -259,7 +259,7 @@ enum CraneGeometry {
         return result
     }
 
-    /// Two midpoints lie on a circle about the O–B diagonal. Keeping one fixed
+    /// Two midpoints lie on a circle about the O-B diagonal. Keeping one fixed
     /// while the other turns through π uniquely determines their shared corner.
     private static func squashCorner(_ fraction: Float, sign: Float) -> SIMD3<Float> {
         let delta = .pi / 2 * fraction

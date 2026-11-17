@@ -30,7 +30,7 @@ final class LearningResumeUITests: XCTestCase {
             waitUntilEnabled(app.buttons["nextStep"])
         }
         app.scrubFold(to: 0.4)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
         let savedProgress = try XCTUnwrap(app.foldProgressValue)
         let savedTitle = app.staticTexts["stepTitle"].label
         capture("Saved_Dart_step_3_partial_fold")
@@ -62,7 +62,7 @@ final class LearningResumeUITests: XCTestCase {
         app.buttons["nextStep"].tap()
         waitUntilEnabled(app.buttons["nextStep"])
         app.scrubFold(to: 0.65)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
 
         chooseDart()
         XCTAssertTrue(app.buttons["startLesson"].label.localizedCaseInsensitiveContains("continue"))
@@ -96,7 +96,7 @@ final class LearningResumeUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["stepTitle"].label, title, file: file, line: line)
         XCTAssertEqual(app.foldProgressValue, sliderValue, file: file, line: line)
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold", file: file, line: line)
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"), file: file, line: line)
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"), file: file, line: line)
         XCTAssertTrue(app.buttons["openAR"].exists, file: file, line: line)
         XCTAssertFalse(app.buttons["closeAR"].exists, file: file, line: line)
     }

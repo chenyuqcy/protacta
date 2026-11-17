@@ -33,7 +33,7 @@ final class EverydaySpatialUITests: XCTestCase {
             XCTAssertFalse(app.segmentedControls["everydayViewMode"].exists)
             XCTAssertFalse(app.otherElements["everydayVisual"].exists)
             scrub(to: 0.42)
-            XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue move"))
+            XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue"))
             app.buttons["everydayConfirm"].tap()
             waitForLabel(app.buttons["everydayPlay"], containing: "Pause move")
             app.buttons["everydayPlay"].tap()
@@ -83,7 +83,7 @@ final class EverydaySpatialUITests: XCTestCase {
             app.buttons["everydayExitAR"].tap()
             assertStudioAction(1, total: course.count)
             XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, paused)
-            XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue move"))
+            XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue"))
             closeCourse()
             assertNoPermissionAlerts()
         }
@@ -129,7 +129,7 @@ final class EverydaySpatialUITests: XCTestCase {
         app.activate()
         XCTAssertTrue(app.buttons["everydayConfirm"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.sliders["everydayProgressSlider"].value as? String, beforeBackground)
-        XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue move"))
+        XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue"))
         assertStudioAction(1, total: 3)
     }
 

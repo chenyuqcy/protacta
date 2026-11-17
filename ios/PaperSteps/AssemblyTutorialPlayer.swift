@@ -325,7 +325,7 @@ struct AssemblyTutorialPlayer: View {
                 }.accessibilityLabel("Read step").accessibilityIdentifier("assemblyReadStep")
                 Spacer(minLength: 0)
                 Button { next() } label: {
-                    Label(scene.stepIndex == scene.tutorial.steps.count - 1 ? "Restart" : "Next", systemImage: "arrow.right")
+                    Label(scene.stepIndex == scene.tutorial.steps.count - 1 ? "Start over" : "Next", systemImage: "arrow.right")
                         .font(.system(size: 14, weight: .semibold)).padding(.horizontal, 14).frame(minHeight: 44)
                 }.background(TutorialColors.ink, in: Capsule()).foregroundStyle(.white).accessibilityIdentifier("assemblyNext")
                     .disabled(!scene.canAnimate)

@@ -35,7 +35,7 @@ final class AdvancedLessonUITests: XCTestCase {
             capture(String(format: "Crane_%02d_Complete", step))
             if [3, 9, 14, 22, 25, 27].contains(step) {
                 app.scrubFold(to: 0.45)
-                XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+                XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
                 capture(String(format: "Crane_%02d_Mid_motion", step))
                 app.tapViewOption("angleView")
                 capture(String(format: "Crane_%02d_Mid_angle", step))

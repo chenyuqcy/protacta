@@ -158,9 +158,15 @@ enum EverydayKnotGeometry {
             for j in 0..<10 {
                 let t = Float(j) / 10, t2 = t * t, t3 = t2 * t
                 let linear: Point = (p2 - p0) * t
-                let quadratic: Point = (p0 * 2 - p1 * 5 + p2 * 4 - p3) * t2
-                let cubic: Point = (-p0 + p1 * 3 - p2 * 3 + p3) * t3
-                var p: Point = (p1 * 2 + linear + quadratic + cubic) * 0.5
+                let q0: Point = p0 * 2
+                let q1: Point = p1 * 5
+                let q2: Point = p2 * 4
+                let quadratic: Point = (q0 - q1 + q2 - p3) * t2
+                let c1: Point = p1 * 3
+                let c2: Point = p2 * 3
+                let cubic: Point = (-p0 + c1 - c2 + p3) * t3
+                let base: Point = p1 * 2
+                var p: Point = (base + linear + quadratic + cubic) * 0.5
                 p.y = max(0.018, p.y)
                 dense.append(p)
             }
@@ -222,10 +228,13 @@ enum EverydayKnotGeometry {
             let tip = pointed ? max(0.012, min(1, (1 - t) / 0.075)) : 1
             let half = width * tip / 2
             let thickness: Float = 0.0013
-            positions += [route[i] - frame.side * half - frame.normal * thickness,
-                          route[i] + frame.side * half - frame.normal * thickness,
-                          route[i] + frame.side * half + frame.normal * thickness,
-                          route[i] - frame.side * half + frame.normal * thickness]
+            let center: Point = route[i]
+            let side: Point = frame.side * half
+            let up: Point = frame.normal * thickness
+            positions += [center - side - up,
+                          center + side - up,
+                          center + side + up,
+                          center - side + up]
         }
         for i in 0..<(route.count - 1) {
             for j in 0..<4 {

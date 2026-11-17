@@ -2,7 +2,7 @@ import Foundation
 import simd
 
 /// An authored standing rabbit variation studied from Hadi Tahir. Every region
-/// retains its coordinates on one source square. Actions 1–24 use rigid folds;
+/// retains its coordinates on one source square. Actions 1-24 use rigid folds;
 /// action 25 is a small, explicitly measured source-continuous forming motion.
 enum FullRabbitGeometry {
     static let width:Float=0.16

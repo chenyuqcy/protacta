@@ -91,9 +91,10 @@ final class DartPracticePaperVisibilityTests: XCTestCase {
             let u = (ap.x * ac.y - ap.y * ac.x) / determinant
             let v = (ab.x * ap.y - ab.y * ap.x) / determinant
             guard u >= -1e-6, v >= -1e-6, u + v <= 1 + 1e-6 else { continue }
-            let start = a.position + a.separation
-            return start + ((b.position + b.separation) - start) * u +
-                ((c.position + c.separation) - start) * v
+            let start: SIMD3<Float> = a.position + a.separation
+            let edgeB: SIMD3<Float> = (b.position + b.separation) - start
+            let edgeC: SIMD3<Float> = (c.position + c.separation) - start
+            return start + edgeB * u + edgeC * v
         }
         return nil
     }

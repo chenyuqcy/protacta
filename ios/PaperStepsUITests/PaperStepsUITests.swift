@@ -69,11 +69,11 @@ final class PaperStepsUITests: XCTestCase {
             }
         }
 
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish lesson"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish"))
         advanceAndWait()
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "LESSON COMPLETE")
         XCTAssertEqual(app.staticTexts["stepTitle"].label, "Made by you.")
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Fold again"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Start over"))
         XCTAssertFalse(app.sliders["foldProgress"].exists)
         assertEnglishScreen()
         capture("13_Made_by_you")
@@ -81,7 +81,7 @@ final class PaperStepsUITests: XCTestCase {
         app.buttons["nextStep"].tap()
         assertStep(0, title: "Start with a blank sheet")
         XCTAssertFalse(app.buttons["backStep"].isEnabled)
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Next fold"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Next"))
         capture("14_Restarted_blank_sheet")
     }
 
@@ -91,29 +91,29 @@ final class PaperStepsUITests: XCTestCase {
         assertStep(1, title: "Make the center crease")
 
         app.scrubFold(to: 0.40)
-        waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Continue")
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         assertStep(1, title: "Make the center crease")
         capture("Partial_center_fold_paused")
 
         // Resuming a partial fold finishes this step, rather than skipping it.
         app.buttons["nextStep"].tap()
-        waitForLabel(app.buttons["nextStep"], contains: "Next fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Next")
         waitUntilEnabled(app.buttons["nextStep"])
         assertStep(1, title: "Make the center crease")
 
         // The transport control can resume another deliberately paused pose.
         app.scrubFold(to: 0.65)
-        waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Continue")
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
         app.tapFoldTool("playPause")
-        waitForLabel(app.buttons["nextStep"], contains: "Next fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Next")
         waitUntilEnabled(app.buttons["nextStep"])
         assertStep(1, title: "Make the center crease")
 
         app.tapFoldTool("replayStep")
         waitUntilEnabled(app.buttons["nextStep"])
-        waitForLabel(app.buttons["nextStep"], contains: "Next fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Next")
         assertStep(1, title: "Make the center crease")
         capture("Center_fold_replayed")
 
@@ -134,7 +134,7 @@ final class PaperStepsUITests: XCTestCase {
         advanceAndWait()
         assertStep(3, title: "Fold the left corner")
         app.scrubFold(to: 0.45)
-        waitForLabel(app.buttons["nextStep"], contains: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Continue")
 
         for visit in 1...2 {
             app.buttons["openAR"].tap()
@@ -146,12 +146,12 @@ final class PaperStepsUITests: XCTestCase {
             app.buttons["returnTo3D"].tap()
             XCTAssertTrue(app.buttons["openAR"].waitForExistence(timeout: 5))
             assertStep(3, title: "Fold the left corner")
-            XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+            XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
             XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
             capture("Preserved_partial_fold_after_AR_\(visit)")
         }
         app.buttons["nextStep"].tap()
-        waitForLabel(app.buttons["nextStep"], contains: "Next fold")
+        waitForLabel(app.buttons["nextStep"], contains: "Next")
         waitUntilEnabled(app.buttons["nextStep"])
         assertStep(3, title: "Fold the left corner")
     }

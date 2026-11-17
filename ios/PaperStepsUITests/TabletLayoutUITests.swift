@@ -86,7 +86,7 @@ final class TabletLayoutUITests: XCTestCase {
             jump(to: step)
             XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP \(step) OF \(total)")
             app.scrubFold(to: lesson == "crane" ? 0.45 : 0.25)
-            XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+            XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
             capture("iPad_Portrait_\(lesson)_Long_instruction_controls")
             assertLessonControls()
 

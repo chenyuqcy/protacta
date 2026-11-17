@@ -60,11 +60,18 @@ enum ElephantAuthoredHeadStudy {
   var paths=[[SIMD3<Float>]]()
   if step==1 {
    crease=PaperCrease(start:f,end:H)
-   paths=[(0...28).map { sample in
-    let d=Float.pi*Float(sample)/56
-    let n=simd_normalize(-radius*cos(d)*xx-radius*sin(d)*yy+r*cos(d)*axis)
-    return f-2*n*simd_dot(f-H,n)
-   }]
+   let reflections=(0...28).map { (sample: Int) -> SIMD3<Float> in
+    let d: Float = Float.pi*Float(sample)/56
+    let cd: Float = cos(d)
+    let sd: Float = sin(d)
+    let term1: SIMD3<Float> = xx*(-radius*cd)
+    let term2: SIMD3<Float> = yy*(-radius*sd)
+    let term3: SIMD3<Float> = axis*(r*cd)
+    let n: SIMD3<Float> = simd_normalize(term1+term2+term3)
+    let proj: Float = simd_dot(f-H,n)
+    return f-n*(2*proj)
+   }
+   paths=[reflections]
   } else if step==2 {
    let left=rotate(m,H,axis,Float.pi),origin=SIMD3<Float>(H.x,H.y,m.z)
    crease=PaperCrease(start:left,end:m)
@@ -74,7 +81,7 @@ enum ElephantAuthoredHeadStudy {
    paths=[(0...28).map{rotate(m,f,[0,0,1],Float.pi*Float($0)/28)}]
   }
   if step>=4 {
-   // Both folded H–P–T walls are the trunk packet. They share the real source
+   // Both folded H-P-T walls are the trunk packet. They share the real source
    // apex (w,0); the coincident leg point (s,±h) is a different source point.
    let crownUV=SIMD2<Float>(width-sqrt(2)*h,0)
    let pivotUV=SIMD2<Float>((s+width)/2,-h/2)

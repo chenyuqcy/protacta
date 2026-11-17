@@ -67,7 +67,7 @@ struct PaperGuideCard: View {
                     Text("FIRST FOLD · A4").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
                 }
                 if controller.isPaperGuideFixture {
-                    Text("SYNTHETIC UI FIXTURE — NOT A LIVE CAMERA")
+                    Text("SYNTHETIC UI FIXTURE - NOT A LIVE CAMERA")
                         .font(.system(size: 10, weight: .bold)).foregroundStyle(.orange)
                         .accessibilityIdentifier("paperGuideFixtureLabel")
                 }

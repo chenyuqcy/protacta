@@ -22,9 +22,12 @@ final class TutorialHubUITests: XCTestCase {
         let firstSection = app.staticTexts["catalogSection_clothes"]
         XCTAssertTrue(firstSection.exists)
         XCTAssertLessThan(origami.frame.minY, firstSection.frame.minY, "The origami hero precedes the grouped catalog")
-        XCTAssertTrue(app.buttons["hubPhoneSetup"].isHittable)
+        XCTAssertTrue(app.buttons["hubPhoneSetup"].exists)
         capture("Team_sections_Origami_first_home")
         origami.tap()
+        let dartCard = app.buttons["hubOrigamiLesson_dart"]
+        XCTAssertTrue(dartCard.waitForExistence(timeout: 10), "The origami hero opens the paper-model list")
+        dartCard.tap()
         XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
         app.buttons["returnTutorialHub"].tap()
         waitForDismissal(app.buttons["returnTutorialHub"])
@@ -64,8 +67,9 @@ final class TutorialHubUITests: XCTestCase {
 
     func testOrigamiFilterShowsOnlyTheOrigamiEntryAndPhoneSetupReturnsToIt() {
         selectHomeFilter("Origami")
-        XCTAssertTrue(app.buttons["hubOrigami"].isHittable)
-        XCTAssertEqual(app.buttons.matching(identifier: "hubOrigami").count, 1)
+        XCTAssertTrue(app.buttons["hubOrigamiLesson_dart"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["hubOrigamiLesson_fox"].exists)
+        XCTAssertFalse(app.buttons["hubOrigami"].exists, "The origami hero is replaced by the model grid")
         for id in ["hubCourse_towel", "hubCourse_t_shirt", "hubCourse_square_knot", "hubEquipment_gearmotor", "hubProductManual"] {
             XCTAssertFalse(app.buttons[id].exists, "Origami must exclude other tutorial categories: \(id)")
         }
@@ -73,14 +77,13 @@ final class TutorialHubUITests: XCTestCase {
             XCTAssertFalse(app.staticTexts[id].exists)
         }
         capture("Team_sections_Origami_filter")
-        app.buttons["hubPhoneSetup"].tap()
+        let setup = app.buttons["hubPhoneSetup"]; reveal(setup); setup.tap()
         XCTAssertTrue(app.buttons["closePhoneSetup"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.alerts.firstMatch.exists, "Phone setup must not start sensors")
         app.buttons["closePhoneSetup"].tap()
         waitForDismissal(app.buttons["closePhoneSetup"])
-        XCTAssertTrue(app.buttons["hubOrigami"].isHittable)
         XCTAssertTrue(app.segmentedControls["hubFilter"].buttons["Origami"].isSelected)
-        app.buttons["hubOrigami"].tap()
+        let dart = app.buttons["hubOrigamiLesson_dart"]; reveal(dart); dart.tap()
         XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
     }
 
@@ -139,9 +142,10 @@ final class TutorialHubUITests: XCTestCase {
     }
 
     func testOrigamiAndAerisAreReachableWithReleaseTabGate() {
-        tapHome("hubOrigami")
+        openOrigamiModel()
         XCTAssertTrue(app.buttons["viewportOptions"].waitForExistence(timeout: 15))
         app.buttons["returnTutorialHub"].tap()
+        selectHomeFilter("All")
         tapHome("hubProductManual")
         let next = app.buttons["nextStep"]
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in next.exists && next.isEnabled }, object: nil)
@@ -215,6 +219,11 @@ final class TutorialHubUITests: XCTestCase {
         for _ in 0..<6 where !button.isHittable { app.scrollViews.firstMatch.swipeUp() }
         for _ in 0..<6 where !button.isHittable { app.scrollViews.firstMatch.swipeDown() }
         XCTAssertTrue(button.isHittable, id); button.tap()
+    }
+    private func openOrigamiModel(_ id: String = "dart") {
+        if !app.buttons["hubOrigamiLesson_\(id)"].exists { tapHome("hubOrigami") }
+        let card = app.buttons["hubOrigamiLesson_\(id)"]
+        reveal(card); card.tap()
     }
     private func selectHomeFilter(_ title: String) {
         let filter = app.segmentedControls["hubFilter"]

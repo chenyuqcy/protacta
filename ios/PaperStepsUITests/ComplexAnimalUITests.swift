@@ -177,7 +177,7 @@ final class ComplexAnimalUITests: XCTestCase {
                 }
                 // The precrease arrow must reverse with the reopening flap.
                 app.scrubFold(to: [12, 13].contains(step) ? 0.75 : 0.5)
-                XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+                XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
                 capture(String(format: "Frog_%02d_Midfold_angle", step))
                 app.tapViewOption("topView")
                 capture(String(format: "Frog_%02d_Midfold_top", step))
@@ -233,7 +233,7 @@ final class ComplexAnimalUITests: XCTestCase {
             capture(String(format: "Turtle_%02d_Complete", step))
             if [13, 15, 16, 19, 20, 23].contains(step) {
                 app.scrubFold(to: 0.5)
-                XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+                XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
                 capture(String(format: "Turtle_%02d_Midfold_angle", step))
                 app.tapViewOption("topView")
                 capture(String(format: "Turtle_%02d_Midfold_top", step))

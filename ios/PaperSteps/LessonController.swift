@@ -14,7 +14,14 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var stepIndex = 0
     @Published var progress: Float = 1
     @Published var isPlaying = false
-    @Published var slowMotion = false
+    @Published var playbackRate: Double = 1
+    @Published var autoPlay = false
+    private var autoAdvanceDeadline: CFTimeInterval?
+    private let autoDwell: Double = 1.6
+    var slowMotion: Bool {
+        get { playbackRate < 1 }
+        set { playbackRate = newValue ? 0.5 : 1 }
+    }
     @Published var hintsVisible = true
     @Published var isAR = false
     @Published private(set) var isPaperGuide = false
@@ -203,11 +210,58 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     func pauseAndSave() {
+        cancelAutoPlay()
         isPlaying = false; lastTick = 0
         saveLearningProgress()
     }
 
     func toggleSlowMotion() { slowMotion.toggle(); saveLearningProgress() }
+
+    func setSpeed(_ rate: Double) {
+        playbackRate = rate
+        saveLearningProgress()
+    }
+
+    func setAutoPlay(_ on: Bool) {
+        autoAdvanceDeadline = nil
+        if on {
+            guard canAnimate, !completed else { return }
+            autoPlay = true
+            if !started { begin() }
+            if stepIndex == 0 { next() }
+            else if progress < 0.999 { play() }
+            else { next() }
+        } else {
+            autoPlay = false
+            isPlaying = false
+            saveLearningProgress()
+        }
+    }
+
+    private func autoAdvance() {
+        guard autoPlay, canAnimate, !completed else { return }
+        if stepIndex >= lastStep {
+            completed = true; progress = 1; applyPose()
+            autoPlay = false
+            saveLearningProgress()
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            recordDiagnostic(force: true)
+        } else {
+            stepIndex += 1; progress = 0; applyPose(); play(); saveLearningProgress()
+        }
+    }
+
+    func skipAhead() {
+        guard autoPlay, canAnimate, !completed else { return }
+        autoAdvanceDeadline = nil
+        isPlaying = false; progress = 1; applyPose()
+        autoAdvance()
+    }
+
+    private func cancelAutoPlay() {
+        if autoPlay { autoPlay = false }
+        autoAdvanceDeadline = nil
+    }
 
     var placementGesturesEnabled: Bool {
         isAR && !isPaperGuide && placed && trackingReady && !needsRescan && cameraError == nil && hasLessonAccess && !positionLocked
@@ -235,9 +289,9 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     var lastStep: Int { lesson.lastStep }
     var canAnimate: Bool { hasLessonAccess && !isPaperGuide && (!isAR || (placed && trackingReady && !needsRescan)) }
     var nextTitle: String {
-        if completed { return "Fold again" }
-        if progress < 0.999 { return "Finish this fold" }
-        return stepIndex == lastStep ? "Finish lesson" : "Next fold"
+        if completed { return "Start over" }
+        if progress < 0.999 { return "Continue" }
+        return stepIndex == lastStep ? "Finish" : "Next"
     }
 
     func makeView() -> ARView {
@@ -344,7 +398,14 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         recordDiagnostic(force: true)
     }
 
+    func resume(lesson selected: OrigamiLesson) {
+        guard !started else { return }
+        if lesson != selected { selectLesson(selected) }
+        continueLearning()
+    }
+
     func selectLesson(_ selected: OrigamiLesson) {
+        cancelAutoPlay()
         saveLearningProgress()
         if isAR { leaveAR() }
         isPlaying = false; started = false; completed = false
@@ -381,6 +442,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
 
     func back() {
         guard canAnimate else { return }
+        cancelAutoPlay()
         isPlaying = false
         if completed { completed = false }
         else { stepIndex = max(0, stepIndex - 1) }
@@ -406,6 +468,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
 
     func scrub(to value: Float) {
         guard canAnimate, stepIndex > 0 else { return }
+        cancelAutoPlay()
         isPlaying = false; completed = false
         progress = min(1, max(0, value)); applyPose()
         saveLearningProgress()
@@ -445,6 +508,10 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             checkTabletopFrameHealth(timestamp: frame?.timestamp, now: CACurrentMediaTime(),
                                       normal: normal, anchorPresent: anchorPresent)
         }
+        if autoPlay, let deadline = autoAdvanceDeadline {
+            if link.timestamp >= deadline { autoAdvanceDeadline = nil; autoAdvance() }
+            else { lastTick = 0; return }
+        }
         guard isPlaying else { lastTick = 0; return }
         if isAR && !isTabletopLayoutFixture {
             guard canAnimate, let frame = arView?.session.currentFrame,
@@ -460,10 +527,13 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         lastTick = link.timestamp
         let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
         let baseDuration: Double = lesson == .crane ? 4.2 : (lesson == .star && stepIndex == 7 ? 6.0 : 3.2)
-        let duration: Double = testing ? 0.35 : baseDuration * (slowMotion ? 2 : 1)
+        let duration: Double = testing ? 0.35 : baseDuration / playbackRate
         progress = min(1, progress + Float(delta / duration))
         applyPose()
-        if progress >= 1 { isPlaying = false; saveLearningProgress(); recordDiagnostic(force: true) }
+        if progress >= 1 {
+            isPlaying = false; saveLearningProgress(); recordDiagnostic(force: true)
+            if autoPlay && !completed { autoAdvanceDeadline = link.timestamp + autoDwell }
+        }
         else if CACurrentMediaTime() - lastProgressSave >= 1 { saveLearningProgress() }
     }
 

@@ -26,7 +26,7 @@ final class AROcclusionHelpUITests: XCTestCase {
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10")
         waitUntilEnabled(app.buttons["nextStep"])
         app.scrubFold(to: 0.4)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
         let beforeProgress = try XCTUnwrap(app.foldProgressValue)
         let beforeTitle = app.staticTexts["stepTitle"].label
         let beforeCounter = app.staticTexts["stepCounter"].label
@@ -72,7 +72,7 @@ final class AROcclusionHelpUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["stepTitle"].label, beforeTitle)
         XCTAssertEqual(app.foldProgressValue, beforeProgress)
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
         XCTAssertTrue(app.buttons["openAR"].exists, "Help must return to the existing 3D lesson without opening AR")
         capture("AR_help_keeps_paused_fold")
     }

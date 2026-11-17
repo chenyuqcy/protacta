@@ -68,7 +68,7 @@ final class AnimalLessonUITests: XCTestCase {
             capture(String(format: "Butterfly_%02d_Complete", step))
             if [8, 9, 17].contains(step) {
                 app.scrubFold(to: 0.45)
-                XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+                XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
                 capture(String(format: "Butterfly_%02d_Midfold_angle", step))
                 app.tapViewOption("topView")
                 capture(String(format: "Butterfly_%02d_Midfold_top", step))

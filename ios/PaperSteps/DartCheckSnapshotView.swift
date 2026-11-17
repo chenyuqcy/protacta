@@ -21,7 +21,7 @@ struct DartCheckSnapshotView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if snapshot.isSynthetic {
-                    Text("SYNTHETIC SAMPLE — NOT LIVE CAMERA")
+                    Text("SYNTHETIC SAMPLE - NOT LIVE CAMERA")
                         .font(.system(size: 11, weight: .bold))
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)

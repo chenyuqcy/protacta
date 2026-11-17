@@ -1,7 +1,7 @@
 import Foundation
 
 /// An independently worded, square-body variation studied from Hadi Tahir's
-/// rabbit. It deliberately omits the original inner-pocket tucks (panels 9–11).
+/// rabbit. It deliberately omits the original inner-pocket tucks (panels 9-11).
 /// Native review and physical-paper validation remain pending.
 enum FullRabbitLessonContent {
     static let isComplete = true

@@ -48,34 +48,38 @@ enum ElephantRearSquashStudy {
     static func apply(to faces:[PaperFace],side:Int,progress:Float,active:Bool=true)->[PaperFace] {
         let h=width/4,s=width-h/tan(Float.pi/8),r=s/4
         let m=motion(side:side,progress:progress)
+        return faces.flatMap {transform($0,side:side,active:active,motion:m,r:r,h:h)}
+    }
+
+    private static func transform(_ original:PaperFace,side:Int,active:Bool,motion m:Motion,r:Float,h:Float)->[PaperFace] {
+        guard original.originalSide==side else{return [original]}
         let P=m.P,R=m.R,C=m.C,T=m.T,u=m.u,v=m.v,alpha=m.alpha,beta=m.beta,newR=m.newR,newC=m.newC
         func normal(_ point:SIMD3<Float>)->SIMD3<Float> {
             let a=point-P;var n=SIMD3<Float>(a.z,0,-a.x)
             if simd_dot(C-P,n)<0 {n *= -1};return n
         }
-        return faces.flatMap {original -> [PaperFace] in
-            guard original.originalSide==side else{return [original]}
-            let uv=original.vertices.reduce(SIMD2<Float>.zero){$0+$1.source}/Float(original.vertices.count)
-            let beforeX=uv.x<r ? 2*r-uv.x:uv.x
-            let z=abs(uv.y),beforeZ=min(z,2*h-z)
-            let corner=beforeZ>h-3*r/sqrt(5)+(beforeX-r)/sqrt(5)+e
-            guard corner else{return [original]}
-            let band=uv.x<r
-            let hinge=band ? R:T
-            return [false,true].compactMap {positive in
-                let vertices=clip(original.vertices,origin:P,normal:normal(hinge),positive:positive)
-                guard vertices.count>=3 else{return nil}
-                var f=original;f.vertices=vertices
-                guard f.area>1e-12 else{return nil}
-                for j in f.vertices.indices {
-                    let q=f.vertices[j].position
-                    if band {
-                        f.vertices[j].position=positive ? rigidMap(q,P,R,C,P,newR,newC):rotate(q,P,u,alpha)
-                    } else if positive {f.vertices[j].position=rotate(q,P,v,beta)}
-                }
-                f.isMoving=active && (band || positive)
-                return f
+        let sum=original.vertices.reduce(SIMD2<Float>.zero){$0+$1.source}
+        let uv=sum/Float(original.vertices.count)
+        let beforeX:Float=uv.x<r ? 2*r-uv.x:uv.x
+        let z=abs(uv.y),beforeZ=min(z,2*h-z)
+        let root5=sqrt(Float(5))
+        let threshold=h-3*r/root5+(beforeX-r)/root5+e
+        guard beforeZ>threshold else{return [original]}
+        let band=uv.x<r
+        let hinge=band ? R:T
+        return [false,true].compactMap {positive in
+            let vertices=clip(original.vertices,origin:P,normal:normal(hinge),positive:positive)
+            guard vertices.count>=3 else{return nil}
+            var f=original;f.vertices=vertices
+            guard f.area>1e-12 else{return nil}
+            for j in f.vertices.indices {
+                let q=f.vertices[j].position
+                if band {
+                    f.vertices[j].position=positive ? rigidMap(q,P,R,C,P,newR,newC):rotate(q,P,u,alpha)
+                } else if positive {f.vertices[j].position=rotate(q,P,v,beta)}
             }
+            f.isMoving=active && (band || positive)
+            return f
         }
     }
     /// Guides use the same solved trajectories as apply(), in uncentered coordinates.

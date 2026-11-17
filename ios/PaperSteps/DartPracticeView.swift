@@ -100,7 +100,7 @@ struct DartPracticeCard<VoiceControls: View>: View {
                         .accessibilityIdentifier("practiceSetup")
                 }
                 if controller.isPaperGuideFixture {
-                    Text("SYNTHETIC UI FIXTURE — NOT A LIVE CAMERA")
+                    Text("SYNTHETIC UI FIXTURE - NOT A LIVE CAMERA")
                         .font(.system(size: 10, weight: .bold)).foregroundStyle(.orange)
                         .accessibilityIdentifier("practiceFixtureLabel")
                 }

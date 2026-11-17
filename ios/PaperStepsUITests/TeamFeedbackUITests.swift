@@ -39,7 +39,7 @@ final class TeamFeedbackUITests: XCTestCase {
         // The Simulator fixture accelerates folds. Pause deterministically by
         // inspecting a partial pose rather than racing a second tap against it.
         app.sliders["foldTimeline"].adjust(toNormalizedSliderPosition: 0.4)
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
         for id in ["replayStep", "foldNotes", "stepList", "playbackSpeed", "playPause", "openDartPractice", "openPaperGuide"] {
             XCTAssertFalse(app.buttons[id].exists, id)
         }
@@ -91,7 +91,7 @@ final class TeamFeedbackUITests: XCTestCase {
         XCTAssertTrue((10...40).contains(backward))
         XCTAssertLessThan(backward, forward)
         XCTAssertEqual(app.staticTexts["stepCounter"].label, "STEP 1 OF 10")
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"))
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"))
         capture("Build25_Visible_fold_timeline")
         app.buttons["openAR"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5))
@@ -138,13 +138,16 @@ final class TeamFeedbackUITests: XCTestCase {
         XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 15))
         app.revealLessonElement(app.buttons["hubOrigami"])
         app.buttons["hubOrigami"].tap()
+        let dartCard = app.buttons["hubOrigamiLesson_dart"]
+        XCTAssertTrue(dartCard.waitForExistence(timeout: 5), "The origami hero opens the paper-model list")
+        dartCard.tap()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["returnTutorialHub"].isHittable)
         XCTAssertFalse(app.buttons["openDartPractice"].exists)
         XCTAssertFalse(app.buttons["openPaperGuide"].exists)
         capture("Build20_Entry_from_home")
         app.buttons["returnTutorialHub"].tap()
-        XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["hubOrigamiLesson_dart"].waitForExistence(timeout: 5))
     }
 
     func testTabletKeepsPrimaryControlsReachableAcrossRotation() throws {

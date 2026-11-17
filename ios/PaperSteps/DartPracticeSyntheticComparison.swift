@@ -47,7 +47,7 @@ struct DartPracticeSyntheticComparison {
                                       bottomRight: CGPoint(x: 0.78, y: 0.88),
                                       bottomLeft: CGPoint(x: 0.22, y: 0.88))
         // Action 2's reopened boundary is identical to an untouched flat sheet.
-        // Actions 3–6 deliberately show the prior shape, exercising adjustment
+        // Actions 3-6 deliberately show the prior shape, exercising adjustment
         // feedback instead of approving every visible simulator sample.
         let renderedState = action == 2 ? 0 : action - 1
         guard let outline = DartOutlineChecker.outline(state: renderedState),

@@ -55,10 +55,14 @@ final class EverydayTutorialProgressStore {
     static let uiTestingSuiteName = "org.realitycore.protacta.prototype.everydayUITests"
     private static let schemaVersion = 1
     private let defaults: UserDefaults?
+    private let now: () -> Date
     private var memoryArchive: Data?
 
     /// Explicit nil makes a new isolated, in-memory store.
-    init(defaults: UserDefaults? = .standard) { self.defaults = defaults }
+    init(defaults: UserDefaults? = .standard, now: @escaping () -> Date = Date.init) {
+        self.defaults = defaults
+        self.now = now
+    }
 
     private static let sharedAppStore: EverydayTutorialProgressStore = {
         let process = ProcessInfo.processInfo
@@ -84,7 +88,7 @@ final class EverydayTutorialProgressStore {
     func save(_ session: EverydayTutorialSession) -> Bool {
         let record = Record(courseID: session.courseID, courseRevision: EverydayTutorialCourse.course(session.courseID).revision,
                             currentAction: session.currentAction, completed: session.completed,
-                            confirmedActions: session.confirmedActions)
+                            confirmedActions: session.confirmedActions, updatedAt: now())
         guard Self.valid(record) else { return false }
         var records = readRecords()
         records[session.courseID.rawValue] = record
@@ -131,6 +135,21 @@ final class EverydayTutorialProgressStore {
         let currentAction: Int
         let completed: Bool
         let confirmedActions: [Int]
+        let updatedAt: Date?
+    }
+
+    struct ResumePoint {
+        let courseID: EverydayTutorialID
+        let currentAction: Int
+        let updatedAt: Date
+    }
+
+    func inProgress(limit: Int) -> [ResumePoint] {
+        let sorted = readRecords().compactMap { key, record -> ResumePoint? in
+            guard let id = EverydayTutorialID(rawValue: key), !record.completed else { return nil }
+            return ResumePoint(courseID: id, currentAction: record.currentAction, updatedAt: record.updatedAt ?? .distantPast)
+        }.sorted { $0.updatedAt > $1.updatedAt }
+        return Array(sorted.prefix(limit))
     }
 
     private struct Archive: Codable {

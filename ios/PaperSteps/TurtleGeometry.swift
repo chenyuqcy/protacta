@@ -429,7 +429,7 @@ enum TurtleGeometry {
         for patch in patches {
             guard patch.face.originalSide == -side else { result.append(patch); continue }
             if patch.part == 21 {
-                // Split along the head valley C–V, then its coupled mountain C–M.
+                // Split along the head valley C-V, then its coupled mountain C-M.
                 let stay = clip(patch.face.vertices,origin:c,normal:nv,positive:false)
                 if stay.count >= 3 { var q=patch; q.face.vertices=stay; if q.face.area > 1e-12 { result.append(q) } }
                 let moving = clip(patch.face.vertices,origin:c,normal:nv,positive:true)

@@ -47,10 +47,10 @@ struct ProtactaApp: App {
                     !ProcessInfo.processInfo.arguments.contains("--tutorial-hub") {
                     // Existing focused origami tests retain their direct entry.
                     // Hub tests explicitly exercise the normal app destination.
-                    PaperStepsView().preferredColorScheme(.light)
-                } else { ProtactaHomeView().preferredColorScheme(.light) }
+                    PaperStepsView().preferredColorScheme(.light).fontDesign(.rounded).tint(Brand.forest)
+                } else { ProtactaHomeView().preferredColorScheme(.light).fontDesign(.rounded).tint(Brand.forest) }
                 #else
-                ProtactaHomeView().preferredColorScheme(.light)
+                ProtactaHomeView().preferredColorScheme(.light).fontDesign(.rounded).tint(Brand.forest)
                 #endif
             }
         }
@@ -67,7 +67,14 @@ private enum Palette {
 
 struct PaperStepsView: View {
     let onExit: (() -> Void)?
-    init(onExit: (() -> Void)? = nil) { self.onExit = onExit }
+    let resumeLesson: OrigamiLesson?
+    let openLesson: OrigamiLesson?
+    init(onExit: (() -> Void)? = nil, resumeLesson: OrigamiLesson? = nil, openLesson: OrigamiLesson? = nil) {
+        self.onExit = onExit
+        self.resumeLesson = resumeLesson
+        self.openLesson = openLesson
+    }
+    @State private var didResume = false
     @StateObject private var controller = LessonController()
     @StateObject private var purchases = PurchaseStore()
     @StateObject private var voice = VoiceGuide()
@@ -155,7 +162,14 @@ struct PaperStepsView: View {
             if phase == .background { isVoiceOnlyAR = false; isARFullScreen = false; controller.background(); voice.stop() }
             if phase == .active { controller.resumeScreenAwake(); voice.handleSceneActive(); Task { await purchases.refresh() } }
         }
-        .onAppear { configureVoiceCommands() }
+        .onAppear {
+            configureVoiceCommands()
+            if !didResume {
+                didResume = true
+                if let resumeLesson { controller.resume(lesson: resumeLesson) }
+                else if let openLesson { controller.selectLesson(openLesson) }
+            }
+        }
         .task(id: voiceFeedbackRevision) {
             compactVoiceFeedbackVisible = !voiceFeedback.isEmpty
             guard !voiceFeedback.isEmpty else { return }
@@ -280,6 +294,9 @@ struct PaperStepsView: View {
                 Image(systemName: "leaf.fill")
                     .font(.system(size: 20, weight: .medium)).foregroundStyle(Palette.accent)
             }
+            Button { controller.pauseAndSave(); voice.stop(); showLibrary = true } label: {
+                Image(systemName: "square.grid.2x2").font(.system(size: 17, weight: .medium)).frame(width: 30, height: 44)
+            }.accessibilityLabel("All origami").accessibilityIdentifier("headerLibrary")
             VStack(alignment: .leading, spacing: 2) {
                 Text(controller.lesson.title).font(.system(size: 17, weight: .medium))
             }
@@ -591,7 +608,10 @@ struct PaperStepsView: View {
                     .font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
                     .accessibilityIdentifier("stepCounter")
                 Spacer()
-                if controller.slowMotion { Text("½×").font(.caption.monospacedDigit()).foregroundStyle(Palette.muted) }
+                if controller.playbackRate != 1 {
+                    Text(controller.playbackRate == 0.5 ? "½×" : "2×")
+                        .font(.caption.monospacedDigit()).foregroundStyle(Palette.muted)
+                }
             }
             Text(controller.completed ? "Made by you." : controller.currentStep.title)
                 .font(.system(size: 25, weight: .medium)).tracking(-0.5)
@@ -615,16 +635,46 @@ struct PaperStepsView: View {
                 Text(controller.status).font(.system(size: 12, weight: .medium)).foregroundStyle(Palette.accent)
                 if controller.needsRescan { Button("Scan table again") { controller.placeAgain() }.accessibilityIdentifier("rescanTable") }
             }
+            if !controller.completed {
+                HStack(spacing: 10) {
+                    HStack(spacing: 0) {
+                        ForEach([0.5, 1.0, 2.0], id: \.self) { rate in
+                            Button { controller.setSpeed(rate) } label: {
+                                Text(rate == 0.5 ? "0.5×" : rate == 1.0 ? "1×" : "2×")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(controller.playbackRate == rate ? .white : Palette.ink)
+                                    .frame(width: 52, height: 34)
+                                    .background(controller.playbackRate == rate ? Palette.accent : Color.clear,
+                                                in: RoundedRectangle(cornerRadius: 9))
+                            }.buttonStyle(.plain)
+                                .accessibilityIdentifier("speed_\(rate == 0.5 ? "half" : rate == 1.0 ? "one" : "two")")
+                        }
+                    }.padding(3).background(Palette.line.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityIdentifier("playbackSpeedControl")
+                    Spacer(minLength: 8)
+                    Button { voice.stop(); controller.setAutoPlay(!controller.autoPlay) } label: {
+                        Label(controller.autoPlay ? "Auto-play on" : "Auto-play",
+                              systemImage: controller.autoPlay ? "pause.circle.fill" : "play.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(controller.autoPlay ? .white : Palette.ink)
+                            .padding(.horizontal, 12).frame(height: 36)
+                            .background(controller.autoPlay ? Palette.accent : Palette.line.opacity(0.55), in: Capsule())
+                    }.buttonStyle(.plain)
+                        .accessibilityIdentifier("autoPlayToggle")
+                        .accessibilityValue(controller.autoPlay ? "On" : "Off")
+                }
+            }
             HStack(spacing: 12) {
                 Button { voice.contextDidChange(); controller.back() } label: {
                     Image(systemName: "arrow.left").font(.system(size: 18, weight: .medium))
                         .frame(width: 50, height: 50).background(Palette.line.opacity(0.55), in: Circle())
                 }.accessibilityLabel("Back").accessibilityIdentifier("backStep")
                     .disabled(controller.stepIndex == 0 || !controller.canAnimate)
-                primaryButton(controller.isPlaying ? "Pause fold" : controller.nextTitle,
-                              symbol: controller.isPlaying ? "pause.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
+                primaryButton(controller.autoPlay ? "Next fold" : controller.isPlaying ? "Pause fold" : controller.nextTitle,
+                              symbol: controller.autoPlay ? "forward.fill" : controller.isPlaying ? "pause.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
                     voice.contextDidChange()
-                    if controller.isPlaying { controller.togglePlayback() }
+                    if controller.autoPlay { controller.skipAhead() }
+                    else if controller.isPlaying { controller.togglePlayback() }
                     else { controller.next() }
                 }.disabled(!controller.canAnimate)
                 Button { showFoldHelp = true } label: {

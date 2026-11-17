@@ -67,7 +67,7 @@ final class VoiceHelpUITests: XCTestCase {
 
         // Start from a deliberately partial fold so replay has real work to do.
         app.scrubFold(to: 0.35)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
         openVoiceGuide()
         command("replay", feedback: "Replaying this fold.")
         command("slower", feedback: "Playback set to half speed.")
@@ -112,7 +112,7 @@ final class VoiceHelpUITests: XCTestCase {
         waitUntilGone(app.buttons["closeFoldHelp"])
         assertStep(1, title: "Make the center crease")
         waitUntilEnabled(app.buttons["nextStep"])
-        waitForLabel(app.buttons["nextStep"], containing: "Next fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Next")
         XCTAssertEqual(app.staticTexts["stepInstruction"].label, instruction)
         app.buttons["nextStep"].tap()
         assertStep(2, title: "Open the sheet")
@@ -125,7 +125,7 @@ final class VoiceHelpUITests: XCTestCase {
         #endif
         advanceToFirstFold()
         app.scrubFold(to: 0.4)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
         let progress = try XCTUnwrap(app.foldProgressValue)
 
         app.buttons["openAR"].tap()
@@ -186,7 +186,7 @@ final class VoiceHelpUITests: XCTestCase {
         assertStep(1, title: "Make the center crease", file: file, line: line)
         XCTAssertEqual(app.foldProgressValue, progress, file: file, line: line)
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold", file: file, line: line)
-        XCTAssertTrue(app.buttons["nextStep"].label.contains("Finish this fold"), file: file, line: line)
+        XCTAssertTrue(app.buttons["nextStep"].label.contains("Continue"), file: file, line: line)
         XCTAssertTrue(app.buttons["openAR"].exists, file: file, line: line)
         XCTAssertFalse(app.buttons["closeAR"].exists, file: file, line: line)
     }

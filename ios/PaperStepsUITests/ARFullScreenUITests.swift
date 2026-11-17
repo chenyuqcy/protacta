@@ -112,7 +112,7 @@ final class ARFullScreenUITests: XCTestCase {
         assertFullViewport(tallerThan: regularHeight)
         assertCompactControls()
         waitForLabel(app.staticTexts["compactARStep"], containing: "Step 1 of 10")
-        waitForLabel(app.buttons["compactARNext"], containing: "Finish this fold")
+        waitForLabel(app.buttons["compactARNext"], containing: "Continue")
         capture("Tabletop_layout_preview_full_screen_partial_fold")
 
         // Expanding and collapsing must not finish or restart the partial fold.
@@ -121,7 +121,7 @@ final class ARFullScreenUITests: XCTestCase {
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10")
         XCTAssertEqual(app.foldProgressValue, partialProgress)
         XCTAssertEqual(app.foldPlaybackLabel, "Play fold")
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold")
+        waitForLabel(app.buttons["nextStep"], containing: "Continue")
 
         enterFullScreen()
         app.buttons["compactARVoice"].tap()
@@ -135,7 +135,7 @@ final class ARFullScreenUITests: XCTestCase {
         app.buttons["compactARNext"].tap()
         waitUntilEnabled(app.buttons["compactARNext"])
         waitForLabel(app.staticTexts["compactARStep"], containing: "Step 1 of 10")
-        waitForLabel(app.buttons["compactARNext"], containing: "Next fold")
+        waitForLabel(app.buttons["compactARNext"], containing: "Next")
         app.buttons["compactARNext"].tap()
         waitForLabel(app.staticTexts["compactARStep"], containing: "Step 2 of 10")
         waitUntilEnabled(app.buttons["compactARNext"])
@@ -168,7 +168,7 @@ final class ARFullScreenUITests: XCTestCase {
             assertFullViewport()
             assertCompactControls()
             waitForLabel(app.staticTexts["compactARStep"], containing: "Step 1 of 10")
-            waitForLabel(app.buttons["compactARNext"], containing: "Finish this fold")
+            waitForLabel(app.buttons["compactARNext"], containing: "Continue")
             capture("iPad_\(landscape ? "landscape" : "portrait")_tabletop_full_screen_layout_preview")
         }
         app.buttons["exitARFullScreen"].tap()
@@ -191,7 +191,7 @@ final class ARFullScreenUITests: XCTestCase {
         waitForLabel(app.staticTexts["stepCounter"], containing: "STEP 1 OF 10", file: file, line: line)
         waitUntilEnabled(app.buttons["nextStep"], file: file, line: line)
         app.scrubFold(to: 0.4)
-        waitForLabel(app.buttons["nextStep"], containing: "Finish this fold", file: file, line: line)
+        waitForLabel(app.buttons["nextStep"], containing: "Continue", file: file, line: line)
         let progress = try XCTUnwrap(app.foldProgressValue, file: file, line: line)
         app.buttons["openAR"].tap()
         XCTAssertTrue(app.buttons["enterARFullScreen"].waitForExistence(timeout: 5), file: file, line: line)

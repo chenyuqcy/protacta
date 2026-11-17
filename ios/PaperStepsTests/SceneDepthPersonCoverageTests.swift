@@ -92,7 +92,7 @@ final class SceneDepthPersonCoverageTests: XCTestCase {
     func testCompletelyOffscreenTrianglesDoNotCompeteOrOverflowPixelConversions() {
         XCTAssertTrue(disjoint(quad(-10, 2, -5, 6)))
         XCTAssertTrue(disjoint(quad(20, 2, 25, 6)))
-        XCTAssertTrue(disjoint(surface([[1e12, 0, -0.5], [1e12 + 1e6, 0, -0.5], [1e12, 1, -0.5]],
+        XCTAssertTrue(disjoint(surface([[1e12, 0, -0.5], [Float(1e12 + 1e6), 0, -0.5], [1e12, 1, -0.5]],
                                         triangles: [0, 1, 2])))
     }
 

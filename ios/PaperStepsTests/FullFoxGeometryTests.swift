@@ -130,7 +130,10 @@ final class FullFoxGeometryTests: XCTestCase {
                 let d=cross(u,v);if abs(d)<1e-14 {continue}
                 let x=cross(w,v)/d,y=cross(u,w)/d
                 if x >= -0.00001 && y >= -0.00001 && x+y<=1.00001 {
-                    return a.position+a.separation+(b.position+b.separation-a.position-a.separation)*x+(c.position+c.separation-a.position-a.separation)*y
+                    let base: SIMD3<Float> = a.position+a.separation
+                    let bEdge: SIMD3<Float> = b.position+b.separation-base
+                    let cEdge: SIMD3<Float> = c.position+c.separation-base
+                    return base+bEdge*x+cEdge*y
                 }
             }
         }

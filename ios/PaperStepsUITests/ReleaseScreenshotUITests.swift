@@ -222,7 +222,7 @@ final class ReleaseScreenshotUITests: XCTestCase {
     private func midpoint() {
         app.tapViewOption("angleView")
         app.scrubFold(to: 0.5)
-        waitLabel(app.buttons["nextStep"], contains: "Finish this fold")
+        waitLabel(app.buttons["nextStep"], contains: "Continue")
     }
 
     private func revealSheetControl(_ target: XCUIElement, towardsTop: Bool = false) {

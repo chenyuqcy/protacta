@@ -40,6 +40,23 @@ final class LearningProgressStore {
         return latest.flatMap { OrigamiLesson(rawValue: $0.lessonID) }
     }
 
+    struct ResumePoint {
+        let lesson: OrigamiLesson
+        let stepIndex: Int
+        let updatedAt: Date
+    }
+
+    func inProgress(limit: Int) -> [ResumePoint] {
+        let sorted = loadRecords().compactMap { key, record -> ResumePoint? in
+            guard !record.completed, let lesson = OrigamiLesson(rawValue: key) else { return nil }
+            return ResumePoint(lesson: lesson, stepIndex: record.stepIndex, updatedAt: record.updatedAt)
+        }.sorted { left, right in
+            if left.updatedAt != right.updatedAt { return left.updatedAt > right.updatedAt }
+            return left.lesson.rawValue < right.lesson.rawValue
+        }
+        return Array(sorted.prefix(limit))
+    }
+
     @discardableResult
     func save(lesson: OrigamiLesson, stepIndex: Int, progress: Float, completed: Bool,
               slowMotion: Bool, hintsVisible: Bool) -> Bool {
