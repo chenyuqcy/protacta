@@ -17,6 +17,14 @@ struct EverydayMeshPart: Equatable {
     var surfaceThickness: Float = 0
     /// Material coordinates follow the undeformed cloth, never world space.
     var fabricUVs: [SIMD2<Float>]? = nil
+    /// Optional smooth front-face normals from a continuous deformation field.
+    /// They must follow the mesh winding and retain one value per source vertex.
+    /// Without these, the surface builder derives normals from triangle areas.
+    var surfaceNormals: [SIMD3<Float>]? = nil
+    /// A closed ribbon has four corners per ring (back-left, back-right,
+    /// front-right, front-left). Its edge/cap UV charts need this authored
+    /// thickness, independent of the animated pose; it does not add a shell.
+    var closedRibbonThickness: Float? = nil
 }
 
 enum EverydayMeshGeometry {

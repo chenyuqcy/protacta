@@ -71,16 +71,29 @@ final class TutorialHubUITests: XCTestCase {
 
     func testImronPlansAndOrigamiGridKeepTheLatestPlayerReachable() {
         app.buttons["hubPricing"].tap()
-        XCTAssertTrue(app.buttons["closePlans"].waitForExistence(timeout: 5))
-        capture("Build38_Imron_Plans_preview")
-        app.buttons["plansPlan_0"].tap()
-        let starterLessons = app.staticTexts["2 starter lessons (with AR guide)"]
-        reveal(starterLessons)
-        XCTAssertTrue(starterLessons.exists)
-        let disclaimer = app.staticTexts["The dart and fox lessons stay free. Prices in Qatari Riyal. Prototype preview - no charges are made."]
-        reveal(disclaimer)
-        XCTAssertTrue(disclaimer.isHittable)
-        app.buttons["closePlans"].tap()
+        if AppReleaseIdentity.productPrefix == "org.realitycore.foliafold" {
+            XCTAssertTrue(app.buttons["closeUnlock"].waitForExistence(timeout: 5))
+            for plan in ["monthly", "annual", "lifetime"] {
+                XCTAssertTrue(app.buttons["purchasePlan_\(plan)"].exists)
+            }
+            XCTAssertFalse(app.buttons["choosePlan"].exists,
+                           "The public release must show the real storefront, not prototype pricing")
+            XCTAssertTrue(app.buttons["restorePurchases"].exists)
+            XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "purchaseTerms").firstMatch.exists)
+            capture("Public_Home_Purchase_Plans")
+            app.buttons["closeUnlock"].tap()
+        } else {
+            XCTAssertTrue(app.buttons["closePlans"].waitForExistence(timeout: 5))
+            capture("Build38_Imron_Plans_preview")
+            app.buttons["plansPlan_0"].tap()
+            let starterLessons = app.staticTexts["2 starter lessons (with AR guide)"]
+            reveal(starterLessons)
+            XCTAssertTrue(starterLessons.exists)
+            let disclaimer = app.staticTexts["The dart and fox lessons stay free. Prices in Qatari Riyal. Prototype preview - no charges are made."]
+            reveal(disclaimer)
+            XCTAssertTrue(disclaimer.isHittable)
+            app.buttons["closePlans"].tap()
+        }
         XCTAssertTrue(app.buttons["hubOrigami"].waitForExistence(timeout: 5))
         app.buttons["hubOrigami"].tap()
         let dart = app.buttons["hubOrigamiLesson_dart"]

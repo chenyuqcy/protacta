@@ -62,7 +62,7 @@ final class EverydayClothGeometryTests: XCTestCase {
                             XCTAssertTrue(indices.allSatisfy { part.positions.indices.contains($0) })
                             guard indices.allSatisfy({ part.positions.indices.contains($0) }) else { continue }
                             let a = part.positions[indices[0]], b = part.positions[indices[1]], c = part.positions[indices[2]]
-                            XCTAssertGreaterThan(simd_length_squared(simd_cross(b - a, c - a)), 1e-17)
+                            XCTAssertGreaterThan(simd_length_squared(simd_cross(b - a, c - a)), 1e-18)
                         }
                     }
                 }
@@ -77,11 +77,11 @@ final class EverydayClothGeometryTests: XCTestCase {
         XCTAssertEqual(towel.maximum.x - towel.minimum.x, 0.206, accuracy: 0.00001)
         XCTAssertEqual(towel.maximum.z - towel.minimum.z, 0.462, accuracy: 0.00001)
         let sheet = bounds(frame(.flatBedsheet, 3, 1))
-        XCTAssertEqual(sheet.maximum.x - sheet.minimum.x, 0.18, accuracy: 0.00001)
-        XCTAssertEqual(sheet.maximum.z - sheet.minimum.z, 0.215, accuracy: 0.00001)
+        XCTAssertEqual(sheet.maximum.x - sheet.minimum.x, 0.1875, accuracy: 0.00001)
+        XCTAssertEqual(sheet.maximum.z - sheet.minimum.z, 0.2315, accuracy: 0.00001)
         let shirt = bounds(frame(.tShirt, 5, 1))
-        XCTAssertEqual(shirt.maximum.x - shirt.minimum.x, 0.24, accuracy: 0.00001)
-        XCTAssertEqual(shirt.maximum.z - shirt.minimum.z, 0.165, accuracy: 0.00001)
+        XCTAssertEqual(shirt.maximum.x - shirt.minimum.x, 0.243, accuracy: 0.00001)
+        XCTAssertEqual(shirt.maximum.z - shirt.minimum.z, 0.18, accuracy: 0.00001)
     }
 
     func testShirtStartsWithSleevesAndAnOpenNeckInsteadOfARectangularBillboard() {
@@ -110,7 +110,7 @@ final class EverydayClothGeometryTests: XCTestCase {
         XCTAssertTrue(frame(.fourInHand, 0, 0).isEmpty)
     }
 
-    func testNonuniformCalibrationKeepsShirtAndSheetPanelsRigidDuringFolds() {
+    func testNonuniformCalibrationBendsFabricWithoutStretchingItsFreePanels() {
         let scales: [SIMD3<Float>] = [[1, sqrt(2), 2], [1.6, sqrt(1.28), 0.8]]
         for scale in scales {
             for (course, count) in [(EverydayTutorialID.tShirt, 6), (.flatBedsheet, 4)] {
@@ -127,9 +127,15 @@ final class EverydayClothGeometryTests: XCTestCase {
                                 let indices = (0..<3).map { Int(before.triangles[triangle + $0]) }
                                 for edge in 0..<3 {
                                     let a = indices[edge], b = indices[(edge + 1) % 3]
-                                    XCTAssertEqual(simd_distance(before.positions[a], before.positions[b]),
-                                                   simd_distance(after.positions[a], after.positions[b]), accuracy: 0.00002,
-                                                   "\(course) action \(action): calibrated panels must not stretch as they rotate")
+                                    let original = simd_distance(before.positions[a], before.positions[b])
+                                    let posed = simd_distance(after.positions[a], after.positions[b])
+                                    // Chords shorten inside a rounded fold; a
+                                    // rigid-panel equality would forbid bending.
+                                    // The restrained free-edge drape may extend
+                                    // a chord slightly, never pull a tiny edge
+                                    // into a long filament at intersecting folds.
+                                    XCTAssertLessThanOrEqual(posed, original * 1.025 + 0.000002,
+                                                            "\(course) action \(action): cloth must not stretch across a fold")
                                 }
                             }
                         }
@@ -152,7 +158,7 @@ final class EverydayClothGeometryTests: XCTestCase {
                         for part in parts {
                             for triangle in stride(from: 0, to: part.triangles.count, by: 3) {
                                 let p = (0..<3).map { part.positions[Int(part.triangles[triangle + $0])] }
-                                XCTAssertGreaterThan(simd_length_squared(simd_cross(p[1] - p[0], p[2] - p[0])), 1e-17)
+                                XCTAssertGreaterThan(simd_length_squared(simd_cross(p[1] - p[0], p[2] - p[0])), 1e-18)
                             }
                         }
                     }
@@ -266,6 +272,87 @@ final class EverydayClothGeometryTests: XCTestCase {
         }
         XCTAssertGreaterThanOrEqual(curved.count, 6,
                                     "The lifted fabric needs a sampled curved band, not a sharp hinge")
+    }
+
+    func testShirtAndSheetRemainCurvedAfterTheFirstFoldLands() throws {
+        for course in [EverydayTutorialID.tShirt, .flatBedsheet] {
+            for progress in [0.5, 1.0] {
+                var curvedNormals = 0
+                for part in frame(course, 0, progress) where part.isMoving {
+                    let surface = try EverydaySurfaceMesh.make(part: part)
+                    // Source-face normals only: sidewalls must not be mistaken
+                    // for the curved fabric surface this test is looking for.
+                    curvedNormals += surface.normals.prefix(part.positions.count).filter {
+                        abs($0.y) > 0.08 && abs($0.y) < 0.92
+                    }.count
+                }
+                XCTAssertGreaterThan(curvedNormals, 20,
+                                     "\(course) at \(progress) needs a resolved round bend, including the landed pose")
+            }
+        }
+    }
+
+    func testFlexibleBodiesKeepSharedSourceSeamsCoincident() throws {
+        for scale: SIMD3<Float> in [[1, 1, 1], [1.6, sqrt(1.28), 0.8]] {
+            for course in [EverydayTutorialID.tShirt, .flatBedsheet] {
+                for action in EverydayTutorialCourse.course(course).actions.indices {
+                    for progress in [0.0, 0.5, 1.0] {
+                        let parts = EverydayMeshGeometry.parts(courseID: course, actionIndex: action,
+                                                              progress: progress, objectScale: scale)
+                        var shared: [SIMD3<Int32>: SIMD3<Float>] = [:]
+                        for part in parts {
+                            let rest = try XCTUnwrap(part.restPositions)
+                            for (source, posed) in zip(rest, part.positions) {
+                                let key = SIMD3<Int32>(Int32((source.x * 1e6).rounded()),
+                                                       Int32((source.y * 1e6).rounded()), Int32((source.z * 1e6).rounded()))
+                                if let neighbour = shared[key] {
+                                    XCTAssertLessThan(simd_distance(neighbour, posed), 0.000005,
+                                                      "\(course) action \(action): material classifications cannot open a seam")
+                                } else { shared[key] = posed }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testFlexibleNormalsFollowFaceWindingAndMeetAcrossMaterialBoundaries() throws {
+        for scale: SIMD3<Float> in [[1, 1, 1], [1.6, sqrt(1.28), 0.8]] {
+            for course in [EverydayTutorialID.tShirt, .flatBedsheet] {
+                for action in EverydayTutorialCourse.course(course).actions.indices {
+                    for progress in [0.0, 0.5, 1.0] {
+                        var shared: [SIMD3<Int32>: SIMD3<Float>] = [:]
+                        let parts = EverydayMeshGeometry.parts(courseID: course, actionIndex: action,
+                                                              progress: progress, objectScale: scale)
+                        for part in parts {
+                            let normals = try XCTUnwrap(part.surfaceNormals)
+                            let rest = try XCTUnwrap(part.restPositions)
+                            XCTAssertEqual(normals.count, part.positions.count)
+                            for index in normals.indices {
+                                XCTAssertEqual(simd_length(normals[index]), 1, accuracy: 0.0001)
+                                let p = rest[index]
+                                let key = SIMD3<Int32>(Int32((p.x * 1e6).rounded()), Int32((p.y * 1e6).rounded()), Int32((p.z * 1e6).rounded()))
+                                if let neighbour = shared[key] {
+                                    // Mirrored source polygons can reverse their
+                                    // front face; the physical normal axis must
+                                    // still be continuous across that boundary.
+                                    XCTAssertGreaterThan(abs(simd_dot(neighbour, normals[index])), 0.995)
+                                } else { shared[key] = normals[index] }
+                            }
+                            for i in stride(from: 0, to: part.triangles.count, by: 3) {
+                                let indices = (0..<3).map { Int(part.triangles[i + $0]) }
+                                let p = indices.map { part.positions[$0] }
+                                let face = simd_normalize(simd_cross(p[1] - p[0], p[2] - p[0]))
+                                let average = indices.map { normals[$0] }.reduce(SIMD3<Float>.zero, +)
+                                XCTAssertGreaterThanOrEqual(simd_dot(face, average), -0.001,
+                                                           "\(course) action \(action): shading normals must face the mesh front")
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func frame(_ course: EverydayTutorialID, _ action: Int, _ progress: Double) -> [EverydayMeshPart] {

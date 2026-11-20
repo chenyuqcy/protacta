@@ -14,11 +14,13 @@ private final class EverydayTeachingModel {
         if let fabric = EverydayFabricStyle.fabric(forPartID: part.id),
            let textured = EverydayFabricMaterials.material(for: fabric) {
             material = textured
-            material.baseColor.tint = UIColor(white: CGFloat(EverydayFabricStyle.trimTint(forPartID: part.id)), alpha: 1)
+            let tint = EverydayFabricStyle.tint(forPartID: part.id, colorIndex: part.colorIndex)
+            material.baseColor.tint = UIColor(red: CGFloat(tint.x), green: CGFloat(tint.y), blue: CGFloat(tint.z), alpha: 1)
         } else {
             material = PhysicallyBasedMaterial()
             let color = EverydayFabricStyle.fabric(forPartID: part.id) != nil
-                ? SIMD3<Float>(repeating: 0.91) : EverydaySurfaceStyle.color(index: part.colorIndex)
+                ? EverydayFabricStyle.tint(forPartID: part.id, colorIndex: part.colorIndex) * 0.91
+                : EverydaySurfaceStyle.color(index: part.colorIndex)
             material.baseColor = .init(tint: UIColor(red: CGFloat(color.x), green: CGFloat(color.y), blue: CGFloat(color.z), alpha: 1))
             material.roughness = .init(floatLiteral: EverydaySurfaceStyle.roughness)
         }

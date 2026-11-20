@@ -9,6 +9,9 @@ enum EverydayFabricStyle: String, CaseIterable {
         if id.hasPrefix("towel_") { return .terry }
         if id.hasPrefix("shirt_") { return .jersey }
         if id.hasPrefix("sheet_") { return .linen }
+        // A fine woven surface on the teaching ribbons, retaining their colour
+        // identity. Cords and the collar are not reclassified as flat cloth.
+        if id.hasPrefix("tie-"), !id.hasPrefix("tie-collar-") { return .linen }
         return nil
     }
 
@@ -26,5 +29,12 @@ enum EverydayFabricStyle: String, CaseIterable {
         if id == "shirt_collar" { return 0.97 }
         if id.contains("_hem") || id == "shirt_cuffs" { return 0.98 }
         return 1
+    }
+
+    static func tint(forPartID id: String, colorIndex: Int) -> SIMD3<Float> {
+        if id.hasPrefix("tie-"), !id.hasPrefix("tie-collar-") {
+            return EverydaySurfaceStyle.color(index: colorIndex)
+        }
+        return SIMD3(repeating: trimTint(forPartID: id))
     }
 }

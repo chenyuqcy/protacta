@@ -3,15 +3,14 @@
 An iPhone and iPad learning app that demonstrates practical tasks with animated
 3D lessons, tabletop AR and hands-free English voice controls.
 
-**Current development candidate: 1.0 (38)** · iOS / iPadOS 17+ · SwiftUI,
+**Current development candidate: 1.0 (40)** · iOS / iPadOS 17+ · SwiftUI,
 RealityKit, ARKit, Vision, Speech and AVFoundation.
 
-Build 38 integrates Imron's latest home and playback UX with the latest local
-3D models, white fabric materials and lesson behavior. See the
-[integration record](docs/IMRON_UX_MODEL_INTEGRATION_2026-11-17.md) for validation
-and remaining device checks. Earlier TestFlight distribution is documented in
-the [Build 24 release record](docs/TESTFLIGHT_BUILD_24.md); it does not establish
-distribution of this candidate.
+The default project builds the prototype installed on the team's test iPhone.
+Build 40 combines Imron's home and player design with softer T-shirt and bedsheet
+folds, continuous square-knot strands and a compact four-in-hand tie. Home →
+Plans opens the pricing preview in the prototype and the StoreKit purchase
+sheet in the public app. Follow [Open and build](#open-and-build) to run the prototype.
 
 ## Current experience
 
@@ -137,7 +136,7 @@ synthetic; passing them does not establish real camera, speech or learning resul
 
 Build products, signing credentials, local environment files and device/test
 receipts in `output/` are excluded from Git. Historical documents describe the
-builds named in them; Build 24 remains the verified external beta release.
+builds named in them.
 
 ## Provenance and assets
 

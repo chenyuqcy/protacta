@@ -7,8 +7,8 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--compile-only" ) ]]; then
   echo "Usage: $0 [--compile-only]" >&2
   exit 2
 fi
-mkdir -p "$PREVIEW_BUILD"
-xcrun swiftc -O \
+mkdir -p "$PREVIEW_BUILD/module-cache"
+xcrun swiftc -O -module-cache-path "$PREVIEW_BUILD/module-cache" \
   "$PROJECT_ROOT/scripts/render_everyday_catalog_thumbnails.swift" \
   "$PROJECT_ROOT/ios/PaperSteps/EverydayTutorialCourse.swift" \
   "$PROJECT_ROOT/ios/PaperSteps/EverydayMeshGeometry.swift" \

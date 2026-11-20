@@ -51,6 +51,18 @@ enum EverydaySurfaceMesh {
                 throw MeshError.invalidGeometry
             }
         }
+        if let authored = part.surfaceNormals {
+            guard authored.count == source.count, authored.allSatisfy(isFinite),
+                  authored.allSatisfy({ simd_length_squared($0).isFinite && simd_length_squared($0) > 1e-12 }) else {
+                throw MeshError.invalidGeometry
+            }
+        }
+        if let thickness = part.closedRibbonThickness {
+            guard thickness.isFinite, thickness > 0, part.surfaceThickness == 0,
+                  source.count >= 8, source.count % 4 == 0, part.fabricUVs != nil else {
+                throw MeshError.invalidGeometry
+            }
+        }
         let sourceUVs = part.fabricUVs ?? Array(repeating: .zero, count: source.count)
 
         var normals = Array(repeating: SIMD3<Float>.zero, count: source.count)
@@ -64,12 +76,20 @@ enum EverydaySurfaceMesh {
             front += [UInt32(a), UInt32(b), UInt32(c)]
         }
         guard !front.isEmpty else { throw MeshError.invalidGeometry }
-        normals = normals.map { simd_length_squared($0) > 1e-18 ? simd_normalize($0) : [0, 1, 0] }
+        if let authored = part.surfaceNormals {
+            normals = authored.map { simd_normalize($0) }
+        } else {
+            normals = normals.map { simd_length_squared($0) > 1e-18 ? simd_normalize($0) : [0, 1, 0] }
+        }
         guard normals.allSatisfy(isFinite) else { throw MeshError.invalidGeometry }
 
         // The producer explicitly marks closed volumes with zero shell width.
         // Cords and tie ribbons already have end caps and real thickness.
         guard part.surfaceThickness > 0 else {
+            if let thickness = part.closedRibbonThickness {
+                return try ribbonSurface(positions: source, normals: normals, uvs: sourceUVs,
+                                         triangles: front, thickness: thickness)
+            }
             return Surface(positions: source, normals: normals,
                            textureCoordinates: sourceUVs, triangles: front)
         }
@@ -80,9 +100,18 @@ enum EverydaySurfaceMesh {
         var surfaceNormals = normals + normals.map { -$0 }
         var textureCoordinates = sourceUVs + sourceUVs
         let count = UInt32(source.count)
-        var triangles = front
+        var triangles: [UInt32] = []
+        func appendSkinFace(_ a: UInt32, _ b: UInt32, _ c: UInt32) {
+            // A valid source sliver can collapse after offsetting along a
+            // curved normal field. Apply the same rendered-face tolerance as
+            // the seam strips; never submit a near-zero tangent frame.
+            let cross = simd_cross(positions[Int(b)] - positions[Int(a)],
+                                   positions[Int(c)] - positions[Int(a)])
+            if simd_length_squared(cross) > 1e-18 { triangles += [a, b, c] }
+        }
         for i in stride(from: 0, to: front.count, by: 3) {
-            triangles += [front[i + 2] + count, front[i + 1] + count, front[i] + count]
+            appendSkinFace(front[i], front[i + 1], front[i + 2])
+            appendSkinFace(front[i + 2] + count, front[i + 1] + count, front[i] + count)
         }
 
         // Indexed ribbons already express shared topology. Cloth producers
@@ -168,6 +197,47 @@ enum EverydaySurfaceMesh {
         }
         return Surface(positions: positions, normals: surfaceNormals,
                        textureCoordinates: textureCoordinates, triangles: triangles)
+    }
+
+    /// Broad faces keep their authored material coordinates. Only thin sides
+    /// and caps split their render vertices, so normal mapping has a valid
+    /// thickness-sized chart rather than a zero-area UV triangle. The original
+    /// closed geometry, averaged normals and winding remain unchanged.
+    private static func ribbonSurface(positions source: [SIMD3<Float>], normals: [SIMD3<Float>],
+                                      uvs: [SIMD2<Float>], triangles: [UInt32],
+                                      thickness: Float) throws -> Surface {
+        var positions = source, surfaceNormals = normals, coordinates = uvs
+        var indices: [UInt32] = []
+        indices.reserveCapacity(triangles.count)
+        for offset in stride(from: 0, to: triangles.count, by: 3) {
+            let face = (0..<3).map { Int(triangles[offset + $0]) }
+            let corners = Set(face.map { $0 % 4 })
+            let isCap = face.allSatisfy { $0 / 4 == face[0] / 4 }
+            if !isCap && (corners == Set([0, 1]) || corners == Set([2, 3])) {
+                indices += face.map(UInt32.init)
+                continue
+            }
+            let rightSide = corners == Set([1, 2])
+            let leftSide = corners == Set([0, 3])
+            guard isCap || rightSide || leftSide else { throw MeshError.invalidGeometry }
+            for index in face {
+                let corner = index % 4
+                let uv: SIMD2<Float>
+                if isCap {
+                    uv = [uvs[index].x, corner >= 2 ? thickness : 0]
+                } else {
+                    let across: Float = rightSide ? (corner == 2 ? thickness : 0)
+                                                 : (corner == 0 ? thickness : 0)
+                    uv = [across, uvs[index].y]
+                }
+                indices.append(UInt32(positions.count))
+                positions.append(source[index])
+                surfaceNormals.append(normals[index])
+                coordinates.append(uv)
+            }
+        }
+        return Surface(positions: positions, normals: surfaceNormals,
+                       textureCoordinates: coordinates, triangles: indices)
     }
 
     private static func isFinite(_ p: SIMD3<Float>) -> Bool { p.x.isFinite && p.y.isFinite && p.z.isFinite }

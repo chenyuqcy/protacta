@@ -260,6 +260,35 @@ final class EverydaySpatialUITests: XCTestCase {
         }
     }
 
+    func testRepeatedARDraggingKeepsTheSameUnconfirmedAction() throws {
+        launch(extraArguments: ["--equipment-ar-layout-fixture"])
+        openCourse("t_shirt")
+        scrub(to: 0.38)
+        let studio = app.sliders["everydayProgressSlider"]
+        let studioPercent = try XCTUnwrap(Double(try XCTUnwrap(studio.value as? String).replacingOccurrences(of: "%", with: "")))
+        XCTAssertEqual(studioPercent, 38, accuracy: 12)
+        enterAR()
+        let slider = app.sliders["everydayARProgressSlider"]
+        let confirm = app.buttons["everydayConfirm"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 5))
+        for target in [CGFloat(0.18), 0.82, 0.35, 0.68, 0.05, 0.95, 0.5] {
+            let before = "target=\(target), slider=\(slider.frame), next=\(confirm.frame), value=\(slider.value ?? "nil"), counter=\(app.staticTexts["everydayARCounter"].label)"
+            let note = XCTAttachment(string: before); note.name = "AR_drag_before_\(target)"; note.lifetime = .keepAlways; add(note)
+            XCTAssertLessThanOrEqual(slider.frame.maxY, confirm.frame.minY, "The slider and confirmation hit targets must stay separate")
+            slider.adjust(toNormalizedSliderPosition: target)
+            capture("AR_repeated_drag_\(Int(target * 100))_NO_LIVE_CAMERA")
+            XCTAssertEqual(app.staticTexts["everydayARCounter"].label, "1/6")
+            let percent = try XCTUnwrap(Double(try XCTUnwrap(slider.value as? String).replacingOccurrences(of: "%", with: "")))
+            XCTAssertEqual(percent, Double(target * 100), accuracy: 12)
+            XCTAssertTrue(app.buttons["everydayPlay"].label.contains("Play move"))
+        }
+        let finalPose = try XCTUnwrap(slider.value as? String)
+        app.buttons["everydayExitAR"].tap()
+        assertStudioAction(1, total: 6)
+        XCTAssertEqual(studio.value as? String, finalPose)
+        XCTAssertFalse(app.staticTexts["everydayCompletion"].exists)
+    }
+
     func testAllFiveCoursesCanScrubInLabeledARAndReturnWithTheExactPausedPose() throws {
         launch(extraArguments: ["--equipment-ar-layout-fixture"])
         for course in courses {
@@ -350,6 +379,141 @@ final class EverydaySpatialUITests: XCTestCase {
             XCTAssertEqual(viewport.value as? String, "Action \(course.count), movement 100 percent")
             closeCourse()
         }
+    }
+
+    /// Focused visual evidence for the four newly refined references. Sampling
+    /// the penultimate action gives a bend/loop sequence plus the adjacent final
+    /// action boundary without repeating the full-course screenshot suite.
+    /// Screenshots require human geometry review; AX values do not prove that
+    /// surfaces or strands are continuous, nor validate a real physical task.
+    func testRefinedClothAndKnotQuarterPosesKeepExplicitActionProgress() throws {
+        launch()
+        for course in courses where course.id != "towel" {
+            let sampledAction = course.count - 1
+            openCourse(course.id)
+            for action in 1..<sampledAction {
+                assertStudioAction(action, total: course.count)
+                try positionQuarterPose(at: 1)
+                app.buttons["everydayConfirm"].tap()
+            }
+            assertStudioAction(sampledAction, total: course.count)
+            let slider = app.sliders["everydayProgressSlider"]
+
+            for progress in [CGFloat(0), 0.25, 0.5, 0.75, 1] {
+                try positionQuarterPose(at: progress)
+                assertStudioAction(sampledAction, total: course.count)
+                XCTAssertFalse(app.staticTexts["everydayCompletion"].exists)
+                let actual = try XCTUnwrap(Double(try XCTUnwrap(slider.value as? String)
+                    .replacingOccurrences(of: "%", with: "")))
+                XCTAssertEqual(actual, Double(progress * 100), accuracy: 6,
+                               "The rendered sample must follow the requested slider position")
+                capture("Refined_\(course.id)_action_\(sampledAction)_p\(Int(progress * 100))")
+            }
+
+            // A reverse drag changes only the animated pose. Returning home
+            // checks the persisted confirmation count, not just a visible label.
+            try positionQuarterPose(at: 0.25)
+            let reversed = try XCTUnwrap(slider.value as? String)
+            assertRemains(slider, value: reversed)
+            assertStudioAction(sampledAction, total: course.count)
+            XCTAssertTrue(app.buttons["everydayConfirm"].label.contains("Continue"))
+            closeCourse()
+            let tile = app.buttons["hubCourse_\(course.id)"]
+            reveal(tile)
+            XCTAssertTrue((tile.value as? String)?.contains("Continue at action \(sampledAction) of \(course.count)") == true)
+            XCTAssertTrue((tile.value as? String)?.contains("\(sampledAction - 1) actions confirmed by you") == true)
+
+            tile.tap()
+            assertStudioAction(sampledAction, total: course.count)
+            try positionQuarterPose(at: 1)
+            waitForLabel(app.buttons["everydayConfirm"], containing: "I've done it")
+            capture("Refined_\(course.id)_boundary_previous_end")
+            app.buttons["everydayConfirm"].tap()
+            assertStudioAction(course.count, total: course.count)
+            try positionQuarterPose(at: 0)
+            capture("Refined_\(course.id)_boundary_next_start")
+            XCTAssertFalse(app.staticTexts["everydayCompletion"].exists)
+
+            try positionQuarterPose(at: 1)
+            waitForLabel(app.buttons["everydayConfirm"], containing: "Finish")
+            assertRemains(slider, value: "100%")
+            assertStudioAction(course.count, total: course.count)
+            XCTAssertFalse(app.staticTexts["everydayCompletion"].exists,
+                           "Viewing the final model must still wait for the learner's confirmation")
+            capture("Refined_\(course.id)_final_unconfirmed")
+            closeCourse()
+            reveal(tile)
+            XCTAssertTrue((tile.value as? String)?.contains("Continue at action \(course.count) of \(course.count)") == true)
+            XCTAssertTrue((tile.value as? String)?.contains("\(course.count - 1) actions confirmed by you") == true)
+        }
+    }
+
+    /// Native slider gestures can miss a requested normalized position because
+    /// of thumb/hit geometry and drag direction. For interior samples, reset to
+    /// the start before each of at most three correction attempts so the target
+    /// is always approached forward. Start/interior samples retain the original
+    /// six-percentage-point limit. If the end drag lands just short, use Play
+    /// to finish the movement through the real controls, without confirming it.
+    /// This helper is intentionally limited to the quarter-pose visual journey.
+    private func positionQuarterPose(at target: CGFloat, file: StaticString = #filePath, line: UInt = #line) throws {
+        let slider = app.sliders["everydayProgressSlider"]
+        XCTAssertTrue(slider.waitForExistence(timeout: 5), file: file, line: line)
+        XCTAssertTrue(slider.isHittable, file: file, line: line)
+        let actionBefore = app.staticTexts["everydayCounter"].label
+        var requested = min(1, max(0, target))
+        var observed: Double = 0
+        var trace: [String] = []
+        let interiorSample = target > 0 && target < 1
+        for attempt in 1...3 {
+            if interiorSample {
+                slider.adjust(toNormalizedSliderPosition: 0)
+                let baselineValue = try XCTUnwrap(slider.value as? String, file: file, line: line)
+                let baseline = try XCTUnwrap(Double(baselineValue.replacingOccurrences(of: "%", with: "")), file: file, line: line)
+                let reset = "attempt=\(attempt), target=\(Double(target) * 100)%, resetRequested=0%, baselineObserved=\(baseline)%"
+                trace.append(reset)
+                print("Quarter-pose sampling: \(reset)")
+            }
+            slider.adjust(toNormalizedSliderPosition: requested)
+            let value = try XCTUnwrap(slider.value as? String, file: file, line: line)
+            observed = try XCTUnwrap(Double(value.replacingOccurrences(of: "%", with: "")), file: file, line: line) / 100
+            let entry = "attempt=\(attempt), target=\(Double(target) * 100)%, requested=\(Double(requested) * 100)%, observed=\(observed * 100)%"
+            trace.append(entry)
+            print("Quarter-pose sampling: \(entry)")
+            if target == 1 && (observed < 1 || !app.buttons["everydayConfirm"].label.contains("done it")) {
+                let label = app.buttons["everydayConfirm"].label
+                if !label.contains("I've done it") && !label.contains("Finish") {
+                    trace.append("End drag landed at \(observed * 100)%; played the remaining movement without confirmation")
+                    app.buttons["everydayPlay"].tap()
+                    let finished = XCTNSPredicateExpectation(predicate: NSPredicate(format:
+                        "label CONTAINS %@ OR label CONTAINS %@", "I've done it", "Finish"),
+                        object: app.buttons["everydayConfirm"])
+                    XCTAssertEqual(XCTWaiter.wait(for: [finished], timeout: 10), .completed, file: file, line: line)
+                    let finalValue = try XCTUnwrap(slider.value as? String, file: file, line: line)
+                    observed = try XCTUnwrap(Double(finalValue.replacingOccurrences(of: "%", with: "")), file: file, line: line) / 100
+                }
+            }
+            let tolerance = target == 1 ? 0 : 0.06
+            let confirmLabel = app.buttons["everydayConfirm"].label
+            let finishGateReady = target != 1 || confirmLabel.contains("I've done it") || confirmLabel.contains("Finish")
+            if abs(observed - Double(target)) <= tolerance && finishGateReady { break }
+            requested = interiorSample ? min(1, max(0, requested + target - CGFloat(observed))) : target
+        }
+        let evidence = XCTAttachment(string: trace.joined(separator: "\n"))
+        evidence.name = "Quarter_pose_drag_feedback_\(actionBefore)_target_\(Int(target * 100))"
+        evidence.lifetime = .keepAlways
+        add(evidence)
+        XCTAssertEqual(observed * 100, Double(target * 100), accuracy: target == 1 ? 0 : 6,
+                       "Bounded correction must reach the original sampling tolerance", file: file, line: line)
+        if target == 1 {
+            let label = app.buttons["everydayConfirm"].label
+            XCTAssertTrue(label.contains("I've done it") || label.contains("Finish"),
+                          "The exact endpoint must expose learner confirmation", file: file, line: line)
+        }
+        XCTAssertEqual(app.buttons["everydayPlay"].label, "Play move",
+                       "Positioning must pause the animation", file: file, line: line)
+        XCTAssertEqual(app.staticTexts["everydayCounter"].label, actionBefore,
+                       "Positioning must not advance or confirm an action", file: file, line: line)
+        XCTAssertFalse(app.staticTexts["everydayCompletion"].exists, file: file, line: line)
     }
 
     func testRoundedTowelPreservesScrubbingAndTheARLayoutPose() throws {

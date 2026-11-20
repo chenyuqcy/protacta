@@ -200,6 +200,9 @@ final class LibraryPurchaseUITests: XCTestCase {
         app.launchArguments = ["--ui-testing"]
         app.launch()
         XCTAssertTrue(app.buttons["startLesson"].waitForExistence(timeout: 15))
+        // The player now opens the free Dart by default. Select a premium
+        // lesson through the visible library before asserting purchase gating.
+        app.selectOrigamiLesson("crane")
         let locked = NSPredicate(format: "label CONTAINS %@", "Unlock this lesson")
         await fulfillment(of: [expectation(for: locked, evaluatedWith: app.buttons["startLesson"])], timeout: 10)
     }

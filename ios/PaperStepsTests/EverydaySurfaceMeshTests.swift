@@ -3,6 +3,40 @@ import simd
 @testable import Protacta
 
 final class EverydaySurfaceMeshTests: XCTestCase {
+    func testCurvedNormalOffsetsCullOnlyCollapsedSkinSlivers() throws {
+        let cloth = EverydayMeshPart(id: "curved-sliver",
+                                     positions: [[0, 0, 0], [0, 0, 0.001], [0.000002, 0, 0]],
+                                     triangles: [0, 1, 2], colorIndex: 0, isMoving: false,
+                                     surfaceThickness: 0.002,
+                                     surfaceNormals: [[0, 1, 0], [0, 1, 0], [-0.0015, 1, 0]])
+        let surface = try EverydaySurfaceMesh.make(part: cloth)
+        let faces = stride(from: 0, to: surface.triangles.count, by: 3).map {
+            Array(surface.triangles[$0..<($0 + 3)])
+        }
+        XCTAssertFalse(faces.contains([0, 1, 2]), "The front offset collapses below the render tolerance")
+        XCTAssertTrue(faces.contains([5, 4, 3]), "The opposite skin stays valid and must be retained")
+        assertValid(surface)
+    }
+
+    func testAuthoredClothNormalsDriveSmoothShadingAndSkinOffsets() throws {
+        let direction = SIMD3<Float>(0, 0.8, 0.6)
+        let part = EverydayMeshPart(id: "curved-cloth", positions: [[0, 0, 0], [0, 0, 1], [1, 0, 0]],
+                                    triangles: [0, 1, 2], colorIndex: 0, isMoving: false,
+                                    surfaceThickness: 0.002,
+                                    surfaceNormals: Array(repeating: direction * 3, count: 3))
+        let surface = try EverydaySurfaceMesh.make(part: part)
+        for index in 0..<3 {
+            XCTAssertLessThan(simd_distance(surface.normals[index], direction), 1e-6)
+            XCTAssertLessThan(simd_distance(surface.positions[index], part.positions[index] + direction * 0.001), 1e-6)
+            XCTAssertLessThan(simd_distance(surface.positions[index + 3], part.positions[index] - direction * 0.001), 1e-6)
+        }
+        for invalid in [[SIMD3<Float>(0, 1, 0)], Array(repeating: SIMD3<Float>.zero, count: 3),
+                        Array(repeating: SIMD3<Float>(.nan, 1, 0), count: 3)] {
+            var bad = part; bad.surfaceNormals = invalid
+            XCTAssertThrowsError(try EverydaySurfaceMesh.make(part: bad))
+        }
+    }
+
     func testDuplicatedTriangleVerticesDoNotCreateAnInternalWall() throws {
         let points: [SIMD3<Float>] = [[-1, 0, -1], [-1, 0, 1], [1, 0, 1],
                                      [-1, 0, -1], [1, 0, 1], [1, 0, -1]]
@@ -139,12 +173,46 @@ final class EverydaySurfaceMeshTests: XCTestCase {
             for part in EverydayMeshGeometry.parts(courseID: id, actionIndex: 2, progress: 0.37)
             where !part.id.hasPrefix("tie-collar-") {
                 let mesh = try EverydaySurfaceMesh.make(part: part)
-                XCTAssertEqual(mesh.positions, part.positions, "\(part.id) already has physical thickness")
-                XCTAssertEqual(mesh.triangles, part.triangles)
-                XCTAssertTrue(mesh.textureCoordinates.allSatisfy { $0 == .zero },
-                              "Untiled rope and ribbon retain zero UVs")
+                XCTAssertEqual(Array(mesh.positions.prefix(part.positions.count)), part.positions,
+                               "\(part.id) already has physical thickness")
+                XCTAssertEqual(mesh.triangles.map { mesh.positions[Int($0)] },
+                               part.triangles.map { part.positions[Int($0)] },
+                               "UV chart splits must preserve every triangle's geometry and winding")
+                XCTAssertEqual(Array(mesh.textureCoordinates.prefix(part.positions.count)),
+                               part.fabricUVs ?? Array(repeating: .zero, count: part.positions.count),
+                               "Closed volumes retain authored material coordinates without adding a shell")
+                if part.closedRibbonThickness == nil {
+                    XCTAssertEqual(mesh.positions, part.positions)
+                    XCTAssertEqual(mesh.triangles, part.triangles)
+                }
             }
         }
+    }
+
+    func testClosedRibbonEdgeAndCapChartsStayValidAndFixedAcrossTheWholeLesson() throws {
+        var reference: [String: EverydaySurfaceMesh.Surface] = [:]
+        for action in EverydayTutorialCourse.course(.fourInHand).actions.indices {
+            for progress in [0.0, 0.25, 0.5, 0.75, 1.0] {
+                for part in EverydayMeshGeometry.parts(courseID: .fourInHand, actionIndex: action, progress: progress)
+                where part.closedRibbonThickness != nil {
+                    let mesh = try EverydaySurfaceMesh.make(part: part)
+                    assertNondegenerateTextureTriangles(mesh)
+                    XCTAssertEqual(mesh.triangles.map { mesh.positions[Int($0)] },
+                                   part.triangles.map { part.positions[Int($0)] })
+                    if let first = reference[part.id] {
+                        XCTAssertEqual(mesh.triangles, first.triangles)
+                        XCTAssertEqual(mesh.textureCoordinates, first.textureCoordinates,
+                                       "Thin edge/cap weave must not swim during tying or scrubbing")
+                    } else { reference[part.id] = mesh }
+                    for uv in mesh.textureCoordinates.dropFirst(part.positions.count) {
+                        // Side charts use thickness across; caps use thickness vertically.
+                        XCTAssertTrue(uv.x == 0 || uv.x == part.closedRibbonThickness ||
+                                      uv.y == 0 || uv.y == part.closedRibbonThickness)
+                    }
+                }
+            }
+        }
+        XCTAssertFalse(reference.isEmpty)
     }
 
     func testClosedMeshesHaveOutwardWindingAndNormals() throws {

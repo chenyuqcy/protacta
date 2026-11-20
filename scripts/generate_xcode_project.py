@@ -22,7 +22,7 @@ TEAM = "67P96Z83PX"
 PROTOTYPE_BUNDLE = "org.realitycore.protacta.prototype"
 BUNDLE = "org.realitycore.foliafold" if foliafold_update else PROTOTYPE_BUNDLE
 CLIP_BUNDLE = BUNDLE + ".Clip"
-VERSION, BUILD = ("1.1.0", "29") if foliafold_update else ("1.0", "38")
+VERSION, BUILD = ("1.1.1", "40") if foliafold_update else ("1.0", "40")
 PROJECT_NAME = "Protacta-FoliafoldUpdate.xcodeproj" if foliafold_update else "Protacta.xcodeproj"
 CLIP_ENTITLEMENTS = "FoliafoldUpdate.entitlements" if foliafold_update else "ProtactaClip.entitlements"
 TARGETS = list(SOURCE_NAMES)
@@ -242,7 +242,8 @@ scheme_file.parent.mkdir(parents=True, exist_ok=True)
 scheme_file.write_text(scheme)
 # An explicitly named local billing scheme opts into Xcode's purchase server.
 # The normal run/archive scheme always uses App Store / sandbox products.
-fixture_path = storekit_fixture(APP)
+# Standalone Xcode project schemes resolve StoreKit references with a ../../ prefix.
+fixture_path = Path("../..") / storekit_fixture(APP).relative_to(ROOT)
 testing_scheme = scheme.replace("</LaunchAction>", f'<StoreKitConfigurationFileReference identifier="{fixture_path}"/></LaunchAction>')
 (scheme_file.parent / f"{APP}-StoreKit.xcscheme").write_text(testing_scheme)
 clip_scheme = f'''<?xml version="1.0" encoding="UTF-8"?>

@@ -74,8 +74,8 @@ enum EverydayCatalogThumbnailRenderer {
             // Part identity matters: the shirt and the first rope share a
             // palette index but must never share a textile material.
             let fabric = EverydayFabricStyle.fabric(forPartID: part.id)
-            let trimTint = EverydayFabricStyle.trimTint(forPartID: part.id)
-            let cacheKey = fabric.map { "\($0.resourcePrefix)-\(trimTint)" } ?? "solid-\(part.colorIndex)"
+            let tint = EverydayFabricStyle.tint(forPartID: part.id, colorIndex: part.colorIndex)
+            let cacheKey = fabric.map { "\($0.resourcePrefix)-\(tint.x)-\(tint.y)-\(tint.z)" } ?? "solid-\(part.colorIndex)"
             let material: SCNMaterial
             if let cached = materialCache[cacheKey] {
                 material = cached
@@ -85,7 +85,7 @@ enum EverydayCatalogThumbnailRenderer {
                 material.metalness.contents = 0
                 if let fabric {
                     material.diffuse.contents = NSColor.white
-                    material.multiply.contents = NSColor(white: CGFloat(trimTint), alpha: 1)
+                    material.multiply.contents = NSColor(srgbRed: CGFloat(tint.x), green: CGFloat(tint.y), blue: CGFloat(tint.z), alpha: 1)
                     let maps: [(SCNMaterialProperty, String, Bool)] = [
                         (material.diffuse, "white-basecolor.jpg", true),
                         (material.normal, "normal-gl.png", false),

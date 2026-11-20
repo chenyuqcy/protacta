@@ -552,8 +552,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         let delta = lastTick == 0 ? 0 : max(0, min(timestamp - lastTick, 0.06))
         lastTick = timestamp
         let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        #if DEBUG
+        // Capture the actual lesson timing while retaining isolated UI-test
+        // progress. This opt-in does not change the interface or shipping speed.
+        let realtimeDemo = testing && ProcessInfo.processInfo.arguments.contains("--demo-realtime")
+        #else
+        let realtimeDemo = false
+        #endif
         let baseDuration: Double = lesson == .crane ? 4.2 : (lesson == .star && stepIndex == 7 ? 6.0 : 3.2)
-        let duration: Double = testing ? 0.35 : baseDuration / playbackRate
+        let duration: Double = testing && !realtimeDemo ? 0.35 : baseDuration / playbackRate
         progress = min(1, progress + Float(delta / duration))
         applyPose()
         if progress >= 1 {

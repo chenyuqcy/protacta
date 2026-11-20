@@ -110,6 +110,10 @@ struct ProtactaHomeView: View {
     @State private var replayIntroductionAfterAbout = false
     @State private var showPhoneSetup = false
     @State private var showPricing = false
+    #if FOLIAFOLD_UPDATE
+    @StateObject private var homePurchases = PurchaseStore()
+    @State private var selectedPurchasePlan: PurchasePlan = .annual
+    #endif
     @State private var showTutorialSupport = false
     @State private var openSupportAfterAbout = false
     @State private var replayIntroductionAfterSupport = false
@@ -209,7 +213,16 @@ struct ProtactaHomeView: View {
             }
         }) { about }
         .sheet(isPresented: $showPhoneSetup) { PhoneSetupView() }
-        .sheet(isPresented: $showPricing) { PlansView() }
+        .sheet(isPresented: $showPricing) {
+            #if FOLIAFOLD_UPDATE
+            LibraryPurchaseSheet(purchases: homePurchases, selectedPurchasePlan: $selectedPurchasePlan) {
+                showPricing = false
+            }
+            .task { await homePurchases.refresh() }
+            #else
+            PlansView()
+            #endif
+        }
         .sheet(isPresented: $showTutorialSupport, onDismiss: {
             if replayIntroductionAfterSupport {
                 replayIntroductionAfterSupport = false
