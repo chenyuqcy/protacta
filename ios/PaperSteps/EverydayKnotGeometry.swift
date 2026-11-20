@@ -6,7 +6,7 @@ import simd
 /// Diagram left is model -X, the far edge is -Z and height is +Y.
 enum EverydayKnotGeometry {
     private typealias Point = SIMD3<Float>
-    private static let sampleCount = 81
+    private static let sampleCount = 161
     private static let cordRadius: Float = 0.009
 
     static func parts(courseID: EverydayTutorialID, actionIndex: Int, progress: Double) -> [EverydayMeshPart] {
@@ -22,16 +22,42 @@ enum EverydayKnotGeometry {
 
     private static func squareParts(action: Int, amount: Float) -> [EverydayMeshPart] {
         let start = squareRoutes(state: action), end = squareRoutes(state: action + 1)
-        let a = interpolate(start.a, end.a, amount: amount)
-        let b = interpolate(start.b, end.b, amount: amount)
-        // The standing sections join outside the knot, making this one practice
-        // cord with two named ends rather than two disconnected floating ropes.
-        let aJoin = smooth([a[0], Point(-0.30, 0.045, 0.35), Point(-0.18, 0.045, 0.39), Point(0, 0.045, 0.39)])
-        let bJoin = smooth([b[0], Point(0.30, 0.045, 0.35), Point(0.18, 0.045, 0.39), Point(0, 0.045, 0.39)])
-        return [tube(id: "cord-A", route: a, radius: cordRadius, color: 1, moving: true),
-                tube(id: "cord-B", route: b, radius: cordRadius, color: 2, moving: true),
-                tube(id: "cord-A-standing", route: aJoin, radius: cordRadius, color: 1, moving: action == 4),
-                tube(id: "cord-B-standing", route: bJoin, radius: cordRadius, color: 2, moving: action == 4)]
+        // Sample each standing section and its working end as one curve. Two
+        // independently capped tubes formerly met here with different tangents,
+        // leaving an angular seam as the knot was dressed. The only remaining
+        // join is the colour boundary, on a straight run away from the knot.
+        func continuous(_ route: [Point], side: Float) -> [Point] {
+            let end = route[0], direction = simd_normalize(route[1] - route[0])
+            let start = Point(side * 0.06, 0.045, 0.39)
+            let first = Point(side * 0.45, 0.045, 0.39), last = end - direction * 0.14
+            // A cubic standing bend has a horizontal tangent at the colour
+            // boundary and enters the working route along its own tangent.
+            // There is no extra corner/control point at the old side join.
+            var controls = [Point(0, 0.045, 0.39), Point(side * 0.02, 0.045, 0.39), Point(side * 0.04, 0.045, 0.39)]
+            controls += (0...24).map { index -> Point in
+                let t = Float(index) / 24, s = 1 - t
+                return start * (s * s * s) + first * (3 * s * s * t)
+                    + last * (3 * s * t * t) + end * (t * t * t)
+            }
+            // Uniform Catmull-Rom tangents must not be pulled backwards by a
+            // half-metre straight tail adjacent to a short standing bend.
+            // Only subdivide this incoming leg; the authored knot controls
+            // retain their rounded bights and original over/under crossings.
+            let sections = max(1, Int(ceil(simd_distance(route[0], route[1]) / 0.045)))
+            for section in 1...sections {
+                controls.append(route[0] + (route[1] - route[0]) * (Float(section) / Float(sections)))
+            }
+            controls += route.dropFirst(2)
+            return controls
+        }
+        let aStart = continuous(start.a, side: -1), aEnd = continuous(end.a, side: -1)
+        let bStart = continuous(start.b, side: 1), bEnd = continuous(end.b, side: 1)
+        return [tube(id: "cord-A", route: interpolate(aStart, aEnd, amount: amount),
+                     radius: cordRadius, color: 1, moving: true,
+                     orientation: transitionFrames(aStart, aEnd, amount: amount)),
+                tube(id: "cord-B", route: interpolate(bStart, bEnd, amount: amount),
+                     radius: cordRadius, color: 2, moving: true,
+                     orientation: transitionFrames(bStart, bEnd, amount: amount))]
     }
 
     private static func squareRoutes(state: Int) -> (a: [Point], b: [Point]) {
@@ -72,26 +98,52 @@ enum EverydayKnotGeometry {
     }
 
     private static func tieParts(action: Int, amount: Float) -> [EverydayMeshPart] {
-        let wide = interpolate(tieWide(state: action), tieWide(state: action + 1), amount: amount)
-        let narrow = interpolate(tieNarrow(state: action), tieNarrow(state: action + 1), amount: amount)
-        let neck = smooth([point(155, 115, 0.075), point(140, 84, 0.075), point(162, 52, 0.075),
-                           point(200, 42, 0.075), point(238, 52, 0.075), point(260, 84, 0.075), point(245, 115, 0.055)])
+        let wideStart = tieWide(state: action), wideEnd = tieWide(state: action + 1)
+        let narrowStart = tieNarrow(state: action), narrowEnd = tieNarrow(state: action + 1)
+        let wide = interpolate(wideStart, wideEnd, amount: amount)
+        let narrow = interpolate(narrowStart, narrowEnd, amount: amount)
+        let baseWideFrames = transitionFrames(wideStart, wideEnd, amount: amount, faceForward: true)
+        let startRoll = tieWideRoll(state: action), endRoll = tieWideRoll(state: action + 1)
+        let wideFrames = baseWideFrames.indices.map { index in
+            let frame = baseWideFrames[index]
+            let roll = startRoll[index] + (endRoll[index] - startRoll[index]) * amount
+            return (side: frame.side * cos(roll) + frame.normal * sin(roll),
+                    normal: frame.normal * cos(roll) - frame.side * sin(roll))
+        }
+        let narrowFrames = transitionFrames(narrowStart, narrowEnd, amount: amount, faceForward: true)
+        let neck = smooth(tieNeck)
         let collarAmount: Float = action == 6 ? amount : 0
-        var result = [ribbon(id: "tie-wide-W", route: wide, width: 0.047, pointed: true, color: 1, moving: action < 6),
-                      ribbon(id: "tie-narrow-N", route: narrow, width: 0.020, pointed: true, color: 2, moving: action == 6),
+        var result = [ribbon(id: "tie-wide-W", route: wide, width: 0.047, pointed: true, color: 1, moving: action < 6,
+                             orientation: wideFrames, neckWidth: 0.018),
+                      ribbon(id: "tie-narrow-N", route: narrow, width: 0.020, pointed: true, color: 2, moving: action == 6,
+                             orientation: narrowFrames),
                       ribbon(id: "tie-neck-loop", route: neck, width: 0.016, pointed: false, color: 1, moving: false)]
         result += [collar(left: true, amount: collarAmount), collar(left: false, amount: collarAmount)]
         // The physical keeper sits on the back of W. It remains attached to the
         // same tail region as the blade moves; orbiting reveals the rear gap.
-        let index = Int(Float(wide.count - 1) * 0.79)
+        // Keep the keeper on the hanging blade, below the knot. A fraction near
+        // the knot mistakenly moved the narrow tail back into the front wrap.
+        let index = Int(Float(wide.count - 1) * 0.91)
         let center = wide[index]
-        let frame = basis(route: wide, index: index)
-        let across = frame.side * 0.028
-        let behind = Point(0, -0.010, 0)
-        let keeperRoute = smooth([center - across, center - across * 0.75 + behind,
-                                  center + across * 0.75 + behind, center + across])
+        let frame = wideFrames[index]
+        // The keeper is sewn inside W's 47 mm blade. Its old 56 mm span
+        // protruded as two dark ears even when viewed directly from the front.
+        let localKeeper = smooth([Point(-0.019, -0.0035, 0), Point(-0.01425, -0.018, 0),
+                                  Point(0.01425, -0.018, 0), Point(0.019, -0.0035, 0)], minimumHeight: nil)
+        let along = simd_cross(frame.side, frame.normal)
+        func transform(_ local: Point) -> Point {
+            frame.side * local.x + frame.normal * local.y + along * local.z
+        }
+        // A sewn loop follows the blade's material frame, including its back
+        // direction. World-Y offsets and separately interpolated loop frames
+        // otherwise swing the keeper sideways during an intermediate tuck.
+        let keeperRoute = localKeeper.map { center + transform($0) }
+        let keeperFrames = frames(route: localKeeper).map {
+            (side: transform($0.side), normal: transform($0.normal))
+        }
         result.append(ribbon(id: "tie-rear-keeper", route: keeperRoute, width: 0.016,
-                             pointed: false, color: 4, moving: action < 6))
+                             pointed: false, color: 4, moving: action < 6,
+                             orientation: keeperFrames))
         return result
     }
 
@@ -106,14 +158,18 @@ enum EverydayKnotGeometry {
         case 3: return band + [point(285, 315, 0.095)]
         case 4: return band + [point(251, 249, 0.04), point(224, 202, 0.035), point(200, 151, 0.04), point(200, 87, 0.055)]
         case 5: return band + [point(251, 249, 0.04), point(224, 202, 0.035), point(200, 151, 0.04),
-                               point(202, 105, 0.06), point(233, 145, 0.145), point(218, 212, 0.145),
-                               point(203, 267, 0.145), point(199, 350, 0.125)]
+                               point(202, 105, 0.06), point(224, 145, 0.145), point(209, 221, 0.082),
+                               point(201, 275, 0.075), point(199, 305, 0.115), point(199, 350, 0.125)]
         default:
-            return [point(155, 115, 0.075), point(155, 165, 0.075), point(197, 182, 0.105),
-                    point(230, 191, 0.065), point(211, 207, 0.035), point(176, 206, 0.035),
-                    point(191, 227, 0.115), point(225, 226, 0.115), point(228, 199, 0.045),
-                    point(201, 169, 0.045), point(202, 135, 0.055), point(220, 165, 0.145),
-                    point(203, 220, 0.145), point(199, 350, 0.125)]
+            // Dress the same crossing sequence near the collar. The descending
+            // blade is between the rear wrap and front band, then emerges below
+            // it. It must never be drawn on top of the band it passes through.
+            return [point(155, 115, 0.075), point(176, 158, 0.075), point(194, 174, 0.084),
+                    point(209, 177, 0.070), point(207, 181, 0.055), point(190, 181, 0.055),
+                    point(186, 184, 0.078), point(192, 187, 0.105), point(207, 187, 0.105),
+                    point(213, 183, 0.078), point(209, 180, 0.055), point(201, 176, 0.055),
+                    point(200, 174, 0.060), point(204, 179, 0.085), point(201, 187, 0.077),
+                    point(199, 204, 0.105), point(199, 350, 0.115)]
         }
     }
 
@@ -122,18 +178,76 @@ enum EverydayKnotGeometry {
             return [point(245, 115, 0.055), point(224, 222, 0.055), point(218, 325, 0.045)]
         }
         let wide = smooth(tieWide(state: 6))
-        let keeper = wide[Int(Float(wide.count - 1) * 0.79)]
-        let tail = wide[Int(Float(wide.count - 1) * 0.95)]
-        let insideGap = Point(0, -0.005, 0)
-        return [point(245, 115, 0.055), point(224, 222, 0.055), keeper + insideGap, tail + insideGap]
+        let insideGap = Point(0, -0.009, 0)
+        let blade = wide.enumerated().filter { $0.offset > wide.count / 2 && $0.element.z >= point(199, 220, 0).z }
+        // Follow the actual back of W through the keeper and stop before its
+        // pointed tip; a single diagonal shortcut exposed an orange stripe.
+        return [point(245, 115, 0.055), point(221, 149, 0.045), point(202, 195, 0.055)]
+            + blade.filter { $0.offset < Int(Float(wide.count - 1) * 0.97) }.map { $0.element + insideGap }
     }
 
+    /// In a dressed tie the front wrap is a band around the knot, not a flat
+    /// ribbon that flips to face the camera on the back half of every turn.
+    /// Keeping its width along the knot axis produces one continuous outside
+    /// face. The open teaching poses retain their exaggerated readable routes.
+    private static func tieWideRoll(state: Int) -> [Float] {
+        guard state >= 6 else { return Array(repeating: 0, count: sampleCount) }
+        let controls = tieWide(state: state), route = smooth(controls)
+        let basis = frames(route: route, faceForward: true)
+        var result = Array(repeating: Float(0), count: route.count)
+        func closest(_ control: Int) -> Int {
+            route.indices.min { simd_distance_squared(route[$0], controls[control]) <
+                simd_distance_squared(route[$1], controls[control]) }!
+        }
+        let first = closest(3), last = closest(9)
+        for index in max(0, first - 4)...min(route.count - 1, last + 4) {
+            let tangent = simd_normalize(route[min(route.count - 1, index + 1)] - route[max(0, index - 1)])
+            let axis = Point(0, 0, 1)
+            let projected = axis - tangent * simd_dot(axis, tangent)
+            guard simd_length_squared(projected) > 1e-8 else { continue }
+            let side = simd_normalize(projected)
+            let amount = min(1, Float(min(index - first + 4, last + 4 - index)) / 4)
+            // A bounded material roll (zero outside the wrap) avoids adding a
+            // whole quaternion turn to the free blade during knot tightening.
+            result[index] = -acos(max(-1, min(1, simd_dot(basis[index].side, side)))) * amount
+        }
+        return result.indices.map { index in
+            var angle: Float = 0, weight: Float = 0
+            for offset in -4...4 {
+                let w = Float(5 - abs(offset))
+                angle += result[min(result.count - 1, max(0, index + offset))] * w
+                weight += w
+            }
+            return angle / weight
+        }
+    }
+
+    private static let tieNeck = [point(155, 115, 0.075), point(140, 84, 0.075), point(162, 52, 0.075),
+                                  point(200, 42, 0.075), point(238, 52, 0.075), point(260, 84, 0.075),
+                                  point(245, 115, 0.055)]
+
     private static func collar(left: Bool, amount: Float) -> EverydayMeshPart {
-        let sign: Float = left ? -1 : 1
-        let positions = [Point(sign * 0.115, 0.085, -0.25), Point(sign * 0.005, 0.085, -0.26),
-                         Point(sign * 0.06, 0.175 - 0.11 * amount, -0.20 - 0.08 * amount)]
+        let neck = smooth(tieNeck)
+        let midpoint = (neck.count - 1) / 2
+        let indices = left ? Array(0...midpoint) : Array(midpoint..<neck.count)
+        let center = point(200, 90, 0)
+        var positions: [Point] = [], triangles: [UInt32] = []
+        for index in indices {
+            let p = neck[index]
+            let radial = simd_normalize(Point(p.x - center.x, 0, p.z - center.z))
+            let hinge = p + radial * 0.032 + Point(0, 0.028, 0)
+            // Raised panels pivot down over the neck band rather than turning
+            // into the two edge-on triangles used by the earlier placeholder.
+            let angle = amount * Float.pi / 2
+            let edge = hinge - radial * (sin(angle) * 0.064) + Point(0, cos(angle) * 0.064, 0)
+            positions += [hinge, edge]
+        }
+        for row in 0..<(indices.count - 1) {
+            let i = UInt32(row * 2)
+            triangles += [i, i + 2, i + 1, i + 1, i + 2, i + 3]
+        }
         return EverydayMeshPart(id: left ? "tie-collar-left" : "tie-collar-right", positions: positions,
-                                triangles: left ? [0, 1, 2] : [0, 2, 1], colorIndex: 3, isMoving: amount > 0)
+                                triangles: triangles, colorIndex: 3, isMoving: amount > 0, surfaceThickness: 0.0005)
     }
 
     private static func point(_ x: Float, _ z: Float, _ height: Float) -> Point {
@@ -149,7 +263,7 @@ enum EverydayKnotGeometry {
 
     /// Cubic smoothing followed by distance sampling keeps a stable ring count
     /// and the free tip at the same final index across every authored action.
-    private static func smooth(_ controls: [Point]) -> [Point] {
+    private static func smooth(_ controls: [Point], minimumHeight: Float? = 0.018) -> [Point] {
         guard controls.count >= 2 else { return Array(repeating: controls.first ?? .zero, count: sampleCount) }
         var dense: [Point] = []
         for i in 0..<(controls.count - 1) {
@@ -167,7 +281,7 @@ enum EverydayKnotGeometry {
                 let cubic: Point = (-p0 + c1 - c2 + p3) * t3
                 let base: Point = p1 * 2
                 var p: Point = (base + linear + quadratic + cubic) * 0.5
-                p.y = max(0.018, p.y)
+                if let minimumHeight { p.y = max(minimumHeight, p.y) }
                 dense.append(p)
             }
         }
@@ -185,19 +299,132 @@ enum EverydayKnotGeometry {
         }
     }
 
-    private static func basis(route: [Point], index: Int) -> (side: Point, normal: Point) {
-        let delta = route[min(route.count - 1, index + 1)] - route[max(0, index - 1)]
-        let tangent = simd_length_squared(delta) > 1e-12 ? simd_normalize(delta) : Point(0, 0, 1)
-        let reference = abs(tangent.y) < 0.92 ? Point(0, 1, 0) : Point(1, 0, 0)
-        let side = simd_normalize(simd_cross(tangent, reference))
-        return (side, simd_normalize(simd_cross(side, tangent)))
+    /// Parallel transport keeps a strand's cross-section continuous as it turns
+    /// upright. Choosing a fresh world-up axis at each ring made the ribbon
+    /// jump by its entire width when a tangent crossed the old 0.92 threshold.
+    private static func frames(route: [Point], faceForward: Bool = false) -> [(side: Point, normal: Point)] {
+        guard !route.isEmpty else { return [] }
+        let tangents: [Point] = route.indices.map { index in
+            let delta = route[min(route.count - 1, index + 1)] - route[max(0, index - 1)]
+            return simd_length_squared(delta) > 1e-12 ? simd_normalize(delta) : Point(0, 0, 1)
+        }
+        let first = tangents[0]
+        let reference = abs(first.y) < 0.999 ? Point(0, 1, 0) : Point(1, 0, 0)
+        var side = simd_normalize(simd_cross(first, reference))
+        var result = [(side: side, normal: simd_normalize(simd_cross(side, first)))]
+        for index in 1..<route.count {
+            let before = tangents[index - 1], after = tangents[index]
+            let axis = simd_cross(before, after)
+            let sine = simd_length(axis)
+            let cosine = max(-1, min(1, simd_dot(before, after)))
+            if sine > 1e-6 {
+                let direction = axis / sine
+                side = side * cosine + simd_cross(direction, side) * sine
+                    + direction * simd_dot(direction, side) * (1 - cosine)
+            }
+            // A straight reversal can retain its side: a half-turn around that
+            // side maps the previous tangent to the next without an axis guess.
+            let projected = side - after * simd_dot(side, after)
+            if simd_length_squared(projected) > 1e-12 { side = simd_normalize(projected) }
+            result.append((side: side, normal: simd_normalize(simd_cross(side, after))))
+        }
+        guard faceForward else { return result }
+        // Retain transported frames as the singularity fallback, but remove
+        // accumulated roll for teaching ribbons. Otherwise the front band can
+        // become edge-on and the hanging blade can twist over its narrow tail.
+        let facing = zip(tangents, result).map { tangent, transported in
+            let across = simd_cross(tangent, Point(0, 1, 0))
+            guard simd_length_squared(across) > 1e-8 else { return transported }
+            // Keep the same signed front-facing width in each authored pose.
+            // Selecting its sign from the preceding ring can reverse the whole
+            // free blade after a tuck, producing an unnecessary half-roll when
+            // interpolating two otherwise broad, forward-facing endpoint poses.
+            let side = simd_normalize(across)
+            return (side: side, normal: simd_normalize(simd_cross(side, tangent)))
+        }
+        return smoothedFrames(facing)
     }
 
-    private static func tube(id: String, route: [Point], radius: Float, color: Int, moving: Bool) -> EverydayMeshPart {
+    private static func smoothedFrames(_ facing: [(side: Point, normal: Point)]) -> [(side: Point, normal: Point)] {
+        // Spread the roll of a tight fabric turn across neighbouring sections.
+        // This retains a broad face without concentrating a half-turn into one
+        // narrow mesh strip when the route bends up and back down.
+        var rotations: [SIMD4<Float>] = []
+        for frame in facing {
+            var q = simd_quatf(simd_float3x3(columns: (frame.side, frame.normal,
+                                                     simd_cross(frame.side, frame.normal)))).vector
+            if let before = rotations.last, simd_dot(before, q) < 0 { q = -q }
+            rotations.append(q)
+        }
+        return rotations.indices.map { index in
+            var total = SIMD4<Float>(repeating: 0)
+            for offset in -3...3 {
+                let other = min(rotations.count - 1, max(0, index + offset))
+                total += rotations[other] * Float(4 - abs(offset))
+            }
+            let rotation = simd_quatf(vector: simd_normalize(total))
+            return (side: rotation.act(Point(1, 0, 0)), normal: rotation.act(Point(0, 1, 0)))
+        }
+    }
+
+    /// Interpolate authored frame orientations as well as positions. Rebuilding
+    /// orientation from a temporarily collapsing intermediate curve can spin a
+    /// whole ribbon even when its centreline moves by less than a millimetre.
+    /// Quaternion interpolation preserves the endpoint poses and is reversible
+    /// when the learner scrubs the timeline backwards.
+    private static func transitionFrames(_ start: [Point], _ end: [Point], amount: Float, faceForward: Bool = false)
+        -> [(side: Point, normal: Point)] {
+        let a = frames(route: smooth(start), faceForward: faceForward), b = frames(route: smooth(end), faceForward: faceForward)
+        if amount <= 0 { return a }
+        if amount >= 1 { return b }
+        func orientations(_ source: [(side: Point, normal: Point)]) -> [SIMD4<Float>] {
+            var result: [SIMD4<Float>] = []
+            for frame in source {
+                var value = simd_quatf(simd_float3x3(columns:
+                    (frame.side, frame.normal, simd_cross(frame.side, frame.normal)))).vector
+                if let previous = result.last, simd_dot(previous, value) < 0 { value = -value }
+                result.append(value)
+            }
+            return result
+        }
+        let first = orientations(a)
+        var last = orientations(b)
+        if simd_dot(first[0], last[0]) < 0 { last = last.map { -$0 } }
+        return zip(first, last).map { start, finish in
+            // Quaternion signs are unwrapped along each strand. Selecting the
+            // shortest rotation separately at each ring creates a visible twist
+            // seam where adjacent rings choose opposite interpolation arcs.
+            let dot = max(-1, min(1, simd_dot(start, finish)))
+            let mixed: SIMD4<Float>
+            if dot > 0.9995 {
+                mixed = simd_normalize(start + (finish - start) * amount)
+            } else {
+                let residual = finish - start * dot
+                let perpendicular: SIMD4<Float>
+                if simd_length_squared(residual) > 1e-12 {
+                    perpendicular = simd_normalize(residual)
+                } else {
+                    // Exact antipodes have no unique arc. Keep a finite,
+                    // deterministic half-circle rather than divide by zero.
+                    let component = (0..<4).min { abs(start[$0]) < abs(start[$1]) }!
+                    var axis = SIMD4<Float>(repeating: 0); axis[component] = 1
+                    perpendicular = simd_normalize(axis - start * simd_dot(axis, start))
+                }
+                let angle = acos(dot) * amount
+                mixed = start * cos(angle) + perpendicular * sin(angle)
+            }
+            let rotation = simd_quatf(vector: simd_normalize(mixed))
+            return (side: rotation.act(Point(1, 0, 0)), normal: rotation.act(Point(0, 1, 0)))
+        }
+    }
+
+    private static func tube(id: String, route: [Point], radius: Float, color: Int, moving: Bool,
+                             orientation: [(side: Point, normal: Point)]? = nil) -> EverydayMeshPart {
         let sides = 10
         var positions: [Point] = [], triangles: [UInt32] = []
+        let routeFrames = orientation ?? frames(route: route)
         for i in route.indices {
-            let frame = basis(route: route, index: i)
+            let frame = routeFrames[i]
             for j in 0..<sides {
                 let angle = 2 * Float.pi * Float(j) / Float(sides)
                 positions.append(route[i] + radius * (cos(angle) * frame.side + sin(angle) * frame.normal))
@@ -220,14 +447,19 @@ enum EverydayKnotGeometry {
         return EverydayMeshPart(id: id, positions: positions, triangles: triangles, colorIndex: color, isMoving: moving)
     }
 
-    private static func ribbon(id: String, route: [Point], width: Float, pointed: Bool, color: Int, moving: Bool) -> EverydayMeshPart {
-        var positions: [Point] = [], triangles: [UInt32] = []
+    private static func ribbon(id: String, route: [Point], width: Float, pointed: Bool, color: Int, moving: Bool,
+                               orientation: [(side: Point, normal: Point)]? = nil,
+                               neckWidth: Float? = nil) -> EverydayMeshPart {
+        var positions: [Point] = [], triangles: [UInt32] = [], uvs: [SIMD2<Float>] = []
+        let routeFrames = orientation ?? frames(route: route)
+        let ribbonThickness: Float = 0.0026
         for i in route.indices {
-            let frame = basis(route: route, index: i)
+            let frame = routeFrames[i]
             let t = Float(i) / Float(route.count - 1)
             let tip = pointed ? max(0.012, min(1, (1 - t) / 0.075)) : 1
-            let half = width * tip / 2
-            let thickness: Float = 0.0013
+            let sectionWidth = neckWidth.map { $0 + (width - $0) * min(1, t / 0.72) } ?? width
+            let half = sectionWidth * tip / 2
+            let thickness = ribbonThickness / 2
             let center: Point = route[i]
             let side: Point = frame.side * half
             let up: Point = frame.normal * thickness
@@ -235,6 +467,18 @@ enum EverydayKnotGeometry {
                           center + side - up,
                           center + side + up,
                           center - side + up]
+            // Material coordinates are authored in metres, independent of the
+            // current folded route. Scrubbing and dressing cannot stretch or
+            // restart the weave. Opposite faces share the same fabric sample.
+            let materialLength: Float
+            switch id {
+            case "tie-wide-W": materialLength = 0.82
+            case "tie-narrow-N": materialLength = 0.55
+            case "tie-neck-loop": materialLength = 0.36
+            default: materialLength = 0.075 // keeper sewn to the rear of W
+            }
+            uvs += [SIMD2(0, t * materialLength), SIMD2(sectionWidth * tip, t * materialLength),
+                    SIMD2(sectionWidth * tip, t * materialLength), SIMD2(0, t * materialLength)]
         }
         for i in 0..<(route.count - 1) {
             for j in 0..<4 {
@@ -245,6 +489,7 @@ enum EverydayKnotGeometry {
         }
         let end = UInt32((route.count - 1) * 4)
         triangles += [0, 1, 2, 0, 2, 3, end, end + 2, end + 1, end, end + 3, end + 2]
-        return EverydayMeshPart(id: id, positions: positions, triangles: triangles, colorIndex: color, isMoving: moving)
+        return EverydayMeshPart(id: id, positions: positions, triangles: triangles, colorIndex: color,
+                                isMoving: moving, fabricUVs: uvs, closedRibbonThickness: ribbonThickness)
     }
 }

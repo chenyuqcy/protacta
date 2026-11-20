@@ -148,8 +148,13 @@ final class EverydayTutorialProgressStore {
         let sorted = readRecords().compactMap { key, record -> ResumePoint? in
             guard let id = EverydayTutorialID(rawValue: key), !record.completed else { return nil }
             return ResumePoint(courseID: id, currentAction: record.currentAction, updatedAt: record.updatedAt ?? .distantPast)
-        }.sorted { $0.updatedAt > $1.updatedAt }
-        return Array(sorted.prefix(limit))
+        }.sorted {
+            if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+            // Legacy saves share distantPast; equal timestamps must not make
+            // the home screen reorder cards with each dictionary decode.
+            return $0.courseID.rawValue < $1.courseID.rawValue
+        }
+        return Array(sorted.prefix(max(0, limit)))
     }
 
     private struct Archive: Codable {

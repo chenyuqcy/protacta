@@ -69,13 +69,15 @@ struct PaperStepsView: View {
     let onExit: (() -> Void)?
     let resumeLesson: OrigamiLesson?
     let openLesson: OrigamiLesson?
-    init(onExit: (() -> Void)? = nil, resumeLesson: OrigamiLesson? = nil, openLesson: OrigamiLesson? = nil) {
+    init(onExit: (() -> Void)? = nil, progressStore: LearningProgressStore? = nil,
+         opensClassicDart: Bool = false, resumeLesson: OrigamiLesson? = nil, openLesson: OrigamiLesson? = nil) {
         self.onExit = onExit
         self.resumeLesson = resumeLesson
         self.openLesson = openLesson
+        _controller = StateObject(wrappedValue: LessonController(progressStore: progressStore, opensClassicDart: opensClassicDart))
     }
     @State private var didResume = false
-    @StateObject private var controller = LessonController()
+    @StateObject private var controller: LessonController
     @StateObject private var purchases = PurchaseStore()
     @StateObject private var voice = VoiceGuide()
     @Environment(\.scenePhase) private var scenePhase
@@ -602,7 +604,10 @@ struct PaperStepsView: View {
     }
 
     private var lessonCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let showsComparison = !controller.completed &&
+            DartFoldComparison(lesson: controller.lesson, stepIndex: controller.stepIndex) != nil
+        let showsFirstFoldPlay = controller.lesson == .dart && controller.stepIndex == 1 && controller.progress == 0
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(controller.completed ? "LESSON COMPLETE" : controller.stepIndex == 0 ? "BEFORE YOU BEGIN" : "STEP \(controller.stepIndex) OF \(controller.lastStep)")
                     .font(.system(size: 10, weight: .bold)).tracking(1.5).foregroundStyle(Palette.accent)
@@ -650,7 +655,7 @@ struct PaperStepsView: View {
                                 .accessibilityIdentifier("speed_\(rate == 0.5 ? "half" : rate == 1.0 ? "one" : "two")")
                         }
                     }.padding(3).background(Palette.line.opacity(0.55), in: RoundedRectangle(cornerRadius: 12))
-                        .accessibilityIdentifier("playbackSpeedControl")
+                        .accessibilityElement(children: .contain)
                     Spacer(minLength: 8)
                     Button { voice.stop(); controller.setAutoPlay(!controller.autoPlay) } label: {
                         Label(controller.autoPlay ? "Auto-play on" : "Auto-play",
@@ -671,18 +676,23 @@ struct PaperStepsView: View {
                 }.accessibilityLabel("Back").accessibilityIdentifier("backStep")
                     .disabled(controller.stepIndex == 0 || !controller.canAnimate)
                 primaryButton(controller.autoPlay ? "Next fold" : controller.isPlaying ? "Pause fold" : controller.nextTitle,
-                              symbol: controller.autoPlay ? "forward.fill" : controller.isPlaying ? "pause.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
+                              symbol: controller.autoPlay ? "forward.fill" : controller.isPlaying ? "pause.fill" : showsFirstFoldPlay ? "play.fill" : controller.completed ? "arrow.counterclockwise" : "arrow.right", id: "nextStep") {
                     voice.contextDidChange()
                     if controller.autoPlay { controller.skipAhead() }
                     else if controller.isPlaying { controller.togglePlayback() }
                     else { controller.next() }
                 }.disabled(!controller.canAnimate)
-                Button { showFoldHelp = true } label: {
+                Button {
+                    if showsComparison { controller.pauseAndSave() }
+                    showFoldHelp = true
+                } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: "questionmark").font(.system(size: 16, weight: .semibold))
-                        Text("Help").font(.system(size: 10, weight: .medium))
+                        Image(systemName: showsComparison ? "rectangle.split.2x1" : "questionmark")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text(showsComparison ? "Compare" : "Help").font(.system(size: 10, weight: .medium))
                     }.frame(width: 50, height: 50).background(Palette.line.opacity(0.55), in: Circle())
-                }.accessibilityLabel("Help").accessibilityIdentifier("foldHelp")
+                }.accessibilityLabel(showsComparison ? "Compare before and after" : "Help")
+                    .accessibilityIdentifier("foldHelp")
             }.buttonStyle(.plain).padding(.top, 6)
         }.padding(.horizontal, 24).padding(.top, 22).padding(.bottom, 20)
             .frame(maxWidth: 620).background(Palette.background).layoutPriority(1)
@@ -826,6 +836,77 @@ struct PaperStepsView: View {
     }
 
     private var unlockSheet: some View {
+        LibraryPurchaseSheet(purchases: purchases, selectedPurchasePlan: $selectedPurchasePlan) {
+            showUnlock = false
+        }
+    }
+
+    private var manageSubscriptionsLink: some View {
+        Link("Manage Subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+            .accessibilityIdentifier("manageSubscriptions")
+    }
+
+    private var privacySheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    Text("Privacy, simply.").font(.system(size: 30, weight: .regular, design: .serif))
+                    Text("Protacta Privacy Policy · September 13, 2026").font(.caption).foregroundStyle(Palette.muted)
+                    Text("Your camera and surroundings").font(.headline)
+                    Text(controller.validationEnabled
+                         ? "Camera analysis stays on your device. In this explicitly enabled local test mode, Save local test sample stores one camera photo and analysis metadata in the app's Documents folder. A photo is saved only when you press that button; no image is uploaded. Normal practice does not save camera photos."
+                         : "Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Images and geometry are processed on your device. Check my step can temporarily show that checked view for comparison; changing action, restarting the camera, leaving the guide or backgrounding clears it. Normal practice does not save camera photos to storage or send them to a server.")
+                    Text("Optional voice control and reading aloud").font(.headline)
+                    Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Protacta does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
+                    Text("Purchases and local data").font(.headline)
+                    Text("Apple processes purchases and restores. Protacta checks Apple's verified purchase information to unlock lessons. We do not receive your payment card details. The app keeps a small local status file for troubleshooting; it contains the lesson, step and AR status, but no camera images or room coordinates. It is not automatically uploaded.")
+                    Text("Your lesson progress, completion state, playback speed and hint preference are saved locally so you can continue later. These records do not include camera images, room positions or purchase credentials, and are not automatically uploaded. Start over begins a fresh attempt; deleting the app removes its local learning records.")
+                    Text("No account, ads or tracking").font(.headline)
+                    Text("Protacta does not require an app account. We do not use advertising SDKs, third-party analytics or cross-app tracking. Tutorials are included in the app. Opening a reference link uses the linked site's own privacy policy.")
+                    Text("Support and your choices").font(.headline)
+                    Text("If you email support, we receive the address and information you choose to send and use it to respond. You can request deletion of support correspondence. You can turn off camera access in Settings and keep using the 3D guide, or delete the app to remove its local files. Apple manages purchase records under its own privacy policy.")
+                    Link("adrianchenyuqiu@gmail.com", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Protacta%20Privacy")!)
+                    Link("Apple Privacy Policy", destination: URL(string: "https://www.apple.com/legal/privacy/")!)
+                }.font(.subheadline).lineSpacing(5).padding(26)
+            }.background(Palette.background).foregroundStyle(Palette.ink)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showPrivacy = false } } }
+        }
+    }
+
+    private var stepListSheet: some View {
+        NavigationStack {
+            List(controller.lesson.steps) { step in
+                Button {
+                    selectedStepToReplay = step.id
+                    showStepList = false
+                } label: {
+                    HStack(spacing: 14) {
+                        Text(step.id == 0 ? "•" : String(format: "%02d", step.id))
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(Palette.accent).frame(width: 24)
+                        Text(step.title).font(.system(size: 15))
+                        Spacer(minLength: 2)
+                        if step.id == controller.stepIndex { Image(systemName: "play.circle.fill").foregroundStyle(Palette.accent) }
+                    }.padding(.vertical, 6).contentShape(Rectangle())
+                }.buttonStyle(.plain).accessibilityIdentifier("jumpStep_\(step.id)")
+                    .listRowBackground(Palette.background)
+            }.listStyle(.plain).scrollContentBackground(.hidden)
+                .background(Palette.background).foregroundStyle(Palette.ink)
+                .navigationTitle(controller.lesson.title).navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showStepList = false }.accessibilityIdentifier("closeSteps") } }
+        }
+    }
+}
+
+/// Shared storefront for the lesson unlock and the public app's Home → Plans.
+/// The caller owns entitlement refresh and presentation so a successful purchase
+/// returns to the same screen without creating a separate purchase state.
+struct LibraryPurchaseSheet: View {
+    @ObservedObject var purchases: PurchaseStore
+    @Binding var selectedPurchasePlan: PurchasePlan
+    let onClose: () -> Void
+
+    var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
@@ -885,15 +966,15 @@ struct PaperStepsView: View {
                     Text("Payment is charged to your Apple Account when you confirm. Subscriptions renew automatically unless canceled at least 24 hours before the current period ends. Manage or cancel in Settings → your name → Subscriptions.")
                         .font(.caption2).foregroundStyle(Palette.muted).lineSpacing(3)
                     HStack(spacing: 20) {
-                        Link("Privacy Policy", destination: URL(string: "https://realitycore.org/foliafold/privacy")!)
+                        Link("Privacy Policy", destination: URL(string: AppReleaseIdentity.privacyPolicyURL)!)
                             .accessibilityIdentifier("purchasePrivacy")
                         Link("Terms of Use (EULA)", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
                             .accessibilityIdentifier("purchaseTerms")
                     }.font(.caption)
-                    Button("Keep exploring") { showUnlock = false }.font(.subheadline).accessibilityIdentifier("keepExploring")
+                    Button("Keep exploring") { onClose() }.font(.subheadline).accessibilityIdentifier("keepExploring")
                 }.padding(28)
             }.background(Palette.background).foregroundStyle(Palette.ink)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showUnlock = false }.accessibilityIdentifier("closeUnlock") } }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { onClose() }.accessibilityIdentifier("closeUnlock") } }
                 .onAppear { selectAvailablePurchasePlan(preferActive: true) }
                 .onChange(of: purchases.availablePlans) { _, _ in selectAvailablePurchasePlan() }
         }
@@ -964,54 +1045,12 @@ struct PaperStepsView: View {
         }
     }
 
-    private var privacySheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    Text("Privacy, simply.").font(.system(size: 30, weight: .regular, design: .serif))
-                    Text("Protacta Privacy Policy · September 13, 2026").font(.caption).foregroundStyle(Palette.muted)
-                    Text("Your camera and surroundings").font(.headline)
-                    Text(controller.validationEnabled
-                         ? "Camera analysis stays on your device. In this explicitly enabled local test mode, Save local test sample stores one camera photo and analysis metadata in the app's Documents folder. A photo is saved only when you press that button; no image is uploaded. Normal practice does not save camera photos."
-                         : "Protacta uses the camera to align guidance with a flat sheet or display a 3D lesson on your table. Images and geometry are processed on your device. Check my step can temporarily show that checked view for comparison; changing action, restarting the camera, leaving the guide or backgrounding clears it. Normal practice does not save camera photos to storage or send them to a server.")
-                    Text("Optional voice control and reading aloud").font(.headline)
-                    Text("Voice control starts only when you turn it on and allow microphone and speech recognition access. English commands use Apple's on-device recognition when it is available; Protacta does not fall back to server recognition. Audio and recognized words are not saved or uploaded by the app. Listening stops when you turn it off or leave the app. Reading aloud uses Apple's speech synthesis and does not require microphone access. The explanations are written lesson notes, not generated answers or a camera assessment of your folds.")
-                    Text("Purchases and local data").font(.headline)
-                    Text("Apple processes purchases and restores. Protacta checks Apple's verified purchase information to unlock lessons. We do not receive your payment card details. The app keeps a small local status file for troubleshooting; it contains the lesson, step and AR status, but no camera images or room coordinates. It is not automatically uploaded.")
-                    Text("Your lesson progress, completion state, playback speed and hint preference are saved locally so you can continue later. These records do not include camera images, room positions or purchase credentials, and are not automatically uploaded. Start over begins a fresh attempt; deleting the app removes its local learning records.")
-                    Text("No account, ads or tracking").font(.headline)
-                    Text("Protacta does not require an app account. We do not use advertising SDKs, third-party analytics or cross-app tracking. Tutorials are included in the app. Opening a reference link uses the linked site's own privacy policy.")
-                    Text("Support and your choices").font(.headline)
-                    Text("If you email support, we receive the address and information you choose to send and use it to respond. You can request deletion of support correspondence. You can turn off camera access in Settings and keep using the 3D guide, or delete the app to remove its local files. Apple manages purchase records under its own privacy policy.")
-                    Link("adrianchenyuqiu@gmail.com", destination: URL(string: "mailto:adrianchenyuqiu@gmail.com?subject=Protacta%20Privacy")!)
-                    Link("Apple Privacy Policy", destination: URL(string: "https://www.apple.com/legal/privacy/")!)
-                }.font(.subheadline).lineSpacing(5).padding(26)
-            }.background(Palette.background).foregroundStyle(Palette.ink)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showPrivacy = false } } }
-        }
+    private func primaryButton(_ title: String, symbol: String, id: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack { Spacer(); Text(title); Image(systemName: symbol); Spacer() }
+                .font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                .padding(.vertical, 15).background(Palette.ink, in: RoundedRectangle(cornerRadius: 15))
+        }.buttonStyle(.plain).accessibilityIdentifier(id)
     }
 
-    private var stepListSheet: some View {
-        NavigationStack {
-            List(controller.lesson.steps) { step in
-                Button {
-                    selectedStepToReplay = step.id
-                    showStepList = false
-                } label: {
-                    HStack(spacing: 14) {
-                        Text(step.id == 0 ? "•" : String(format: "%02d", step.id))
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(Palette.accent).frame(width: 24)
-                        Text(step.title).font(.system(size: 15))
-                        Spacer(minLength: 2)
-                        if step.id == controller.stepIndex { Image(systemName: "play.circle.fill").foregroundStyle(Palette.accent) }
-                    }.padding(.vertical, 6).contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityIdentifier("jumpStep_\(step.id)")
-                    .listRowBackground(Palette.background)
-            }.listStyle(.plain).scrollContentBackground(.hidden)
-                .background(Palette.background).foregroundStyle(Palette.ink)
-                .navigationTitle(controller.lesson.title).navigationBarTitleDisplayMode(.inline)
-                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { showStepList = false }.accessibilityIdentifier("closeSteps") } }
-        }
-    }
 }

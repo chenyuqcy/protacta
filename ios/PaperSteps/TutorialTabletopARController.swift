@@ -68,6 +68,19 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     @Published private(set) var error: String?
     @Published private(set) var occlusionMode: EquipmentOcclusionMode
     @Published private(set) var handEdgeNotice: String?
+    @Published private(set) var isAligningObject = false
+    @Published private(set) var objectAlignmentPointCount = 0
+    @Published private(set) var objectAlignmentMessage: String?
+    @Published private(set) var canCaptureObjectAlignmentPoint = false
+    @Published private(set) var isObjectAligned = false
+    /// Applied to authored vertices and crease pivots before fold rotations.
+    /// Keep it after Adjust: a moved reference still has calibrated dimensions.
+    @Published private(set) var objectAlignmentScale = SIMD3<Float>(repeating: 1)
+    private var objectFootprint: EverydayObjectFootprint?
+    private var objectAlignmentPoints: [SIMD3<Float>] = []
+    private var objectAlignmentPlaneID: UUID?
+    private var alignmentMarkers: AnchorEntity?
+    private var placementBaseScale = SIMD3<Float>(repeating: 1)
     private let occlusionCapabilities: EquipmentOcclusionCapabilities
     private let handDepth = SceneDepthOcclusion(profile: .stableEquipment)
     private var depthSessionStartedAt: TimeInterval = 0
@@ -95,7 +108,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     private var panOffset = SIMD3<Float>.zero
     private var gestureGate = TutorialPlacementGestureGate()
     var onEntityTap: ((Entity?) -> Void)?
-    var ready: Bool { placed && trackingReady && error == nil && !backgrounded }
+    var ready: Bool { placed && trackingReady && error == nil && !backgrounded && !isAligningObject }
     var placementGesturesEnabled: Bool { ready && !positionLocked }
     var supportsStableEdges: Bool { occlusionCapabilities.stableDepth }
 
@@ -198,6 +211,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
                 if let last = self.lastFrame, CACurrentMediaTime() - last > 0.3 {
                     self.gate.reset(); self.setReady(false); self.setCanPlace(false)
                     self.placementAnchor?.isEnabled = false
+                    self.alignmentMarkers?.isEnabled = false
                     self.setStatus("Tracking paused. Keep the table in view, or scan again.")
                 }
             }
@@ -231,7 +245,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
 
     func place(at point: CGPoint? = nil) {
-        guard !isLayoutPreview, !placed, canPlace, trackingReady, let view,
+        guard !isLayoutPreview, !isAligningObject, !placed, canPlace, trackingReady, let view,
               let content, let layout, let frame = freshFrame(),
               let hit = surfaceHit(at: point ?? CGPoint(x: view.bounds.midX, y: view.bounds.midY)) else { return }
         var transform = matrix_identity_float4x4
@@ -244,7 +258,8 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         let camera = frame.camera.transform.columns.3, position = transform.columns.3
         placedYaw = atan2(camera.x - position.x, camera.z - position.z) - initialYaw
         scaleFactor = 1
-        container.scale = SIMD3(repeating: layout.scale)
+        placementBaseScale = SIMD3(repeating: layout.scale)
+        container.scale = placementBaseScale
         container.orientation = simd_quatf(angle: placedYaw, axis: [0, 1, 0])
         anchor.addChild(container)
         let light = DirectionalLight(); light.light.intensity = 1100
@@ -260,13 +275,122 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     func togglePositionLock() {
         guard ready else { return }
         positionLocked.toggle()
+        if !positionLocked { isObjectAligned = false }
         updatePlacementGestures()
         setStatus(placementInstruction)
     }
 
     private var placementInstruction: String {
-        positionLocked ? "Reference locked. Tap Adjust to move or resize it."
+        isObjectAligned ? "Manually aligned to the flat setup. Keep the object in place."
+            : positionLocked ? "Reference locked. Tap Adjust to move or resize it."
             : "Drag to move · Pinch to resize · Twist to rotate"
+    }
+
+    /// Requires an explicit learner-selected flat footprint. Existing placement
+    /// survives capture and cancellation; nothing is recognised automatically.
+    @discardableResult
+    func beginObjectAlignment(footprint: EverydayObjectFootprint) -> Bool {
+        guard !isAligningObject, !backgrounded, error == nil,
+              isLayoutPreview || (view?.session.delegate === self && trackingReady && freshFrame() != nil) else { return false }
+        objectFootprint = footprint; objectAlignmentPoints = []; objectAlignmentPlaneID = nil
+        objectAlignmentPointCount = 0; objectAlignmentMessage = nil
+        isAligningObject = true; canCaptureObjectAlignmentPoint = false
+        placementAnchor?.isEnabled = false; updatePlacementGestures()
+        if !isLayoutPreview { setStatus("Slowly scan the flat surface, then aim at the first point.") }
+        return true
+    }
+
+    func cancelObjectAlignment() {
+        guard isAligningObject else { return }
+        clearObjectAlignmentCapture()
+        placementAnchor?.isEnabled = trackingReady && !backgrounded && error == nil
+        updatePlacementGestures()
+    }
+
+    /// Samples the centre reticle only, avoiding taps passing through controls.
+    func captureObjectAlignmentPoint() {
+        guard isAligningObject, !isLayoutPreview, canCaptureObjectAlignmentPoint,
+              trackingReady, freshFrame() != nil, let view, let footprint = objectFootprint,
+              let hit = alignmentSurfaceHit(), let plane = hit.anchor as? ARPlaneAnchor else { return }
+        if let id = objectAlignmentPlaneID, id != plane.identifier {
+            objectAlignmentMessage = "Aim at the same detected surface, or cancel and try again."
+            return
+        }
+        let column = hit.worldTransform.columns.3
+        let point = SIMD3<Float>(column.x, column.y, column.z)
+        let candidate = objectAlignmentPoints + [point]
+        if let issue = EverydayObjectAlignment.validate(points: candidate) {
+            objectAlignmentMessage = issue.message; return
+        }
+        if candidate.count < 3 {
+            objectAlignmentPoints = candidate; objectAlignmentPlaneID = plane.identifier
+            objectAlignmentPointCount = candidate.count; objectAlignmentMessage = nil
+            addAlignmentMarker(at: point, in: view)
+            return
+        }
+        switch EverydayObjectAlignment.solve(footprint: footprint, points: candidate) {
+        case .failure(let issue): objectAlignmentMessage = issue.message
+        case .success(let solution): commitObjectAlignment(solution, in: view)
+        }
+    }
+
+    private func alignmentSurfaceHit() -> ARRaycastResult? {
+        guard let view else { return nil }
+        // Estimated planes are suitable for a loose reference, not calibration.
+        return view.raycast(from: CGPoint(x: view.bounds.midX, y: view.bounds.midY),
+                            allowing: .existingPlaneGeometry, alignment: .horizontal).first
+    }
+
+    private func addAlignmentMarker(at point: SIMD3<Float>, in view: ARView) {
+        let anchor = alignmentMarkers ?? AnchorEntity(world: SIMD3<Float>.zero)
+        if alignmentMarkers == nil { alignmentMarkers = anchor; view.scene.addAnchor(anchor) }
+        let marker = ModelEntity(mesh: .generateSphere(radius: 0.006),
+                                 materials: [UnlitMaterial(color: .systemOrange)])
+        marker.position = point + [0, 0.006, 0]; anchor.addChild(marker)
+    }
+
+    private func clearObjectAlignmentCapture() {
+        isAligningObject = false; objectFootprint = nil; objectAlignmentPoints = []
+        objectAlignmentPlaneID = nil; objectAlignmentPointCount = 0
+        canCaptureObjectAlignmentPoint = false; objectAlignmentMessage = nil
+        alignmentMarkers?.removeFromParent(); alignmentMarkers = nil
+    }
+
+    private func resetObjectAlignmentSamples() {
+        objectAlignmentPoints = []; objectAlignmentPlaneID = nil; objectAlignmentPointCount = 0
+        canCaptureObjectAlignmentPoint = false
+        alignmentMarkers?.removeFromParent(); alignmentMarkers = nil
+        objectAlignmentMessage = "Tracking changed. Start again at the first corner."
+    }
+
+    private func commitObjectAlignment(_ solution: EverydayObjectAlignment, in view: ARView) {
+        guard let content else { return }
+        // Only replace the committed reference after all three samples pass.
+        removePlacement()
+        let realAnchor = ARAnchor(name: "Protacta_Manual_Flat_Object", transform: solution.worldTransform)
+        let anchor = AnchorEntity(.anchor(identifier: realAnchor.identifier))
+        let container = Entity(); container.name = "Manually calibrated flat reference"
+        let offset = Entity(); offset.position = solution.contentOffset * solution.scale
+        offset.addChild(content); container.addChild(offset)
+        // Nonuniform entity scaling after animation would stretch a rising
+        // flap. The everyday geometry applies dimensions before each rotation.
+        objectAlignmentScale = solution.scale
+        placementBaseScale = SIMD3<Float>(repeating: 1); container.scale = placementBaseScale
+        placedYaw = 0; scaleFactor = 1
+        anchor.addChild(container)
+        let light = DirectionalLight(); light.light.intensity = 1100
+        light.look(at: .zero, from: [-0.6, 1, 0.8], relativeTo: nil); anchor.addChild(light)
+        view.session.add(anchor: realAnchor); view.scene.addAnchor(anchor)
+        placementAnchor = anchor; worldAnchor = realAnchor; movable = container
+        placed = true; isObjectAligned = true; positionLocked = true
+        // Wait for ARKit to report the replacement anchor before showing it.
+        anchor.isEnabled = false; gate.reset(); setReady(false); setCanPlace(false)
+        // Scene-depth uncertainty around a real cloth surface is much larger
+        // than the 3 mm guide offset. Retain native person occlusion without a
+        // competing object-depth mesh clipping the calibrated cloth itself.
+        // This reruns configuration without resetting tracking or its anchors.
+        setOcclusionMode(.nativeHands)
+        updatePlacementGestures(); setStatus("Alignment saved. Keep the object in place.")
     }
 
     private func updatePlacementGestures() {
@@ -286,13 +410,14 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
 
     func resetManipulation() {
-        guard ready, let layout, let movable else { return }
-        scaleFactor = 1; movable.scale = SIMD3(repeating: layout.scale)
+        guard ready, let movable else { return }
+        scaleFactor = 1; movable.scale = placementBaseScale
         movable.orientation = simd_quatf(angle: placedYaw, axis: [0, 1, 0])
     }
 
     func handleInactive() {
         if isRequestingCamera && UIApplication.shared.applicationState != .background { return }
+        clearObjectAlignmentCapture()
         guard !isLayoutPreview else { return }
         backgrounded = true; pendingStart = false
         generation += 1; permissionTask?.cancel(); isRequestingCamera = false
@@ -326,6 +451,8 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
 
     private func removePlacement() {
+        clearObjectAlignmentCapture(); isObjectAligned = false
+        objectAlignmentScale = SIMD3<Float>(repeating: 1)
         placementAnchor?.removeFromParent(); placementAnchor = nil
         if let worldAnchor, let view, view.session.delegate === self { view.session.remove(anchor: worldAnchor) }
         worldAnchor = nil; movable = nil; placed = false; positionLocked = true
@@ -346,13 +473,17 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
     private func setStatus(_ value: String) { if status != value { status = value } }
     private func setReady(_ value: Bool) {
+        if !value && isAligningObject {
+            if !objectAlignmentPoints.isEmpty { resetObjectAlignmentSamples() }
+            canCaptureObjectAlignmentPoint = false
+        }
         if trackingReady != value { trackingReady = value }
         updatePlacementGestures()
     }
     private func setCanPlace(_ value: Bool) { if canPlace != value { canPlace = value } }
 
     @objc private func tap(_ gesture: UITapGestureRecognizer) {
-        guard let view else { return }
+        guard let view, !isAligningObject else { return }
         if !placed { place(at: gesture.location(in: view)); return }
         guard ready, freshFrame() != nil else { return }
         onEntityTap?(view.entity(at: gesture.location(in: view)))
@@ -366,11 +497,11 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         if gesture.state == .began || gesture.state == .changed { movable.setPosition(world + panOffset, relativeTo: nil) }
     }
     @objc private func pinch(_ gesture: UIPinchGestureRecognizer) {
-        guard placementGesturesEnabled, freshFrame() != nil, let movable, let layout else { gestureGate.cancel(.pinch); return }
+        guard placementGesturesEnabled, freshFrame() != nil, let movable else { gestureGate.cancel(.pinch); return }
         guard gestureGate.allows(.pinch, phase: gesture.state, enabled: placementGesturesEnabled) else { return }
         if gesture.state == .began { pinchStart = scaleFactor }
         scaleFactor = min(3, max(0.25, pinchStart * Float(gesture.scale)))
-        movable.scale = SIMD3(repeating: layout.scale * scaleFactor)
+        movable.scale = placementBaseScale * scaleFactor
     }
     @objc private func rotate(_ gesture: UIRotationGestureRecognizer) {
         guard placementGesturesEnabled, freshFrame() != nil, let movable else { gestureGate.cancel(.rotation); return }
@@ -410,6 +541,19 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
         let present = worldAnchor.map { anchor in frame.anchors.contains { $0.identifier == anchor.identifier } } ?? true
         let stable = gate.observe(timestamp: frame.timestamp, normal: normal, anchorPresent: present)
         setReady(stable)
+        if isAligningObject {
+            placementAnchor?.isEnabled = false; setCanPlace(false)
+            if let id = objectAlignmentPlaneID, !frame.anchors.contains(where: { $0.identifier == id }) {
+                resetObjectAlignmentSamples()
+            }
+            let hit = stable ? alignmentSurfaceHit() : nil
+            canCaptureObjectAlignmentPoint = stable && hit?.anchor is ARPlaneAnchor
+            alignmentMarkers?.isEnabled = stable
+            setStatus(!stable ? "Tracking is recovering. Hold the phone steady."
+                      : hit?.anchor is ARPlaneAnchor ? "Aim at the named point, then tap Set point."
+                      : "Scan the flat surface slowly. Move the crosshair onto a detected area.")
+            return
+        }
         if placed {
             placementAnchor?.isEnabled = stable; setCanPlace(false)
             setStatus(stable ? placementInstruction : "Tracking is recovering. Keep the same table in view, or scan again.")
@@ -432,6 +576,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
             "groundingShadowsDisabled": view?.renderOptions.contains(.disableGroundingShadows) ?? false,
             "placed": placed, "trackingReady": trackingReady,
             "positionLocked": positionLocked, "placementGesturesEnabled": placementGesturesEnabled,
+            "manualObjectAligned": isObjectAligned, "capturingObjectAlignment": isAligningObject,
             "depthSource": depth.depthSource, "depthStatus": depth.status,
             "nativePersonExclusion": depth.nativePersonExclusion,
             "excludedPersonPixels": depth.excludedPersonPixels,
@@ -462,6 +607,7 @@ final class TutorialTabletopARController: NSObject, ObservableObject, ARSessionD
     }
     nonisolated func session(_ session: ARSession, didFailWithError error: Error) {
         MainActor.assumeIsolated {
+            clearObjectAlignmentCapture()
             self.error = "The AR session stopped. Return to 3D and open AR again."
             setStatus(self.error!); setReady(false); setCanPlace(false); placementAnchor?.isEnabled = false
         }

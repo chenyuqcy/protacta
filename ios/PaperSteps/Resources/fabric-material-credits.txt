@@ -1,0 +1,16 @@
+Everyday fabric texture credits
+
+Terry Cloth — https://polyhaven.com/a/terry_cloth
+Cotton Jersey — https://polyhaven.com/a/cotton_jersey
+Rough Linen — https://polyhaven.com/a/rough_linen
+Photography: colormass. Processing: Rico Cilliers.
+Provided by Poly Haven under CC0 1.0.
+License: https://polyhaven.com/license
+CC0: https://creativecommons.org/publicdomain/zero/1.0/
+
+App uses 1K neutral-white base color, OpenGL normal, and roughness maps.
+Base color is a neutral-white derivative of the lossless source scan, preserving
+fiber variation through linear luminance; the source samples were blue/beige.
+Normal and roughness PNG maps converted from 16-bit to 8-bit for application
+size. No normal-channel inversion or roughness changes from color conversion.
+Prepared 2026-11-17. See docs/FABRIC_MATERIAL_SOURCES.md in the source project.

@@ -11,7 +11,7 @@ final class AdvancedLessonUITests: XCTestCase {
         storeSession.resetToDefaultState()
         storeSession.clearTransactions()
         storeSession.disableDialogs = true
-        _ = try await storeSession.buyProduct(identifier: "org.realitycore.protacta.prototype.complete")
+        _ = try await storeSession.buyProduct(identifier: AppReleaseIdentity.productPrefix + ".complete")
         app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         app.launch()

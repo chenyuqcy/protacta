@@ -9,16 +9,39 @@ struct EverydayMeshPart: Equatable {
     let triangles: [UInt32]
     let colorIndex: Int
     let isMoving: Bool
+    /// Stable undeformed coordinates identify shared cloth vertices. Current
+    /// positions can overlap after a fold and must never define topology.
+    var restPositions: [SIMD3<Float>]? = nil
+    /// Zero preserves an already closed volume (rope/tie). Open cloth declares
+    /// its teaching thickness, scaled with calibrated dimensions and layer gaps.
+    var surfaceThickness: Float = 0
+    /// Material coordinates follow the undeformed cloth, never world space.
+    var fabricUVs: [SIMD2<Float>]? = nil
+    /// Optional smooth front-face normals from a continuous deformation field.
+    /// They must follow the mesh winding and retain one value per source vertex.
+    /// Without these, the surface builder derives normals from triangle areas.
+    var surfaceNormals: [SIMD3<Float>]? = nil
+    /// A closed ribbon has four corners per ring (back-left, back-right,
+    /// front-right, front-left). Its edge/cap UV charts need this authored
+    /// thickness, independent of the animated pose; it does not add a shell.
+    var closedRibbonThickness: Float? = nil
 }
 
 enum EverydayMeshGeometry {
-    static func parts(courseID: EverydayTutorialID, actionIndex: Int, progress: Double) -> [EverydayMeshPart] {
+    /// Flat-object calibration dimensions the undeformed fabric before folding.
+    /// Knot/tie routes remain tabletop references and do not accept a cloth fit.
+    static func parts(courseID: EverydayTutorialID, actionIndex: Int, progress: Double,
+                      objectScale: SIMD3<Float> = SIMD3(repeating: 1)) -> [EverydayMeshPart] {
         switch courseID {
         case .tShirt, .towel, .flatBedsheet:
-            return EverydayClothGeometry.parts(courseID: courseID, actionIndex: actionIndex, progress: progress)
+            return EverydayClothGeometry.parts(courseID: courseID, actionIndex: actionIndex, progress: progress, objectScale: objectScale)
         case .squareKnot, .fourInHand:
             return EverydayKnotGeometry.parts(courseID: courseID, actionIndex: actionIndex, progress: progress)
         }
+    }
+
+    static func validatedObjectScale(_ value: SIMD3<Float>) -> SIMD3<Float> {
+        (0..<3).allSatisfy { value[$0].isFinite && value[$0] > 0 } ? value : SIMD3(repeating: 1)
     }
 
     /// Use the whole course's motion envelope so folds never trigger a camera

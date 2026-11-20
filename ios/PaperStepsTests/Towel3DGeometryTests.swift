@@ -62,6 +62,27 @@ final class Towel3DGeometryTests: XCTestCase {
                        Towel3DGeometry.panels(actionIndex: 2, progress: 1).flatMap(\.quads))
     }
 
+    func testCalibratedTowelFlapsKeepTheirDimensionsWhenVertical() {
+        let scale = SIMD3<Float>(1, sqrt(2), 2)
+        let flat = Towel3DGeometry.panels(actionIndex: 0, progress: 0, objectScale: scale)
+        let uprightWidth = Towel3DGeometry.panels(actionIndex: 0, progress: 0.5, objectScale: scale)
+        // A 20 cm third must remain 20 cm when raised, even though the towel's
+        // length was doubled. Scaling the final mesh used to make it 28.3 cm.
+        for quad in uprightWidth[0].quads {
+            XCTAssertEqual(simd_distance(quad[0], quad[3]), 0.2, accuracy: 0.00001)
+        }
+        let halfStart = Towel3DGeometry.panels(actionIndex: 2, progress: 0, objectScale: scale)
+        let halfLift = Towel3DGeometry.panels(actionIndex: 2, progress: 0.5, objectScale: scale)
+        for (start, lift) in zip(halfStart, halfLift) {
+            let a = start.quads[1], b = lift.quads[1]
+            XCTAssertEqual(simd_distance(a[0], a[1]), 0.9, accuracy: 0.00001)
+            XCTAssertEqual(simd_distance(b[0], b[1]), 0.9, accuracy: 0.00001)
+        }
+        let bounds = Towel3DGeometry.bounds(of: flat)
+        XCTAssertEqual(bounds.maximum.x - bounds.minimum.x, 0.6, accuracy: 0.00001)
+        XCTAssertEqual(bounds.maximum.z - bounds.minimum.z, 1.8, accuracy: 0.00001)
+    }
+
     @MainActor
     func testRuntimeMeshesRemainVisibleAcrossAllActionsAndReplay() throws {
         let model = Towel3DModel()

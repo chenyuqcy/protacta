@@ -7,14 +7,35 @@ private final class EverydayTeachingModel {
     let root = Entity()
     private var entities: [String: ModelEntity] = [:]
     private var previous: [String: EverydayMeshPart] = [:]
-    private let materials: [SimpleMaterial] = [
-        SimpleMaterial(color: UIColor(red: 0.40, green: 0.65, blue: 0.62, alpha: 1), roughness: 0.92, isMetallic: false),
-        SimpleMaterial(color: UIColor(red: 0.20, green: 0.46, blue: 0.69, alpha: 1), roughness: 0.75, isMetallic: false),
-        SimpleMaterial(color: UIColor(red: 0.82, green: 0.37, blue: 0.17, alpha: 1), roughness: 0.75, isMetallic: false),
-        SimpleMaterial(color: UIColor(red: 0.90, green: 0.88, blue: 0.80, alpha: 1), roughness: 0.92, isMetallic: false),
-        SimpleMaterial(color: UIColor(red: 0.16, green: 0.23, blue: 0.29, alpha: 1), roughness: 0.85, isMetallic: false)
-    ]
-    private enum MeshError: Error { case invalidGeometry }
+    private var seeThrough = false
+
+    private func material(for part: EverydayMeshPart) -> PhysicallyBasedMaterial {
+        var material: PhysicallyBasedMaterial
+        if let fabric = EverydayFabricStyle.fabric(forPartID: part.id),
+           let textured = EverydayFabricMaterials.material(for: fabric) {
+            material = textured
+            let tint = EverydayFabricStyle.tint(forPartID: part.id, colorIndex: part.colorIndex)
+            material.baseColor.tint = UIColor(red: CGFloat(tint.x), green: CGFloat(tint.y), blue: CGFloat(tint.z), alpha: 1)
+        } else {
+            material = PhysicallyBasedMaterial()
+            let color = EverydayFabricStyle.fabric(forPartID: part.id) != nil
+                ? EverydayFabricStyle.tint(forPartID: part.id, colorIndex: part.colorIndex) * 0.91
+                : EverydaySurfaceStyle.color(index: part.colorIndex)
+            material.baseColor = .init(tint: UIColor(red: CGFloat(color.x), green: CGFloat(color.y), blue: CGFloat(color.z), alpha: 1))
+            material.roughness = .init(floatLiteral: EverydaySurfaceStyle.roughness)
+        }
+        material.blending = seeThrough ? .transparent(opacity: .init(floatLiteral: 0.46)) : .opaque
+        return material
+    }
+
+    func setSeeThrough(_ enabled: Bool) {
+        guard enabled != seeThrough else { return }
+        seeThrough = enabled
+        for (id, entity) in entities {
+            guard let part = previous[id] else { continue }
+            entity.model?.materials = [material(for: part)]
+        }
+    }
     init() { root.name = "Everyday spatial teaching reference"; root.synchronization = nil }
 
     func update(_ parts: [EverydayMeshPart]) throws {
@@ -23,37 +44,17 @@ private final class EverydayTeachingModel {
             entities.removeValue(forKey: id)?.removeFromParent(); previous.removeValue(forKey: id)
         }
         for part in parts {
-            guard !part.positions.isEmpty, part.triangles.count >= 3, part.triangles.count % 3 == 0,
-                  part.positions.allSatisfy({ $0.x.isFinite && $0.y.isFinite && $0.z.isFinite }) else { throw MeshError.invalidGeometry }
             if previous[part.id] == part { continue }
-            var normals = Array(repeating: SIMD3<Float>.zero, count: part.positions.count)
-            var front: [UInt32] = []
-            for index in stride(from: 0, to: part.triangles.count - 2, by: 3) {
-                let a = Int(part.triangles[index]), b = Int(part.triangles[index + 1]), c = Int(part.triangles[index + 2])
-                guard a < part.positions.count, b < part.positions.count, c < part.positions.count else { throw MeshError.invalidGeometry }
-                let cross = simd_cross(part.positions[b] - part.positions[a], part.positions[c] - part.positions[a])
-                guard simd_length_squared(cross) > 1e-15 else { continue }
-                normals[a] += cross; normals[b] += cross; normals[c] += cross
-                front += [UInt32(a), UInt32(b), UInt32(c)]
-            }
-            guard !front.isEmpty else { throw MeshError.invalidGeometry }
-            normals = normals.map { simd_length_squared($0) > 1e-15 ? simd_normalize($0) : [0, 1, 0] }
-            let count = UInt32(part.positions.count)
-            let skin: Float = 0.00025
-            let positions = zip(part.positions, normals).map { $0.0 + $0.1 * skin }
-                + zip(part.positions, normals).map { $0.0 - $0.1 * skin }
-            var triangles = front
-            for index in stride(from: 0, to: front.count, by: 3) {
-                triangles += [front[index + 2] + count, front[index + 1] + count, front[index] + count]
-            }
+            let surface = try EverydaySurfaceMesh.make(part: part)
             var descriptor = MeshDescriptor(name: part.id)
-            descriptor.positions = MeshBuffers.Positions(positions)
-            descriptor.normals = MeshBuffers.Normals(normals + normals.map { -$0 })
-            descriptor.primitives = .triangles(triangles)
+            descriptor.positions = MeshBuffers.Positions(surface.positions)
+            descriptor.normals = MeshBuffers.Normals(surface.normals)
+            descriptor.textureCoordinates = MeshBuffers.TextureCoordinates(surface.textureCoordinates)
+            descriptor.primitives = .triangles(surface.triangles)
             let mesh = try MeshResource.generate(from: [descriptor])
             let entity = entities[part.id] ?? ModelEntity()
             entity.name = part.id; entity.synchronization = nil
-            entity.model = ModelComponent(mesh: mesh, materials: [materials[min(materials.count - 1, max(0, part.colorIndex))]])
+            entity.model = ModelComponent(mesh: mesh, materials: [material(for: part)])
             if entities[part.id] == nil { root.addChild(entity); entities[part.id] = entity }
             previous[part.id] = part
         }
@@ -64,27 +65,61 @@ private final class EverydayTeachingModel {
 /// Animation never declares that the learner has completed a real action.
 @MainActor
 final class EverydaySceneController: ObservableObject {
+    enum FramingMode: String { case action, detail, complete }
     let courseID: EverydayTutorialID
     let tabletop = TutorialTabletopARController()
-    let renderer = Tutorial3DRenderer(orbitTouchCount: 1)
+    let renderer: Tutorial3DRenderer
     private let model = EverydayTeachingModel()
     @Published private(set) var motion = EverydayMotionPlayback()
     @Published private(set) var isAR = false
     @Published private(set) var arEntryError: String?
     @Published private(set) var failure: String?
-    let framing: Tutorial3DRenderer.Framing
+    @Published private(set) var seeThroughGuide = true
+    @Published private(set) var framing: Tutorial3DRenderer.Framing
+    @Published private(set) var framingMode: FramingMode = .action
+    private var actionFrames: [Int: EverydayStepFraming.Frame] = [:]
     private let tabletopLayout: TutorialTabletopLayout?
     private var tabletopObservation: AnyCancellable?
+    private var alignmentObservation: AnyCancellable?
+    private var dimensionObservation: AnyCancellable?
+    private var objectScale = SIMD3<Float>(repeating: 1)
     var canAnimate: Bool { failure == nil && (!isAR || tabletop.ready) }
+    let objectGuide: EverydayObjectGuide?
 
     init(courseID: EverydayTutorialID) {
         self.courseID = courseID
+        renderer = Tutorial3DRenderer(orbitTouchCount: 1, hasStudioSurface: [.towel, .tShirt, .flatBedsheet].contains(courseID))
+        objectGuide = EverydayObjectGuide.course(courseID)
         let bounds = EverydayMeshGeometry.envelope(courseID: courseID)
-        let center = (bounds.minimum + bounds.maximum) * 0.5
-        let radius = max(0.15, simd_length(bounds.maximum - bounds.minimum) * 0.5)
-        framing = .init(center: center, radius: radius, initialYaw: 0.12, initialPitch: 1.0)
+        let first = EverydayStepFraming.action(courseID: courseID, actionIndex: 0)
+        framing = .init(center: first.center, radius: first.radius, initialYaw: 0.12, initialPitch: 1.0)
+        actionFrames[0] = first
         tabletopLayout = TutorialTabletopLayout(minimum: bounds.minimum, maximum: bounds.maximum, span: 0.52)
         tabletopObservation = tabletop.objectWillChange.sink { [weak self] in self?.objectWillChange.send() }
+        dimensionObservation = tabletop.$objectAlignmentScale.sink { [weak self] scale in
+            guard let self, self.objectScale != scale else { return }
+            self.objectScale = scale
+            self.actionFrames.removeAll()
+            self.refreshStudioFraming(resetZoom: true)
+            self.applyPose()
+        }
+        alignmentObservation = tabletop.$isObjectAligned.sink { [weak self] aligned in
+            guard let self else { return }
+            self.model.setSeeThrough(self.isAR && aligned && self.seeThroughGuide)
+            if aligned && self.isAR {
+                // Calibration uses the flat starting item. Show that same pose
+                // without overwriting the learner's saved confirmations.
+                self.motion.select(actionIndex: 0, progress: 0)
+                self.framingMode = .action
+                self.refreshStudioFraming(resetZoom: true)
+                self.applyPose()
+            }
+        }
+        renderer.onCameraChange = { [weak self] in
+            // Gesture changes do not otherwise publish scene state. Dispatch
+            // avoids publishing during UIViewRepresentable's layout update.
+            Task { @MainActor [weak self] in self?.objectWillChange.send() }
+        }
         applyPose()
     }
 
@@ -93,17 +128,23 @@ final class EverydaySceneController: ObservableObject {
         view.accessibilityIdentifier = "everyday3DViewport"
         return view
     }
-    func select(actionIndex: Int, progress: Double = 0, autoplay: Bool = false) {
+    func select(actionIndex: Int, progress: Double = 0, autoplay: Bool = false, completed: Bool = false) {
         guard canAnimate else { pause(); return }
         let last = EverydayTutorialCourse.course(courseID).actions.count - 1
         motion.select(actionIndex: min(last, max(0, actionIndex)), progress: progress,
                       autoplay: autoplay && canAnimate)
+        framingMode = completed ? .complete : .action
+        refreshStudioFraming(resetZoom: true)
         applyPose()
     }
-    func play() { guard canAnimate else { return }; motion.play(); applyPose() }
+    func play() { guard canAnimate else { return }; restoreActionFraming(); motion.play(); applyPose() }
     func pause() { if motion.isPlaying { motion.pause() } }
-    func replay() { guard canAnimate else { return }; motion.replay(); applyPose() }
-    func seek(_ progress: Double) { guard canAnimate else { pause(); return }; motion.seek(to: progress); applyPose() }
+    func replay() { guard canAnimate else { return }; restoreActionFraming(); motion.replay(); applyPose() }
+    func seek(_ progress: Double) {
+        guard canAnimate else { pause(); return }
+        if framingMode != .complete || progress < 1 { restoreActionFraming() }
+        motion.seek(to: progress); applyPose()
+    }
     func setSlow(_ slow: Bool) { motion.setSlow(slow) }
     func tick(elapsed: TimeInterval, allowed: Bool) {
         guard motion.isPlaying else { return }
@@ -113,7 +154,56 @@ final class EverydaySceneController: ObservableObject {
     }
     func resetView() {
         if isAR { tabletop.resetManipulation() }
-        else { renderer.resetView() }
+        else { refreshStudioFraming(resetZoom: true); renderer.resetView() }
+    }
+
+    func focusCurrentStep() {
+        guard !isAR, failure == nil else { return }
+        pause()
+        if framingMode != .complete { framingMode = framingMode == .detail ? .action : .detail }
+        refreshStudioFraming(resetZoom: true)
+        renderer.resetView()
+    }
+
+    var focusDiagnostics: String {
+        String(format: "mode=%@;center=%.6f,%.6f,%.6f;radius=%.6f;zoom=%.6f",
+               framingMode.rawValue, framing.center.x, framing.center.y, framing.center.z,
+               framing.radius, renderer.cameraZoom)
+    }
+
+    private func restoreActionFraming() {
+        guard framingMode != .action else { return }
+        framingMode = .action
+        refreshStudioFraming(resetZoom: true)
+    }
+
+    private func refreshStudioFraming(resetZoom: Bool) {
+        let frame: EverydayStepFraming.Frame
+        switch framingMode {
+        case .action:
+            if let cached = actionFrames[motion.actionIndex] { frame = cached }
+            else {
+                frame = EverydayStepFraming.action(courseID: courseID, actionIndex: motion.actionIndex, objectScale: objectScale)
+                actionFrames[motion.actionIndex] = frame
+            }
+        case .detail:
+            frame = EverydayStepFraming.pose(courseID: courseID, actionIndex: motion.actionIndex, progress: motion.progress, objectScale: objectScale)
+        case .complete:
+            frame = EverydayStepFraming.completed(courseID: courseID, objectScale: objectScale)
+        }
+        framing = .init(center: frame.center, radius: frame.radius, initialYaw: 0.12, initialPitch: 1.0)
+        renderer.setFraming(framing, resetZoom: resetZoom)
+    }
+
+    func beginObjectAlignment() {
+        guard isAR, let guide = objectGuide else { return }
+        pause()
+        _ = tabletop.beginObjectAlignment(footprint: guide.footprint)
+    }
+
+    func toggleSeeThroughGuide() {
+        seeThroughGuide.toggle()
+        model.setSeeThrough(isAR && tabletop.isObjectAligned && seeThroughGuide)
     }
 
     @discardableResult
@@ -136,6 +226,7 @@ final class EverydaySceneController: ObservableObject {
     func exitAR() {
         guard isAR else { return }
         pause(); tabletop.stop(); renderer.restoreStudio(); isAR = false
+        model.setSeeThrough(false)
         renderer.setContent(model.root, framing: framing)
     }
     func handleActive() {
@@ -150,7 +241,8 @@ final class EverydaySceneController: ObservableObject {
     }
     private func applyPose() {
         do {
-            try model.update(EverydayMeshGeometry.parts(courseID: courseID, actionIndex: motion.actionIndex, progress: motion.progress))
+            try model.update(EverydayMeshGeometry.parts(courseID: courseID, actionIndex: motion.actionIndex,
+                                                       progress: motion.progress, objectScale: objectScale))
             model.root.isEnabled = true
             if failure != nil { failure = nil }
         } catch {

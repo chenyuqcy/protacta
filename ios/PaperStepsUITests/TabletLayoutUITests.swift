@@ -6,7 +6,7 @@ import StoreKitTest
 final class TabletLayoutUITests: XCTestCase {
     private var app: XCUIApplication!
     private var storeSession: SKTestSession!
-    private let productID = "org.realitycore.protacta.prototype.complete"
+    private let productID = AppReleaseIdentity.productPrefix + ".complete"
 
     override func setUp() async throws {
         continueAfterFailure = false

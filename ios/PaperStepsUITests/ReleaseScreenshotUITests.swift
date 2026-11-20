@@ -10,7 +10,7 @@ import UIKit
 final class ReleaseScreenshotUITests: XCTestCase {
     private var app: XCUIApplication!
     private var storeSession: SKTestSession!
-    private let productID = "org.realitycore.protacta.prototype.complete"
+    private let productID = AppReleaseIdentity.productPrefix + ".complete"
     private var fixturePrice = ""
     private var captureRecords = [[String: Any]]()
     private var acceptedFixturePurchase = false

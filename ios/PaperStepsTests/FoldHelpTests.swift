@@ -3,6 +3,8 @@ import XCTest
 
 final class FoldHelpTests: XCTestCase {
     private let authoredSteps: [(lesson: OrigamiLesson, id: Int, title: String)] = [
+        (.dart, 7, "Close the body"),
+        (.dart, 8, "Fold the first wing"),
         (.crane, 3, "Open the first pocket"),
         (.crane, 5, "Complete the square base"),
         (.crane, 9, "Lift the first petal"),

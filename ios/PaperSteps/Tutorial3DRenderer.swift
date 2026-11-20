@@ -49,12 +49,24 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
     private var lastSize = CGSize.zero
     private var content: Entity?
     private let orbitTouchCount: Int
+    private let hasStudioSurface: Bool
     private var installedGestures: [UIGestureRecognizer] = []
     private var lightingTask: Task<Void, Never>?
     var onEntityTap: ((Entity?) -> Void)?
+    var onCameraChange: (() -> Void)?
+    var cameraZoom: Float { zoom }
 
-    init(orbitTouchCount: Int = 1) {
+    /// Studio framing only. AR placement and calibrated physical scale are
+    /// owned by the tabletop controller and never changed by a camera focus.
+    func setFraming(_ framing: Framing, resetZoom: Bool = false) {
+        self.framing = framing
+        if resetZoom { zoom = 1 }
+        updateCamera()
+    }
+
+    init(orbitTouchCount: Int = 1, hasStudioSurface: Bool = false) {
         self.orbitTouchCount = min(2, max(1, orbitTouchCount))
+        self.hasStudioSurface = hasStudioSurface
         super.init()
         anchor.name = "Tutorial studio"
         anchor.synchronization = nil
@@ -63,14 +75,35 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         if #available(iOS 18.0, *) { camera.camera.fieldOfViewOrientation = .vertical }
         anchor.addChild(camera)
         let key = DirectionalLight()
-        key.light.intensity = 1300
+        key.light.intensity = hasStudioSurface ? 1550 : 1300
+        if hasStudioSurface, #available(iOS 18.0, *) {
+            // Keep the default bias: 0.5 produces diagonal self-shadow bands
+            // on the nearly horizontal, sub-millimetre shirt/sheet shells.
+            key.shadow = .init(shadowProjection: .automatic(maximumDistance: 4), depthBias: 1.0)
+        }
         key.look(at: .zero, from: [-0.6, 1, 0.5], relativeTo: nil)
         anchor.addChild(key)
         let fill = PointLight()
-        fill.light.intensity = 180
+        fill.light.intensity = hasStudioSurface ? 150 : 180
         fill.light.attenuationRadius = 4
         fill.position = [0.6, 0.8, -0.6]
         anchor.addChild(fill)
+        if hasStudioSurface {
+            var material = PhysicallyBasedMaterial()
+            material.baseColor = .init(tint: UIColor(white: 0.84, alpha: 1))
+            material.roughness = 1.0
+            material.metallic = 0.0
+            let surface = ModelEntity(mesh: .generatePlane(width: 20, depth: 20), materials: [material])
+            surface.name = "Studio-only matte surface"
+            surface.position.y = -0.001
+            surface.synchronization = nil
+            if #available(iOS 18.0, *) {
+                surface.components.set(DynamicLightShadowComponent(castsShadow: false))
+            }
+            // This belongs to the studio anchor. It never follows content into
+            // the camera/AR scene and cannot occlude a physical hand or table.
+            anchor.addChild(surface)
+        }
     }
 
     func makeView(content: Entity, framing: Framing, sharedView: ARView? = nil) -> ARView {
@@ -166,6 +199,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         anchor.removeFromParent()
         content?.removeFromParent(); content = nil
         onEntityTap = nil
+        onCameraChange = nil
         for gesture in installedGestures { view?.removeGestureRecognizer(gesture) }
         installedGestures.removeAll()
         isHandedToAR = false
@@ -179,7 +213,7 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
             guard !Task.isCancelled, let self, let view, self.view === view,
                   !self.isHandedToAR, view.cameraMode == .nonAR else { return }
             view.environment.lighting.resource = resource
-            view.environment.lighting.intensityExponent = -0.2
+            view.environment.lighting.intensityExponent = self.hasStudioSurface ? 0.6 : -0.2
         }
     }
 
@@ -200,12 +234,14 @@ final class Tutorial3DRenderer: NSObject, UIGestureRecognizerDelegate {
         yaw = dragStart.x - Float(translation.x) * 0.006
         pitch = min(1.48, max(0.15, dragStart.y + Float(translation.y) * 0.005))
         updateCamera()
+        onCameraChange?()
     }
 
     @objc private func pinch(_ gesture: UIPinchGestureRecognizer) {
         if gesture.state == .began { zoomStart = zoom }
         zoom = min(2.2, max(0.55, zoomStart / max(Float(gesture.scale), 0.01)))
         updateCamera()
+        onCameraChange?()
     }
 
     @objc private func selectEntity(_ gesture: UITapGestureRecognizer) {

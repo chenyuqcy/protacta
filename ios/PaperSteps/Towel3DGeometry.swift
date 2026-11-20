@@ -10,7 +10,9 @@ enum Towel3DGeometry {
         let quads: [[SIMD3<Float>]]
     }
 
-    static func panels(actionIndex: Int, progress: Double) -> [Panel] {
+    static func panels(actionIndex: Int, progress: Double,
+                       objectScale: SIMD3<Float> = SIMD3(repeating: 1)) -> [Panel] {
+        let scale = EverydayMeshGeometry.validatedObjectScale(objectScale)
         let action = min(2, max(0, actionIndex))
         let value = progress.isFinite ? Float(min(1, max(0, progress))) : 0
         let edges: [Float] = [-0.30, -0.10, 0.10, 0.30]
@@ -22,34 +24,36 @@ enum Towel3DGeometry {
                  SIMD3<Float>(edges[column], 0, rows[row + 1]),
                  SIMD3<Float>(edges[column + 1], 0, rows[row + 1]),
                  SIMD3<Float>(edges[column + 1], 0, rows[row])].map {
-                    position($0, column: column, action: action, progress: value)
+                    position($0, column: column, action: action, progress: value, objectScale: scale)
                 }
             }
             return Panel(column: column, isMoving: moving, quads: quads)
         }
     }
 
-    private static func position(_ source: SIMD3<Float>, column: Int,
-                                 action: Int, progress: Float) -> SIMD3<Float> {
+    /// Body and attached outer hems share this exact authored deformation.
+    static func position(_ source: SIMD3<Float>, column: Int,
+                                 action: Int, progress: Float, objectScale: SIMD3<Float>) -> SIMD3<Float> {
+        let source = source * objectScale
         var point = source
         // Small visible layer spacing explains the stack; it is not a measured
         // fabric thickness. Left/right thirds use their own fixed hinge axes.
         if column == 0 {
             let amount: Float = action == 0 ? progress : 1
             let angle = Float.pi * amount
-            let dx = source.x + 0.10
-            point.x = -0.10 + dx * cos(angle)
-            point.y = -dx * sin(angle) + 0.004 * (1 - cos(angle)) / 2
+            let dx = source.x + 0.10 * objectScale.x
+            point.x = -0.10 * objectScale.x + dx * cos(angle)
+            point.y = -dx * sin(angle) + 0.004 * objectScale.y * (1 - cos(angle)) / 2
         } else if column == 2 {
             let amount: Float = action == 0 ? 0 : action == 1 ? progress : 1
             let angle = Float.pi * amount
-            let dx = source.x - 0.10
-            point.x = 0.10 + dx * cos(angle)
-            point.y = dx * sin(angle) + 0.008 * (1 - cos(angle)) / 2
+            let dx = source.x - 0.10 * objectScale.x
+            point.x = 0.10 * objectScale.x + dx * cos(angle)
+            point.y = dx * sin(angle) + 0.008 * objectScale.y * (1 - cos(angle)) / 2
         }
         if action == 2 && source.z >= 0 {
             let angle = -Float.pi * progress
-            let hingeHeight: Float = 0.012
+            let hingeHeight: Float = 0.012 * objectScale.y
             let dy = point.y - hingeHeight
             point.y = hingeHeight + dy * cos(angle) - source.z * sin(angle)
             point.z = dy * sin(angle) + source.z * cos(angle)

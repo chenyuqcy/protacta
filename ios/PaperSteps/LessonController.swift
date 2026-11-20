@@ -14,8 +14,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     @Published var stepIndex = 0
     @Published var progress: Float = 1
     @Published var isPlaying = false
-    @Published var playbackRate: Double = 1
-    @Published var autoPlay = false
+    @Published private(set) var playbackRate: Double = 1
+    @Published private(set) var autoPlay = false
     private var autoAdvanceDeadline: CFTimeInterval?
     private let autoDwell: Double = 1.6
     var slowMotion: Bool {
@@ -147,7 +147,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     private let screenAwake = HandsOnScreenAwakeLease.system()
 
     init(progressStore: LearningProgressStore? = nil, practiceStore: PracticeProgressStore? = nil,
-         occlusionCapabilities: AROcclusionCapabilities = .current) {
+         occlusionCapabilities: AROcclusionCapabilities = .current, opensClassicDart: Bool = false) {
         self.occlusionCapabilities = occlusionCapabilities
         self.progressStore = progressStore ?? Self.makeProgressStore()
         let practiceStore = practiceStore ?? PracticeProgressStore.appDefault()
@@ -155,10 +155,19 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         self.dartPractice = practiceStore.load() ?? DartPracticeSession()
         super.init()
         occlusionMode = AROcclusionConfiguration.recommendedMode(capabilities: occlusionCapabilities)
-        lesson = self.progressStore.latestLesson ?? .dart
+        if opensClassicDart {
+            lesson = .dart
+            if savedProgress(for: .dart) == nil {
+                goToStep(1, autoplay: false)
+            } else {
+                continueLearning()
+            }
+        } else {
+            lesson = self.progressStore.latestLesson ?? .dart
+        }
     }
 
-    private static func makeProgressStore() -> LearningProgressStore {
+    static func makeProgressStore() -> LearningProgressStore {
         let process = ProcessInfo.processInfo
         // UI persistence tests use their own domain; other tests stay in memory.
         // Neither path grants lesson access or changes production purchase state.
@@ -194,7 +203,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         guard hasLessonAccess, !started else { return }
         guard let saved = savedProgress(for: lesson) else { begin(); return }
         started = true; completed = saved.completed; stepIndex = saved.stepIndex
-        progress = saved.progress; slowMotion = saved.slowMotion; hintsVisible = saved.hintsVisible
+        cancelAutoPlay()
+        progress = saved.progress; playbackRate = saved.effectivePlaybackRate; hintsVisible = saved.hintsVisible
         isPlaying = false; lastTick = 0
         // Only teaching state is restored. Camera and world coordinates are not saved.
         applyPose(); saveLearningProgress(); recordDiagnostic(force: true)
@@ -203,7 +213,8 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     func saveLearningProgress() {
         guard started, hasLessonAccess else { return }
         if progressStore.save(lesson: lesson, stepIndex: stepIndex, progress: progress,
-                              completed: completed, slowMotion: slowMotion, hintsVisible: hintsVisible) {
+                              completed: completed, slowMotion: slowMotion, hintsVisible: hintsVisible,
+                              playbackRate: playbackRate) {
             savedProgressRevision &+= 1
             lastProgressSave = CACurrentMediaTime()
         }
@@ -218,33 +229,33 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     func toggleSlowMotion() { slowMotion.toggle(); saveLearningProgress() }
 
     func setSpeed(_ rate: Double) {
+        guard LearningProgressStore.isSupportedPlaybackRate(rate) else { return }
         playbackRate = rate
         saveLearningProgress()
     }
 
     func setAutoPlay(_ on: Bool) {
+        if !on { pauseAndSave(); return }
+        guard canAnimate, !completed else { return }
+        if !started { begin() }
         autoAdvanceDeadline = nil
-        if on {
-            guard canAnimate, !completed else { return }
-            autoPlay = true
-            if !started { begin() }
-            if stepIndex == 0 { next() }
-            else if progress < 0.999 { play() }
-            else { next() }
-        } else {
-            autoPlay = false
-            isPlaying = false
-            saveLearningProgress()
-        }
+        autoPlay = true
+        // A direct home entry is already on paused fold 1; play that fold.
+        // Only the flat-sheet introduction or a finished fold advances here.
+        if stepIndex > 0 && progress < 0.999 { play() }
+        else { autoAdvance() }
     }
 
     private func autoAdvance() {
-        guard autoPlay, canAnimate, !completed else { return }
+        guard autoPlay else { return }
+        guard canAnimate, !completed else { pauseAndSave(); return }
+        autoAdvanceDeadline = nil
         if stepIndex >= lastStep {
-            completed = true; progress = 1; applyPose()
-            autoPlay = false
-            saveLearningProgress()
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            // Watching the final animation is not confirmation of a real fold.
+            // Leave the manual Finish action available at its final pose.
+            cancelAutoPlay()
+            isPlaying = false; lastTick = 0
+            progress = 1; applyPose(); saveLearningProgress()
             recordDiagnostic(force: true)
         } else {
             stepIndex += 1; progress = 0; applyPose(); play(); saveLearningProgress()
@@ -290,7 +301,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     var canAnimate: Bool { hasLessonAccess && !isPaperGuide && (!isAR || (placed && trackingReady && !needsRescan)) }
     var nextTitle: String {
         if completed { return "Start over" }
-        if progress < 0.999 { return "Continue" }
+        if progress < 0.999 { return progress == 0 ? "Play" : "Continue" }
         return stepIndex == lastStep ? "Finish" : "Next"
     }
 
@@ -382,6 +393,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         if hasFullLibrary && !unlocked { saveLearningProgress() }
         hasFullLibrary = unlocked
         if !hasLessonAccess && started {
+            cancelAutoPlay()
             if isAR { leaveAR() }
             isPlaying = false; started = false; completed = false
             stepIndex = 0; progress = 1; applyPose()
@@ -391,6 +403,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
 
     func begin() {
         guard hasLessonAccess else { return }
+        cancelAutoPlay()
         started = true; completed = false; stepIndex = 0; progress = 1
         isPlaying = false; updateCamera(); applyPose()
         saveLearningProgress()
@@ -415,18 +428,20 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         applyPose(); recordDiagnostic(force: true)
     }
 
-    func goToStep(_ index: Int) {
+    func goToStep(_ index: Int, autoplay: Bool = true) {
         guard canAnimate, (0...lastStep).contains(index) else { return }
+        cancelAutoPlay()
         isPlaying = false; started = true; completed = false; stepIndex = index
         progress = index == 0 ? 1 : 0
         applyPose()
-        if index > 0 { play() }
+        if index > 0 && autoplay { play() }
         saveLearningProgress()
         recordDiagnostic(force: true)
     }
 
     func next() {
         guard canAnimate, !isPlaying else { return }
+        cancelAutoPlay()
         if completed { begin(); return }
         if progress < 0.999 { play(); return }
         if stepIndex == lastStep {
@@ -451,10 +466,14 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
 
     func replay() {
         guard canAnimate, stepIndex > 0 else { return }
+        cancelAutoPlay()
         completed = false; progress = 0; applyPose(); play(); saveLearningProgress()
     }
 
     func togglePlayback() {
+        // The 1.6-second dwell is still part of auto-play. A pause during it
+        // must not replay the fold or allow the pending deadline to advance.
+        if autoPlay { pauseAndSave(); return }
         if isPlaying { isPlaying = false }
         else if progress >= 0.999 { replay() }
         else { play() }
@@ -508,8 +527,15 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
             checkTabletopFrameHealth(timestamp: frame?.timestamp, now: CACurrentMediaTime(),
                                       normal: normal, anchorPresent: anchorPresent)
         }
+        advancePlayback(at: link.timestamp)
+    }
+
+    /// Deterministic playback clock, independent of camera/render callbacks.
+    /// Unit tests exercise pauses during auto-play dwell without an AR session.
+    func advancePlayback(at timestamp: CFTimeInterval) {
+        guard timestamp.isFinite else { return }
         if autoPlay, let deadline = autoAdvanceDeadline {
-            if link.timestamp >= deadline { autoAdvanceDeadline = nil; autoAdvance() }
+            if timestamp >= deadline { autoAdvanceDeadline = nil; autoAdvance() }
             else { lastTick = 0; return }
         }
         guard isPlaying else { lastTick = 0; return }
@@ -523,16 +549,26 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
                 return
             }
         }
-        let delta = lastTick == 0 ? 0 : min(link.timestamp - lastTick, 0.06)
-        lastTick = link.timestamp
+        let delta = lastTick == 0 ? 0 : max(0, min(timestamp - lastTick, 0.06))
+        lastTick = timestamp
         let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        #if DEBUG
+        // Capture the actual lesson timing while retaining isolated UI-test
+        // progress. This opt-in does not change the interface or shipping speed.
+        let realtimeDemo = testing && ProcessInfo.processInfo.arguments.contains("--demo-realtime")
+        #else
+        let realtimeDemo = false
+        #endif
         let baseDuration: Double = lesson == .crane ? 4.2 : (lesson == .star && stepIndex == 7 ? 6.0 : 3.2)
-        let duration: Double = testing ? 0.35 : baseDuration / playbackRate
+        let duration: Double = testing && !realtimeDemo ? 0.35 : baseDuration / playbackRate
         progress = min(1, progress + Float(delta / duration))
         applyPose()
         if progress >= 1 {
             isPlaying = false; saveLearningProgress(); recordDiagnostic(force: true)
-            if autoPlay && !completed { autoAdvanceDeadline = link.timestamp + autoDwell }
+            if autoPlay && !completed {
+                if stepIndex >= lastStep { cancelAutoPlay() }
+                else { autoAdvanceDeadline = timestamp + autoDwell }
+            }
         }
         else if CACurrentMediaTime() - lastProgressSave >= 1 { saveLearningProgress() }
     }
@@ -561,6 +597,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
     }
 
     private func pauseForTracking(_ message: String) {
+        cancelAutoPlay()
         trackingReady = false; canPlace = false; isPlaying = false; lastTick = 0
         worldAnchor?.isEnabled = false
         for gesture in installedGestures { gesture.isEnabled = false }
@@ -962,6 +999,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         runSession()
     }
     func leaveAR() {
+        cancelAutoPlay()
         depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         cameraStartRevision = nil
         paperGuide.invalidate()
@@ -1069,6 +1107,7 @@ final class LessonController: NSObject, ObservableObject, ARSessionDelegate {
         }
     }
     func handleCameraFailure(_ message: String) {
+        pauseAndSave()
         depthHealth.reset(); occlusionHealthNotice = nil; placementFrameTimestamp = nil
         sessionGeneration += 1
         cameraStartRevision = nil
